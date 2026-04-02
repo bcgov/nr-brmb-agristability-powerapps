@@ -1,0 +1,1980 @@
+{
+  "name": "vsi_participantprogramyear",
+  "title": "Enrolments",
+  "schema": {
+    "type": "array",
+    "items": {
+      "type": "object",
+      "x-ms-dataverse-entity": true,
+      "x-ms-dataverse-entityset": "vsi_participantprogramyears",
+      "x-ms-dataverse-primary-id": "vsi_participantprogramyearid",
+      "x-ms-dataverse-primary-name": "vsi_name",
+      "properties": {
+        "createdby": {
+          "type": "string",
+          "title": "Created By",
+          "x-ms-dataverse-attribute": "createdby",
+          "x-ms-dataverse-type": "LookupType",
+          "x-ms-schema-name": "CreatedBy",
+          "x-ms-read-only": true
+        },
+        "createdbyname": {
+          "type": "string",
+          "title": "createdbyname",
+          "x-ms-dataverse-attribute": "createdbyname",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "CreatedByName",
+          "x-ms-read-only": true,
+          "maxLength": 100
+        },
+        "createdbyyominame": {
+          "type": "string",
+          "title": "createdbyyominame",
+          "x-ms-dataverse-attribute": "createdbyyominame",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "CreatedByYomiName",
+          "x-ms-read-only": true,
+          "required": true,
+          "maxLength": 100
+        },
+        "createdon": {
+          "type": "string",
+          "title": "Created On",
+          "x-ms-dataverse-attribute": "createdon",
+          "x-ms-dataverse-type": "DateTimeType",
+          "x-ms-schema-name": "CreatedOn",
+          "x-ms-read-only": true
+        },
+        "createdonbehalfby": {
+          "type": "string",
+          "title": "Created By (Delegate)",
+          "x-ms-dataverse-attribute": "createdonbehalfby",
+          "x-ms-dataverse-type": "LookupType",
+          "x-ms-schema-name": "CreatedOnBehalfBy",
+          "x-ms-read-only": true
+        },
+        "createdonbehalfbyname": {
+          "type": "string",
+          "title": "createdonbehalfbyname",
+          "x-ms-dataverse-attribute": "createdonbehalfbyname",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "CreatedOnBehalfByName",
+          "x-ms-read-only": true,
+          "maxLength": 100
+        },
+        "createdonbehalfbyyominame": {
+          "type": "string",
+          "title": "createdonbehalfbyyominame",
+          "x-ms-dataverse-attribute": "createdonbehalfbyyominame",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "CreatedOnBehalfByYomiName",
+          "x-ms-read-only": true,
+          "required": true,
+          "maxLength": 100
+        },
+        "dynamics_integrationkey": {
+          "type": "string",
+          "title": "Integration Key",
+          "x-ms-dataverse-attribute": "dynamics_integrationkey",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "dynamics_integrationkey",
+          "maxLength": 256
+        },
+        "exchangerate": {
+          "type": "string",
+          "title": "Exchange Rate",
+          "x-ms-dataverse-attribute": "exchangerate",
+          "x-ms-dataverse-type": "DecimalType",
+          "x-ms-schema-name": "ExchangeRate",
+          "x-ms-read-only": true
+        },
+        "importsequencenumber": {
+          "type": "string",
+          "title": "Import Sequence Number",
+          "x-ms-dataverse-attribute": "importsequencenumber",
+          "x-ms-dataverse-type": "IntegerType",
+          "x-ms-schema-name": "ImportSequenceNumber"
+        },
+        "modifiedby": {
+          "type": "string",
+          "title": "Modified By",
+          "x-ms-dataverse-attribute": "modifiedby",
+          "x-ms-dataverse-type": "LookupType",
+          "x-ms-schema-name": "ModifiedBy",
+          "x-ms-read-only": true
+        },
+        "modifiedbyname": {
+          "type": "string",
+          "title": "modifiedbyname",
+          "x-ms-dataverse-attribute": "modifiedbyname",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "ModifiedByName",
+          "x-ms-read-only": true,
+          "maxLength": 100
+        },
+        "modifiedbyyominame": {
+          "type": "string",
+          "title": "modifiedbyyominame",
+          "x-ms-dataverse-attribute": "modifiedbyyominame",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "ModifiedByYomiName",
+          "x-ms-read-only": true,
+          "required": true,
+          "maxLength": 100
+        },
+        "modifiedon": {
+          "type": "string",
+          "title": "Modified On",
+          "x-ms-dataverse-attribute": "modifiedon",
+          "x-ms-dataverse-type": "DateTimeType",
+          "x-ms-schema-name": "ModifiedOn",
+          "x-ms-read-only": true
+        },
+        "modifiedonbehalfby": {
+          "type": "string",
+          "title": "Modified By (Delegate)",
+          "x-ms-dataverse-attribute": "modifiedonbehalfby",
+          "x-ms-dataverse-type": "LookupType",
+          "x-ms-schema-name": "ModifiedOnBehalfBy",
+          "x-ms-read-only": true
+        },
+        "modifiedonbehalfbyname": {
+          "type": "string",
+          "title": "modifiedonbehalfbyname",
+          "x-ms-dataverse-attribute": "modifiedonbehalfbyname",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "ModifiedOnBehalfByName",
+          "x-ms-read-only": true,
+          "maxLength": 100
+        },
+        "modifiedonbehalfbyyominame": {
+          "type": "string",
+          "title": "modifiedonbehalfbyyominame",
+          "x-ms-dataverse-attribute": "modifiedonbehalfbyyominame",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "ModifiedOnBehalfByYomiName",
+          "x-ms-read-only": true,
+          "required": true,
+          "maxLength": 100
+        },
+        "new_benefit": {
+          "type": "string",
+          "title": "Benefit",
+          "x-ms-dataverse-attribute": "new_benefit",
+          "x-ms-dataverse-type": "LookupType",
+          "x-ms-schema-name": "new_Benefit"
+        },
+        "new_benefitname": {
+          "type": "string",
+          "title": "new_benefitname",
+          "x-ms-dataverse-attribute": "new_benefitname",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "new_BenefitName",
+          "x-ms-read-only": true,
+          "maxLength": 100
+        },
+        "new_combinedfarmname": {
+          "type": "string",
+          "title": "Combined Farm Name",
+          "x-ms-dataverse-attribute": "new_combinedfarmname",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "new_CombinedFarmName",
+          "maxLength": 100
+        },
+        "overriddencreatedon": {
+          "type": "string",
+          "title": "Record Created On",
+          "x-ms-dataverse-attribute": "overriddencreatedon",
+          "x-ms-dataverse-type": "DateTimeType",
+          "x-ms-schema-name": "OverriddenCreatedOn"
+        },
+        "ownerid": {
+          "type": "string",
+          "title": "Owner",
+          "x-ms-dataverse-attribute": "ownerid",
+          "x-ms-dataverse-type": "OwnerType",
+          "x-ms-schema-name": "OwnerId",
+          "required": true
+        },
+        "owneridname": {
+          "type": "string",
+          "title": "owneridname",
+          "x-ms-dataverse-attribute": "owneridname",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "OwnerIdName",
+          "x-ms-read-only": true,
+          "required": true,
+          "maxLength": 100
+        },
+        "owneridtype": {
+          "type": "string",
+          "title": "owneridtype",
+          "x-ms-dataverse-attribute": "owneridtype",
+          "x-ms-dataverse-type": "EntityNameType",
+          "x-ms-schema-name": "OwnerIdType",
+          "required": true
+        },
+        "owneridyominame": {
+          "type": "string",
+          "title": "owneridyominame",
+          "x-ms-dataverse-attribute": "owneridyominame",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "OwnerIdYomiName",
+          "x-ms-read-only": true,
+          "required": true,
+          "maxLength": 100
+        },
+        "owningbusinessunit": {
+          "type": "string",
+          "title": "Owning Business Unit",
+          "x-ms-dataverse-attribute": "owningbusinessunit",
+          "x-ms-dataverse-type": "LookupType",
+          "x-ms-schema-name": "OwningBusinessUnit",
+          "x-ms-read-only": true
+        },
+        "owningbusinessunitname": {
+          "type": "string",
+          "title": "owningbusinessunitname",
+          "x-ms-dataverse-attribute": "owningbusinessunitname",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "OwningBusinessUnitName",
+          "x-ms-read-only": true,
+          "required": true,
+          "maxLength": 100
+        },
+        "owningteam": {
+          "type": "string",
+          "title": "Owning Team",
+          "x-ms-dataverse-attribute": "owningteam",
+          "x-ms-dataverse-type": "LookupType",
+          "x-ms-schema-name": "OwningTeam",
+          "x-ms-read-only": true
+        },
+        "owninguser": {
+          "type": "string",
+          "title": "Owning User",
+          "x-ms-dataverse-attribute": "owninguser",
+          "x-ms-dataverse-type": "LookupType",
+          "x-ms-schema-name": "OwningUser",
+          "x-ms-read-only": true
+        },
+        "statecode": {
+          "type": "string",
+          "title": "Status",
+          "x-ms-dataverse-attribute": "statecode",
+          "x-ms-dataverse-type": "StateType",
+          "x-ms-schema-name": "statecode",
+          "required": true,
+          "enum": [
+            "Active",
+            "Inactive"
+          ],
+          "x-ms-enum-values": [
+            0,
+            1
+          ],
+          "Color": [
+            null,
+            null
+          ],
+          "x-ms-optionsetmetadataid": "ea4edf51-e84b-ed11-bba3-0022483c0cc5",
+          "x-ms-isGlobal": false,
+          "x-ms-optionsetdisplayname": "Status",
+          "x-ms-optionSetType": "State"
+        },
+        "statecodename": {
+          "type": "string",
+          "title": "statecodename",
+          "x-ms-dataverse-attribute": "statecodename",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "statecodeName",
+          "x-ms-read-only": true
+        },
+        "statuscode": {
+          "type": "string",
+          "title": "Status Reason",
+          "x-ms-dataverse-attribute": "statuscode",
+          "x-ms-dataverse-type": "StatusType",
+          "x-ms-schema-name": "statuscode",
+          "enum": [
+            "Active",
+            "Inactive"
+          ],
+          "x-ms-enum-values": [
+            1,
+            2
+          ],
+          "Color": [
+            null,
+            null
+          ],
+          "x-ms-optionsetmetadataid": "f44edf51-e84b-ed11-bba3-0022483c0cc5",
+          "x-ms-isGlobal": false,
+          "x-ms-optionsetdisplayname": "Status Reason",
+          "x-ms-optionSetType": "Status"
+        },
+        "statuscodename": {
+          "type": "string",
+          "title": "statuscodename",
+          "x-ms-dataverse-attribute": "statuscodename",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "statuscodeName",
+          "x-ms-read-only": true
+        },
+        "timezoneruleversionnumber": {
+          "type": "string",
+          "title": "Time Zone Rule Version Number",
+          "x-ms-dataverse-attribute": "timezoneruleversionnumber",
+          "x-ms-dataverse-type": "IntegerType",
+          "x-ms-schema-name": "TimeZoneRuleVersionNumber"
+        },
+        "transactioncurrencyid": {
+          "type": "string",
+          "title": "Currency",
+          "x-ms-dataverse-attribute": "transactioncurrencyid",
+          "x-ms-dataverse-type": "LookupType",
+          "x-ms-schema-name": "TransactionCurrencyId"
+        },
+        "transactioncurrencyidname": {
+          "type": "string",
+          "title": "transactioncurrencyidname",
+          "x-ms-dataverse-attribute": "transactioncurrencyidname",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "TransactionCurrencyIdName",
+          "x-ms-read-only": true,
+          "maxLength": 100
+        },
+        "utcconversiontimezonecode": {
+          "type": "string",
+          "title": "UTC Conversion Time Zone Code",
+          "x-ms-dataverse-attribute": "utcconversiontimezonecode",
+          "x-ms-dataverse-type": "IntegerType",
+          "x-ms-schema-name": "UTCConversionTimeZoneCode"
+        },
+        "versionnumber": {
+          "type": "string",
+          "title": "Version Number",
+          "x-ms-dataverse-attribute": "versionnumber",
+          "x-ms-dataverse-type": "BigIntType",
+          "x-ms-schema-name": "VersionNumber",
+          "x-ms-read-only": true
+        },
+        "vsi_adjustedlateenrolmentfee": {
+          "type": "string",
+          "title": "Adjusted Late Enrolment Fee",
+          "x-ms-dataverse-attribute": "vsi_adjustedlateenrolmentfee",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_AdjustedLateEnrolmentFee"
+        },
+        "vsi_adjustedlateenrolmentfee_base": {
+          "type": "string",
+          "title": "Adjusted Late Enrolment Fee (Base)",
+          "x-ms-dataverse-attribute": "vsi_adjustedlateenrolmentfee_base",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_adjustedlateenrolmentfee_Base",
+          "x-ms-read-only": true
+        },
+        "vsi_administrativecostsharingfee": {
+          "type": "string",
+          "title": "Administrative Cost Sharing Fee",
+          "x-ms-dataverse-attribute": "vsi_administrativecostsharingfee",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_AdministrativeCostSharingFee"
+        },
+        "vsi_administrativecostsharingfee_base": {
+          "type": "string",
+          "title": "Administrative Cost Sharing Fee (Base)",
+          "x-ms-dataverse-attribute": "vsi_administrativecostsharingfee_base",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_administrativecostsharingfee_Base",
+          "x-ms-read-only": true
+        },
+        "vsi_amendmentnumber": {
+          "type": "string",
+          "title": "Enrolment Amendment Number",
+          "x-ms-dataverse-attribute": "vsi_amendmentnumber",
+          "x-ms-dataverse-type": "IntegerType",
+          "x-ms-schema-name": "vsi_AmendmentNumber"
+        },
+        "vsi_bringforward": {
+          "type": "string",
+          "title": "Bring Forward",
+          "x-ms-dataverse-attribute": "vsi_bringforward",
+          "x-ms-dataverse-type": "BooleanType",
+          "x-ms-schema-name": "vsi_BringForward",
+          "enum": [
+            "No",
+            "Yes"
+          ],
+          "x-ms-enum-values": [
+            0,
+            1
+          ],
+          "Color": [
+            null,
+            null
+          ],
+          "x-ms-optionsetmetadataid": "564fdf51-e84b-ed11-bba3-0022483c0cc5",
+          "x-ms-isGlobal": false,
+          "x-ms-optionsetdisplayname": "Bring Forward",
+          "x-ms-optionSetType": "Boolean"
+        },
+        "vsi_bringforwardname": {
+          "type": "string",
+          "title": "vsi_bringforwardname",
+          "x-ms-dataverse-attribute": "vsi_bringforwardname",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "vsi_bringforwardName",
+          "x-ms-read-only": true
+        },
+        "vsi_broughtforward": {
+          "type": "string",
+          "title": "Brought Forward",
+          "x-ms-dataverse-attribute": "vsi_broughtforward",
+          "x-ms-dataverse-type": "BooleanType",
+          "x-ms-schema-name": "vsi_BroughtForward",
+          "enum": [
+            "No",
+            "Yes"
+          ],
+          "x-ms-enum-values": [
+            0,
+            1
+          ],
+          "Color": [
+            null,
+            null
+          ],
+          "x-ms-optionsetmetadataid": "584fdf51-e84b-ed11-bba3-0022483c0cc5",
+          "x-ms-isGlobal": false,
+          "x-ms-optionsetdisplayname": "Brought Forward",
+          "x-ms-optionSetType": "Boolean"
+        },
+        "vsi_broughtforwardname": {
+          "type": "string",
+          "title": "vsi_broughtforwardname",
+          "x-ms-dataverse-attribute": "vsi_broughtforwardname",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "vsi_broughtforwardName",
+          "x-ms-read-only": true
+        },
+        "vsi_calculatedenfee": {
+          "type": "string",
+          "title": "Calculated EN Fee",
+          "x-ms-dataverse-attribute": "vsi_calculatedenfee",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_CalculatedENFee"
+        },
+        "vsi_calculatedenfee_base": {
+          "type": "string",
+          "title": "Calculated EN Fee (Base)",
+          "x-ms-dataverse-attribute": "vsi_calculatedenfee_base",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_calculatedenfee_Base",
+          "x-ms-read-only": true
+        },
+        "vsi_calculatedlatepaymentfee": {
+          "type": "string",
+          "title": "Calculated Late Payment Fee",
+          "x-ms-dataverse-attribute": "vsi_calculatedlatepaymentfee",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_CalculatedLatePaymentFee"
+        },
+        "vsi_calculatedlatepaymentfee_base": {
+          "type": "string",
+          "title": "Calculated Late Payment Fee (Base)",
+          "x-ms-dataverse-attribute": "vsi_calculatedlatepaymentfee_base",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_calculatedlatepaymentfee_Base",
+          "x-ms-read-only": true
+        },
+        "vsi_checkfordatafix": {
+          "type": "string",
+          "title": "Check for Data Fix",
+          "x-ms-dataverse-attribute": "vsi_checkfordatafix",
+          "x-ms-dataverse-type": "BooleanType",
+          "x-ms-schema-name": "vsi_CheckforDataFix",
+          "enum": [
+            "No",
+            "Yes"
+          ],
+          "x-ms-enum-values": [
+            0,
+            1
+          ],
+          "Color": [
+            null,
+            null
+          ],
+          "x-ms-optionsetmetadataid": "5f4fdf51-e84b-ed11-bba3-0022483c0cc5",
+          "x-ms-isGlobal": false,
+          "x-ms-optionsetdisplayname": "Check for Data Fix",
+          "x-ms-optionSetType": "Boolean"
+        },
+        "vsi_checkfordatafixname": {
+          "type": "string",
+          "title": "vsi_checkfordatafixname",
+          "x-ms-dataverse-attribute": "vsi_checkfordatafixname",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "vsi_checkfordatafixName",
+          "x-ms-read-only": true
+        },
+        "vsi_cleandata": {
+          "type": "string",
+          "title": "BARN Data",
+          "x-ms-dataverse-attribute": "vsi_cleandata",
+          "x-ms-dataverse-type": "BooleanType",
+          "x-ms-schema-name": "vsi_CleanData",
+          "enum": [
+            "No",
+            "Yes"
+          ],
+          "x-ms-enum-values": [
+            0,
+            1
+          ],
+          "Color": [
+            null,
+            null
+          ],
+          "x-ms-optionsetmetadataid": "614fdf51-e84b-ed11-bba3-0022483c0cc5",
+          "x-ms-isGlobal": false,
+          "x-ms-optionsetdisplayname": "Clean Data",
+          "x-ms-optionSetType": "Boolean"
+        },
+        "vsi_cleandataname": {
+          "type": "string",
+          "title": "vsi_cleandataname",
+          "x-ms-dataverse-attribute": "vsi_cleandataname",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "vsi_cleandataName",
+          "x-ms-read-only": true
+        },
+        "vsi_combinedfarmpercents": {
+          "type": "string",
+          "title": "Combined Farm Percents",
+          "x-ms-dataverse-attribute": "vsi_combinedfarmpercents",
+          "x-ms-dataverse-type": "MemoType",
+          "x-ms-schema-name": "vsi_CombinedFarmPercents",
+          "maxLength": 1000
+        },
+        "vsi_combinedfarmpins": {
+          "type": "string",
+          "title": "Combined Farm PINS",
+          "x-ms-dataverse-attribute": "vsi_combinedfarmpins",
+          "x-ms-dataverse-type": "MemoType",
+          "x-ms-schema-name": "vsi_CombinedFarmPINS",
+          "maxLength": 1000
+        },
+        "vsi_contributionmargin": {
+          "type": "string",
+          "title": "Contribution Margin",
+          "x-ms-dataverse-attribute": "vsi_contributionmargin",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_contributionmargin"
+        },
+        "vsi_contributionmargin_base": {
+          "type": "string",
+          "title": "Contribution Margin (Base)",
+          "x-ms-dataverse-attribute": "vsi_contributionmargin_base",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_contributionmargin_Base",
+          "x-ms-read-only": true
+        },
+        "vsi_createtaskinbarn": {
+          "type": "string",
+          "title": "Create Task in BARN",
+          "x-ms-dataverse-attribute": "vsi_createtaskinbarn",
+          "x-ms-dataverse-type": "BooleanType",
+          "x-ms-schema-name": "vsi_CreateTaskinBARN",
+          "enum": [
+            "No",
+            "Yes"
+          ],
+          "x-ms-enum-values": [
+            0,
+            1
+          ],
+          "Color": [
+            null,
+            null
+          ],
+          "x-ms-optionsetmetadataid": "684fdf51-e84b-ed11-bba3-0022483c0cc5",
+          "x-ms-isGlobal": false,
+          "x-ms-optionsetdisplayname": "Create Task in BARN",
+          "x-ms-optionSetType": "Boolean"
+        },
+        "vsi_createtaskinbarnname": {
+          "type": "string",
+          "title": "vsi_createtaskinbarnname",
+          "x-ms-dataverse-attribute": "vsi_createtaskinbarnname",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "vsi_createtaskinbarnName",
+          "x-ms-read-only": true
+        },
+        "vsi_datafixapplied": {
+          "type": "string",
+          "title": "Data Fix Applied",
+          "x-ms-dataverse-attribute": "vsi_datafixapplied",
+          "x-ms-dataverse-type": "BooleanType",
+          "x-ms-schema-name": "vsi_DataFixApplied",
+          "enum": [
+            "No",
+            "Yes"
+          ],
+          "x-ms-enum-values": [
+            0,
+            1
+          ],
+          "Color": [
+            null,
+            null
+          ],
+          "x-ms-optionsetmetadataid": "6b4fdf51-e84b-ed11-bba3-0022483c0cc5",
+          "x-ms-isGlobal": false,
+          "x-ms-optionsetdisplayname": "Data Fix Applied",
+          "x-ms-optionSetType": "Boolean"
+        },
+        "vsi_datafixappliedname": {
+          "type": "string",
+          "title": "vsi_datafixappliedname",
+          "x-ms-dataverse-attribute": "vsi_datafixappliedname",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "vsi_datafixappliedName",
+          "x-ms-read-only": true
+        },
+        "vsi_datafixtag": {
+          "type": "string",
+          "title": "Data Fix Tag",
+          "x-ms-dataverse-attribute": "vsi_datafixtag",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vsi_DataFixTag",
+          "maxLength": 100
+        },
+        "vsi_enrollmentregionaloffice": {
+          "type": "string",
+          "title": "Enrollment Regional Office",
+          "x-ms-dataverse-attribute": "vsi_enrollmentregionaloffice",
+          "x-ms-dataverse-type": "PicklistType",
+          "x-ms-schema-name": "vsi_EnrollmentRegionalOffice",
+          "enum": [
+            "Abbotsford",
+            "Fort St. John",
+            "Kelowna",
+            "Oliver"
+          ],
+          "x-ms-enum-values": [
+            865520000,
+            865520001,
+            865520002,
+            865520003
+          ],
+          "Color": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "x-ms-optionsetmetadataid": "3c6c3f10-5ed2-4cd5-9ca7-40660952f4ea",
+          "x-ms-isGlobal": true,
+          "x-ms-optionsetdisplayname": "Regional Offices",
+          "x-ms-optionSetType": "Picklist"
+        },
+        "vsi_enrollmentregionalofficename": {
+          "type": "string",
+          "title": "vsi_enrollmentregionalofficename",
+          "x-ms-dataverse-attribute": "vsi_enrollmentregionalofficename",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "vsi_enrollmentregionalofficeName",
+          "x-ms-read-only": true
+        },
+        "vsi_enrolmentcandidate": {
+          "type": "string",
+          "title": "Enrolment Candidate",
+          "x-ms-dataverse-attribute": "vsi_enrolmentcandidate",
+          "x-ms-dataverse-type": "BooleanType",
+          "x-ms-schema-name": "vsi_EnrolmentCandidate",
+          "enum": [
+            "No",
+            "Yes"
+          ],
+          "x-ms-enum-values": [
+            0,
+            1
+          ],
+          "Color": [
+            null,
+            null
+          ],
+          "x-ms-optionsetmetadataid": "6d4fdf51-e84b-ed11-bba3-0022483c0cc5",
+          "x-ms-isGlobal": false,
+          "x-ms-optionsetdisplayname": "Enrolment Candidate",
+          "x-ms-optionSetType": "Boolean"
+        },
+        "vsi_enrolmentcandidatename": {
+          "type": "string",
+          "title": "vsi_enrolmentcandidatename",
+          "x-ms-dataverse-attribute": "vsi_enrolmentcandidatename",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "vsi_enrolmentcandidateName",
+          "x-ms-read-only": true
+        },
+        "vsi_enrolmentfee": {
+          "type": "string",
+          "title": "Enrolment Fee",
+          "x-ms-dataverse-attribute": "vsi_enrolmentfee",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_EnrolmentFee"
+        },
+        "vsi_enrolmentfee_base": {
+          "type": "string",
+          "title": "Enrolment Fee (Base)",
+          "x-ms-dataverse-attribute": "vsi_enrolmentfee_base",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_enrolmentfee_Base",
+          "x-ms-read-only": true
+        },
+        "vsi_enrolmentfeecalculated": {
+          "type": "string",
+          "title": "Enrolment Fees Calculated",
+          "x-ms-dataverse-attribute": "vsi_enrolmentfeecalculated",
+          "x-ms-dataverse-type": "BooleanType",
+          "x-ms-schema-name": "vsi_EnrolmentFeeCalculated",
+          "enum": [
+            "No",
+            "Yes"
+          ],
+          "x-ms-enum-values": [
+            0,
+            1
+          ],
+          "Color": [
+            null,
+            null
+          ],
+          "x-ms-optionsetmetadataid": "754fdf51-e84b-ed11-bba3-0022483c0cc5",
+          "x-ms-isGlobal": false,
+          "x-ms-optionsetdisplayname": "Enrolment Fees Calculated",
+          "x-ms-optionSetType": "Boolean"
+        },
+        "vsi_enrolmentfeecalculatedname": {
+          "type": "string",
+          "title": "vsi_enrolmentfeecalculatedname",
+          "x-ms-dataverse-attribute": "vsi_enrolmentfeecalculatedname",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "vsi_enrolmentfeecalculatedName",
+          "x-ms-read-only": true
+        },
+        "vsi_enrolmentfeesfinaldeadlinedate": {
+          "type": "string",
+          "title": "Enrolment Fees Final Deadline Date",
+          "x-ms-dataverse-attribute": "vsi_enrolmentfeesfinaldeadlinedate",
+          "x-ms-dataverse-type": "DateTimeType",
+          "x-ms-schema-name": "vsi_EnrolmentFeesFinalDeadlineDate"
+        },
+        "vsi_enrolmentfeesmodifiedbyid": {
+          "type": "string",
+          "title": "Enrolment Fees Modified By",
+          "x-ms-dataverse-attribute": "vsi_enrolmentfeesmodifiedbyid",
+          "x-ms-dataverse-type": "LookupType",
+          "x-ms-schema-name": "vsi_EnrolmentFeesModifiedById"
+        },
+        "vsi_enrolmentfeesmodifiedbyidname": {
+          "type": "string",
+          "title": "vsi_enrolmentfeesmodifiedbyidname",
+          "x-ms-dataverse-attribute": "vsi_enrolmentfeesmodifiedbyidname",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vsi_EnrolmentFeesModifiedByIdName",
+          "x-ms-read-only": true,
+          "maxLength": 200
+        },
+        "vsi_enrolmentfeesmodifiedbyidyominame": {
+          "type": "string",
+          "title": "vsi_enrolmentfeesmodifiedbyidyominame",
+          "x-ms-dataverse-attribute": "vsi_enrolmentfeesmodifiedbyidyominame",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vsi_EnrolmentFeesModifiedByIdYomiName",
+          "x-ms-read-only": true,
+          "maxLength": 200
+        },
+        "vsi_enrolmentfeesnonpenaltyduedate": {
+          "type": "string",
+          "title": "Enrolment Fees Non-Penalty Due Date",
+          "x-ms-dataverse-attribute": "vsi_enrolmentfeesnonpenaltyduedate",
+          "x-ms-dataverse-type": "DateTimeType",
+          "x-ms-schema-name": "vsi_EnrolmentFeesNonPenaltyDueDate"
+        },
+        "vsi_enrolmentfeespaiddate": {
+          "type": "string",
+          "title": "Enrolment Fees Paid Date",
+          "x-ms-dataverse-attribute": "vsi_enrolmentfeespaiddate",
+          "x-ms-dataverse-type": "DateTimeType",
+          "x-ms-schema-name": "vsi_EnrolmentFeesPaidDate"
+        },
+        "vsi_enrolmentnoticesentdate": {
+          "type": "string",
+          "title": "Enrolment Notice Sent Date",
+          "x-ms-dataverse-attribute": "vsi_enrolmentnoticesentdate",
+          "x-ms-dataverse-type": "DateTimeType",
+          "x-ms-schema-name": "vsi_EnrolmentNoticeSentDate"
+        },
+        "vsi_enrolmentstatus": {
+          "type": "string",
+          "title": "Enrolment Status",
+          "x-ms-dataverse-attribute": "vsi_enrolmentstatus",
+          "x-ms-dataverse-type": "PicklistType",
+          "x-ms-schema-name": "vsi_EnrolmentStatus",
+          "required": true,
+          "enum": [
+            "Initialized",
+            "Enrolment Fees Calculated",
+            "Updated Enrolment Fees Calculated",
+            "Enrolment Notice Sent",
+            "Enrolled, Not Paid",
+            "Enrolled",
+            "Late Enrolled",
+            "Ineligible",
+            "Opted Out",
+            "To Be Reviewed",
+            "Not Enough Information",
+            "Dormant"
+          ],
+          "x-ms-enum-values": [
+            865520004,
+            865520005,
+            865520006,
+            865520007,
+            865520008,
+            865520000,
+            865520011,
+            865520002,
+            865520001,
+            865520009,
+            865520010,
+            865520012
+          ],
+          "Color": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            "#0000ff",
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "x-ms-optionsetmetadataid": "e9ee3b1d-5035-4a43-91b2-dd1909c55378",
+          "x-ms-isGlobal": true,
+          "x-ms-optionsetdisplayname": "Enrolment Status",
+          "x-ms-optionSetType": "Picklist"
+        },
+        "vsi_enrolmentstatusname": {
+          "type": "string",
+          "title": "vsi_enrolmentstatusname",
+          "x-ms-dataverse-attribute": "vsi_enrolmentstatusname",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "vsi_enrolmentstatusName",
+          "x-ms-read-only": true
+        },
+        "vsi_farmingsector": {
+          "type": "string",
+          "title": "Farming Sector",
+          "x-ms-dataverse-attribute": "vsi_farmingsector",
+          "x-ms-dataverse-type": "PicklistType",
+          "x-ms-schema-name": "vsi_FarmingSector",
+          "enum": [
+            "Berries",
+            "Cattle",
+            "Dairy",
+            "Floriculture",
+            "Green House Vegetables",
+            "Grains and Oilseeds",
+            "Grapes",
+            "Hogs",
+            "Nursery",
+            "Other",
+            "Other Fruits and Vegetables",
+            "Other Livestock",
+            "Potatoes",
+            "Poultry",
+            "Tree Fruits",
+            "Unknown"
+          ],
+          "x-ms-enum-values": [
+            865520000,
+            865520002,
+            865520004,
+            865520005,
+            865520006,
+            865520001,
+            865520007,
+            865520003,
+            865520008,
+            865520009,
+            865520010,
+            865520011,
+            865520012,
+            865520013,
+            865520014,
+            865520015
+          ],
+          "Color": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "x-ms-optionsetmetadataid": "a966f08d-9e43-435e-8af8-510273f333d7",
+          "x-ms-isGlobal": true,
+          "x-ms-optionsetdisplayname": "Commodity Groups",
+          "x-ms-optionSetType": "Picklist"
+        },
+        "vsi_farmingsectorname": {
+          "type": "string",
+          "title": "vsi_farmingsectorname",
+          "x-ms-dataverse-attribute": "vsi_farmingsectorname",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "vsi_farmingsectorName",
+          "x-ms-read-only": true
+        },
+        "vsi_farmtype": {
+          "type": "string",
+          "title": "Farm Type",
+          "x-ms-dataverse-attribute": "vsi_farmtype",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vsi_FarmType",
+          "maxLength": 100
+        },
+        "vsi_farmtypedetailed": {
+          "type": "string",
+          "title": "Farm Type Detailed",
+          "x-ms-dataverse-attribute": "vsi_farmtypedetailed",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vsi_FarmTypeDetailed",
+          "maxLength": 500
+        },
+        "vsi_feemodifiedby": {
+          "type": "string",
+          "title": "Fee Modified By",
+          "x-ms-dataverse-attribute": "vsi_feemodifiedby",
+          "x-ms-dataverse-type": "LookupType",
+          "x-ms-schema-name": "vsi_FeeModifiedBy"
+        },
+        "vsi_feemodifiedbyname": {
+          "type": "string",
+          "title": "vsi_feemodifiedbyname",
+          "x-ms-dataverse-attribute": "vsi_feemodifiedbyname",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vsi_FeeModifiedByName",
+          "x-ms-read-only": true,
+          "maxLength": 200
+        },
+        "vsi_feemodifiedbyyominame": {
+          "type": "string",
+          "title": "vsi_feemodifiedbyyominame",
+          "x-ms-dataverse-attribute": "vsi_feemodifiedbyyominame",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vsi_FeeModifiedByYomiName",
+          "x-ms-read-only": true,
+          "maxLength": 200
+        },
+        "vsi_filereceiveddate": {
+          "type": "string",
+          "title": "FIle Received Date",
+          "x-ms-dataverse-attribute": "vsi_filereceiveddate",
+          "x-ms-dataverse-type": "DateTimeType",
+          "x-ms-schema-name": "vsi_FileReceivedDate"
+        },
+        "vsi_firstmonthlateinformationfee": {
+          "type": "string",
+          "title": "First Month Late Filing Penalty",
+          "x-ms-dataverse-attribute": "vsi_firstmonthlateinformationfee",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_FirstMonthLateInformationFee"
+        },
+        "vsi_firstmonthlateinformationfee_base": {
+          "type": "string",
+          "title": "First Month Late Filing Penalty (Base)",
+          "x-ms-dataverse-attribute": "vsi_firstmonthlateinformationfee_base",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_firstmonthlateinformationfee_Base",
+          "x-ms-read-only": true
+        },
+        "vsi_fortyfivedaylettersent": {
+          "type": "string",
+          "title": "fortyFiveDayLetterSent",
+          "x-ms-dataverse-attribute": "vsi_fortyfivedaylettersent",
+          "x-ms-dataverse-type": "DateTimeType",
+          "x-ms-schema-name": "vsi_fortyFiveDayLetterSent"
+        },
+        "vsi_fullyprovinciallyfunded": {
+          "type": "string",
+          "title": "Late Participant",
+          "x-ms-dataverse-attribute": "vsi_fullyprovinciallyfunded",
+          "x-ms-dataverse-type": "BooleanType",
+          "x-ms-schema-name": "vsi_FullyProvinciallyFunded",
+          "enum": [
+            "No",
+            "Yes"
+          ],
+          "x-ms-enum-values": [
+            0,
+            1
+          ],
+          "Color": [
+            "#0000ff",
+            "#0000ff"
+          ],
+          "x-ms-optionsetmetadataid": "844fdf51-e84b-ed11-bba3-0022483c0cc5",
+          "x-ms-isGlobal": false,
+          "x-ms-optionsetdisplayname": "FullyProvinciallyFunded",
+          "x-ms-optionSetType": "Boolean"
+        },
+        "vsi_fullyprovinciallyfundedname": {
+          "type": "string",
+          "title": "vsi_fullyprovinciallyfundedname",
+          "x-ms-dataverse-attribute": "vsi_fullyprovinciallyfundedname",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "vsi_fullyprovinciallyfundedName",
+          "x-ms-read-only": true
+        },
+        "vsi_generateddate": {
+          "type": "string",
+          "title": "Generated Date",
+          "x-ms-dataverse-attribute": "vsi_generateddate",
+          "x-ms-dataverse-type": "DateTimeType",
+          "x-ms-schema-name": "vsi_generateddate"
+        },
+        "vsi_generatedfromenwscenario": {
+          "type": "string",
+          "title": "Generated From ENW",
+          "x-ms-dataverse-attribute": "vsi_generatedfromenwscenario",
+          "x-ms-dataverse-type": "BooleanType",
+          "x-ms-schema-name": "vsi_GeneratedFromENWScenario",
+          "required": true,
+          "enum": [
+            "No",
+            "Yes"
+          ],
+          "x-ms-enum-values": [
+            0,
+            1
+          ],
+          "Color": [
+            "#0000ff",
+            "#0000ff"
+          ],
+          "x-ms-optionsetmetadataid": "884fdf51-e84b-ed11-bba3-0022483c0cc5",
+          "x-ms-isGlobal": false,
+          "x-ms-optionsetdisplayname": "Generated from ENW",
+          "x-ms-optionSetType": "Boolean"
+        },
+        "vsi_generatedfromenwscenarioname": {
+          "type": "string",
+          "title": "vsi_generatedfromenwscenarioname",
+          "x-ms-dataverse-attribute": "vsi_generatedfromenwscenarioname",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "vsi_generatedfromenwscenarioName",
+          "x-ms-read-only": true
+        },
+        "vsi_hardcopyreceiveddate": {
+          "type": "string",
+          "title": "Hard Copy Received Date",
+          "x-ms-dataverse-attribute": "vsi_hardcopyreceiveddate",
+          "x-ms-dataverse-type": "DateTimeType",
+          "x-ms-schema-name": "vsi_HardCopyReceivedDate"
+        },
+        "vsi_haspartners": {
+          "type": "string",
+          "title": "Has Partners",
+          "x-ms-dataverse-attribute": "vsi_haspartners",
+          "x-ms-dataverse-type": "BooleanType",
+          "x-ms-schema-name": "vsi_HasPartners",
+          "required": true,
+          "enum": [
+            "No",
+            "Yes"
+          ],
+          "x-ms-enum-values": [
+            0,
+            1
+          ],
+          "Color": [
+            "#0000ff",
+            "#0000ff"
+          ],
+          "x-ms-optionsetmetadataid": "8f4fdf51-e84b-ed11-bba3-0022483c0cc5",
+          "x-ms-isGlobal": false,
+          "x-ms-optionsetdisplayname": "Has Partners",
+          "x-ms-optionSetType": "Boolean"
+        },
+        "vsi_haspartnersname": {
+          "type": "string",
+          "title": "vsi_haspartnersname",
+          "x-ms-dataverse-attribute": "vsi_haspartnersname",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "vsi_haspartnersName",
+          "x-ms-read-only": true
+        },
+        "vsi_incombinedfarm": {
+          "type": "string",
+          "title": "In Combined Farm",
+          "x-ms-dataverse-attribute": "vsi_incombinedfarm",
+          "x-ms-dataverse-type": "BooleanType",
+          "x-ms-schema-name": "vsi_InCombinedFarm",
+          "required": true,
+          "enum": [
+            "No",
+            "Yes"
+          ],
+          "x-ms-enum-values": [
+            0,
+            1
+          ],
+          "Color": [
+            "#0000ff",
+            "#0000ff"
+          ],
+          "x-ms-optionsetmetadataid": "924fdf51-e84b-ed11-bba3-0022483c0cc5",
+          "x-ms-isGlobal": false,
+          "x-ms-optionsetdisplayname": "In Combined Farm",
+          "x-ms-optionSetType": "Boolean"
+        },
+        "vsi_incombinedfarmname": {
+          "type": "string",
+          "title": "vsi_incombinedfarmname",
+          "x-ms-dataverse-attribute": "vsi_incombinedfarmname",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "vsi_incombinedfarmName",
+          "x-ms-read-only": true
+        },
+        "vsi_lateenrolmentfeesfinaldeadlinedate": {
+          "type": "string",
+          "title": "Late Enrolment Fees Final Deadline Date",
+          "x-ms-dataverse-attribute": "vsi_lateenrolmentfeesfinaldeadlinedate",
+          "x-ms-dataverse-type": "DateTimeType",
+          "x-ms-schema-name": "vsi_LateEnrolmentFeesFinalDeadlineDate"
+        },
+        "vsi_lateenrolmentnoticesentdate": {
+          "type": "string",
+          "title": "Late Enrolment Notice Sent Date",
+          "x-ms-dataverse-attribute": "vsi_lateenrolmentnoticesentdate",
+          "x-ms-dataverse-type": "DateTimeType",
+          "x-ms-schema-name": "vsi_LateEnrolmentNoticeSentDate"
+        },
+        "vsi_lateinformationfeeassessed": {
+          "type": "string",
+          "title": "Late Filing Penalty Assessed?",
+          "x-ms-dataverse-attribute": "vsi_lateinformationfeeassessed",
+          "x-ms-dataverse-type": "BooleanType",
+          "x-ms-schema-name": "vsi_LateInformationFeeAssessed",
+          "enum": [
+            "No",
+            "Yes"
+          ],
+          "x-ms-enum-values": [
+            0,
+            1
+          ],
+          "Color": [
+            null,
+            null
+          ],
+          "x-ms-optionsetmetadataid": "964fdf51-e84b-ed11-bba3-0022483c0cc5",
+          "x-ms-isGlobal": false,
+          "x-ms-optionsetdisplayname": "Late Information Fee Assessed?",
+          "x-ms-optionSetType": "Boolean"
+        },
+        "vsi_lateinformationfeeassessedname": {
+          "type": "string",
+          "title": "vsi_lateinformationfeeassessedname",
+          "x-ms-dataverse-attribute": "vsi_lateinformationfeeassessedname",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "vsi_lateinformationfeeassessedName",
+          "x-ms-read-only": true
+        },
+        "vsi_latepaymentfee": {
+          "type": "string",
+          "title": "Late Payment Fee",
+          "x-ms-dataverse-attribute": "vsi_latepaymentfee",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_LatePaymentFee"
+        },
+        "vsi_latepaymentfee_base": {
+          "type": "string",
+          "title": "Late Payment Fee (Base)",
+          "x-ms-dataverse-attribute": "vsi_latepaymentfee_base",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_latepaymentfee_Base",
+          "x-ms-read-only": true
+        },
+        "vsi_latepaymentfeeassessed": {
+          "type": "string",
+          "title": "Late Payment Fee Assessed?",
+          "x-ms-dataverse-attribute": "vsi_latepaymentfeeassessed",
+          "x-ms-dataverse-type": "BooleanType",
+          "x-ms-schema-name": "vsi_LatePaymentFeeAssessed",
+          "enum": [
+            "No",
+            "Yes"
+          ],
+          "x-ms-enum-values": [
+            0,
+            1
+          ],
+          "Color": [
+            null,
+            null
+          ],
+          "x-ms-optionsetmetadataid": "9f4fdf51-e84b-ed11-bba3-0022483c0cc5",
+          "x-ms-isGlobal": false,
+          "x-ms-optionsetdisplayname": "Late Payment Fee Assessed?",
+          "x-ms-optionSetType": "Boolean"
+        },
+        "vsi_latepaymentfeeassessedname": {
+          "type": "string",
+          "title": "vsi_latepaymentfeeassessedname",
+          "x-ms-dataverse-attribute": "vsi_latepaymentfeeassessedname",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "vsi_latepaymentfeeassessedName",
+          "x-ms-read-only": true
+        },
+        "vsi_manualreview": {
+          "type": "string",
+          "title": "Manual Review",
+          "x-ms-dataverse-attribute": "vsi_manualreview",
+          "x-ms-dataverse-type": "BooleanType",
+          "x-ms-schema-name": "vsi_ManualReview",
+          "enum": [
+            "No",
+            "Yes"
+          ],
+          "x-ms-enum-values": [
+            0,
+            1
+          ],
+          "Color": [
+            null,
+            null
+          ],
+          "x-ms-optionsetmetadataid": "a34fdf51-e84b-ed11-bba3-0022483c0cc5",
+          "x-ms-isGlobal": false,
+          "x-ms-optionsetdisplayname": "Manual Review",
+          "x-ms-optionSetType": "Boolean"
+        },
+        "vsi_manualreviewname": {
+          "type": "string",
+          "title": "vsi_manualreviewname",
+          "x-ms-dataverse-attribute": "vsi_manualreviewname",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "vsi_manualreviewName",
+          "x-ms-read-only": true
+        },
+        "vsi_name": {
+          "type": "string",
+          "title": "Enrolment Name",
+          "x-ms-dataverse-attribute": "vsi_name",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vsi_name",
+          "x-ms-dataverse-primary-name": true,
+          "required": true,
+          "maxLength": 200
+        },
+        "vsi_participantid": {
+          "type": "string",
+          "title": "Participant",
+          "x-ms-dataverse-attribute": "vsi_participantid",
+          "x-ms-dataverse-type": "LookupType",
+          "x-ms-schema-name": "vsi_ParticipantId",
+          "required": true
+        },
+        "vsi_participantidname": {
+          "type": "string",
+          "title": "vsi_participantidname",
+          "x-ms-dataverse-attribute": "vsi_participantidname",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vsi_ParticipantIdName",
+          "x-ms-read-only": true,
+          "maxLength": 160
+        },
+        "vsi_participantidyominame": {
+          "type": "string",
+          "title": "vsi_participantidyominame",
+          "x-ms-dataverse-attribute": "vsi_participantidyominame",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vsi_ParticipantIdYomiName",
+          "x-ms-read-only": true,
+          "maxLength": 160
+        },
+        "vsi_participantprogramyearid": {
+          "type": "string",
+          "title": "Participant Program Year",
+          "x-ms-dataverse-attribute": "vsi_participantprogramyearid",
+          "x-ms-dataverse-type": "UniqueidentifierType",
+          "x-ms-schema-name": "vsi_participantprogramyearId",
+          "x-ms-dataverse-primary-id": true,
+          "required": true,
+          "x-ms-keyType": "primary"
+        },
+        "vsi_partnershipnames": {
+          "type": "string",
+          "title": "Partnership Names",
+          "x-ms-dataverse-attribute": "vsi_partnershipnames",
+          "x-ms-dataverse-type": "MemoType",
+          "x-ms-schema-name": "vsi_PartnershipNames",
+          "maxLength": 1000
+        },
+        "vsi_partnershippercents": {
+          "type": "string",
+          "title": "Partnership Percents",
+          "x-ms-dataverse-attribute": "vsi_partnershippercents",
+          "x-ms-dataverse-type": "MemoType",
+          "x-ms-schema-name": "vsi_PartnershipPercents",
+          "maxLength": 1000
+        },
+        "vsi_partnershippins": {
+          "type": "string",
+          "title": "Partnership PINS",
+          "x-ms-dataverse-attribute": "vsi_partnershippins",
+          "x-ms-dataverse-type": "MemoType",
+          "x-ms-schema-name": "vsi_PartnershipPINS",
+          "maxLength": 1000
+        },
+        "vsi_previousyearcalculatedenfee": {
+          "type": "string",
+          "title": "Previous Year Calculated EN Fee",
+          "x-ms-dataverse-attribute": "vsi_previousyearcalculatedenfee",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vsi_PreviousYearCalculatedENFee",
+          "maxLength": 100
+        },
+        "vsi_primaryenrolmenthistory": {
+          "type": "string",
+          "title": "Primary Enrolment History",
+          "x-ms-dataverse-attribute": "vsi_primaryenrolmenthistory",
+          "x-ms-dataverse-type": "LookupType",
+          "x-ms-schema-name": "vsi_PrimaryEnrolmentHistory"
+        },
+        "vsi_primaryenrolmenthistoryname": {
+          "type": "string",
+          "title": "vsi_primaryenrolmenthistoryname",
+          "x-ms-dataverse-attribute": "vsi_primaryenrolmenthistoryname",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vsi_PrimaryEnrolmentHistoryName",
+          "x-ms-read-only": true,
+          "maxLength": 100
+        },
+        "vsi_programyearid": {
+          "type": "string",
+          "title": "Program Year",
+          "x-ms-dataverse-attribute": "vsi_programyearid",
+          "x-ms-dataverse-type": "LookupType",
+          "x-ms-schema-name": "vsi_ProgramYearId",
+          "required": true
+        },
+        "vsi_programyearidname": {
+          "type": "string",
+          "title": "vsi_programyearidname",
+          "x-ms-dataverse-attribute": "vsi_programyearidname",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vsi_ProgramYearIdName",
+          "x-ms-read-only": true,
+          "maxLength": 100
+        },
+        "vsi_programyearmargin1": {
+          "type": "string",
+          "title": "Program Year Margin 1",
+          "x-ms-dataverse-attribute": "vsi_programyearmargin1",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_programyearmargin1"
+        },
+        "vsi_programyearmargin1_base": {
+          "type": "string",
+          "title": "Program Year Margin 1 (Base)",
+          "x-ms-dataverse-attribute": "vsi_programyearmargin1_base",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_programyearmargin1_Base",
+          "x-ms-read-only": true
+        },
+        "vsi_programyearmargin1used": {
+          "type": "string",
+          "title": "Program Year Margin 1 Used?",
+          "x-ms-dataverse-attribute": "vsi_programyearmargin1used",
+          "x-ms-dataverse-type": "BooleanType",
+          "x-ms-schema-name": "vsi_programyearmargin1used",
+          "enum": [
+            "No",
+            "Yes"
+          ],
+          "x-ms-enum-values": [
+            0,
+            1
+          ],
+          "Color": [
+            "#0000ff",
+            "#0000ff"
+          ],
+          "x-ms-optionsetmetadataid": "ac4fdf51-e84b-ed11-bba3-0022483c0cc5",
+          "x-ms-isGlobal": false,
+          "x-ms-optionsetdisplayname": "Program Year Margin 1 Used?",
+          "x-ms-optionSetType": "Boolean"
+        },
+        "vsi_programyearmargin1usedname": {
+          "type": "string",
+          "title": "vsi_programyearmargin1usedname",
+          "x-ms-dataverse-attribute": "vsi_programyearmargin1usedname",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "vsi_programyearmargin1usedName",
+          "x-ms-read-only": true
+        },
+        "vsi_programyearmargin2": {
+          "type": "string",
+          "title": "Program Year Margin 2",
+          "x-ms-dataverse-attribute": "vsi_programyearmargin2",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_programyearmargin2"
+        },
+        "vsi_programyearmargin2_base": {
+          "type": "string",
+          "title": "Program Year Margin 2 (Base)",
+          "x-ms-dataverse-attribute": "vsi_programyearmargin2_base",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_programyearmargin2_Base",
+          "x-ms-read-only": true
+        },
+        "vsi_programyearmargin2used": {
+          "type": "string",
+          "title": "Program Year Margin 2 Used?",
+          "x-ms-dataverse-attribute": "vsi_programyearmargin2used",
+          "x-ms-dataverse-type": "BooleanType",
+          "x-ms-schema-name": "vsi_programyearmargin2used",
+          "enum": [
+            "No",
+            "Yes"
+          ],
+          "x-ms-enum-values": [
+            0,
+            1
+          ],
+          "Color": [
+            null,
+            null
+          ],
+          "x-ms-optionsetmetadataid": "b34fdf51-e84b-ed11-bba3-0022483c0cc5",
+          "x-ms-isGlobal": false,
+          "x-ms-optionsetdisplayname": "Program Year Margin 2 Used?",
+          "x-ms-optionSetType": "Boolean"
+        },
+        "vsi_programyearmargin2usedname": {
+          "type": "string",
+          "title": "vsi_programyearmargin2usedname",
+          "x-ms-dataverse-attribute": "vsi_programyearmargin2usedname",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "vsi_programyearmargin2usedName",
+          "x-ms-read-only": true
+        },
+        "vsi_programyearmargin3": {
+          "type": "string",
+          "title": "Program Year Margin 3",
+          "x-ms-dataverse-attribute": "vsi_programyearmargin3",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_programyearmargin3"
+        },
+        "vsi_programyearmargin3_base": {
+          "type": "string",
+          "title": "Program Year Margin 3 (Base)",
+          "x-ms-dataverse-attribute": "vsi_programyearmargin3_base",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_programyearmargin3_Base",
+          "x-ms-read-only": true
+        },
+        "vsi_programyearmargin3used": {
+          "type": "string",
+          "title": "Program Year Margin 3 Used?",
+          "x-ms-dataverse-attribute": "vsi_programyearmargin3used",
+          "x-ms-dataverse-type": "BooleanType",
+          "x-ms-schema-name": "vsi_programyearmargin3used",
+          "enum": [
+            "No",
+            "Yes"
+          ],
+          "x-ms-enum-values": [
+            0,
+            1
+          ],
+          "Color": [
+            null,
+            null
+          ],
+          "x-ms-optionsetmetadataid": "ba4fdf51-e84b-ed11-bba3-0022483c0cc5",
+          "x-ms-isGlobal": false,
+          "x-ms-optionsetdisplayname": "Program Year Margin 3 Used?",
+          "x-ms-optionSetType": "Boolean"
+        },
+        "vsi_programyearmargin3usedname": {
+          "type": "string",
+          "title": "vsi_programyearmargin3usedname",
+          "x-ms-dataverse-attribute": "vsi_programyearmargin3usedname",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "vsi_programyearmargin3usedName",
+          "x-ms-read-only": true
+        },
+        "vsi_programyearmargin4": {
+          "type": "string",
+          "title": "Program Year Margin 4",
+          "x-ms-dataverse-attribute": "vsi_programyearmargin4",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_programyearmargin4"
+        },
+        "vsi_programyearmargin4_base": {
+          "type": "string",
+          "title": "Program Year Margin 4 (Base)",
+          "x-ms-dataverse-attribute": "vsi_programyearmargin4_base",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_programyearmargin4_Base",
+          "x-ms-read-only": true
+        },
+        "vsi_programyearmargin4used": {
+          "type": "string",
+          "title": "Program Year Margin 4 Used?",
+          "x-ms-dataverse-attribute": "vsi_programyearmargin4used",
+          "x-ms-dataverse-type": "BooleanType",
+          "x-ms-schema-name": "vsi_programyearmargin4used",
+          "enum": [
+            "No",
+            "Yes"
+          ],
+          "x-ms-enum-values": [
+            0,
+            1
+          ],
+          "Color": [
+            null,
+            null
+          ],
+          "x-ms-optionsetmetadataid": "c14fdf51-e84b-ed11-bba3-0022483c0cc5",
+          "x-ms-isGlobal": false,
+          "x-ms-optionsetdisplayname": "Program Year Margin 4 Used?",
+          "x-ms-optionSetType": "Boolean"
+        },
+        "vsi_programyearmargin4usedname": {
+          "type": "string",
+          "title": "vsi_programyearmargin4usedname",
+          "x-ms-dataverse-attribute": "vsi_programyearmargin4usedname",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "vsi_programyearmargin4usedName",
+          "x-ms-read-only": true
+        },
+        "vsi_programyearmargin5": {
+          "type": "string",
+          "title": "Program Year Margin 5",
+          "x-ms-dataverse-attribute": "vsi_programyearmargin5",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_programyearmargin5"
+        },
+        "vsi_programyearmargin5_base": {
+          "type": "string",
+          "title": "Program Year Margin 5 (Base)",
+          "x-ms-dataverse-attribute": "vsi_programyearmargin5_base",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_programyearmargin5_Base",
+          "x-ms-read-only": true
+        },
+        "vsi_programyearmargin5used": {
+          "type": "string",
+          "title": "Program Year Margin 5 Used?",
+          "x-ms-dataverse-attribute": "vsi_programyearmargin5used",
+          "x-ms-dataverse-type": "BooleanType",
+          "x-ms-schema-name": "vsi_programyearmargin5used",
+          "enum": [
+            "No",
+            "Yes"
+          ],
+          "x-ms-enum-values": [
+            0,
+            1
+          ],
+          "Color": [
+            null,
+            null
+          ],
+          "x-ms-optionsetmetadataid": "c84fdf51-e84b-ed11-bba3-0022483c0cc5",
+          "x-ms-isGlobal": false,
+          "x-ms-optionsetdisplayname": "Program Year Margin 5 Used?",
+          "x-ms-optionSetType": "Boolean"
+        },
+        "vsi_programyearmargin5usedname": {
+          "type": "string",
+          "title": "vsi_programyearmargin5usedname",
+          "x-ms-dataverse-attribute": "vsi_programyearmargin5usedname",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "vsi_programyearmargin5usedName",
+          "x-ms-read-only": true
+        },
+        "vsi_programyearmargin6": {
+          "type": "string",
+          "title": "Program Year Margin 6",
+          "x-ms-dataverse-attribute": "vsi_programyearmargin6",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_programyearmargin6"
+        },
+        "vsi_programyearmargin6_base": {
+          "type": "string",
+          "title": "Program Year Margin 6 (Base)",
+          "x-ms-dataverse-attribute": "vsi_programyearmargin6_base",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_programyearmargin6_Base",
+          "x-ms-read-only": true
+        },
+        "vsi_programyearmargin6used": {
+          "type": "string",
+          "title": "Program Year Margin 6 Used?",
+          "x-ms-dataverse-attribute": "vsi_programyearmargin6used",
+          "x-ms-dataverse-type": "BooleanType",
+          "x-ms-schema-name": "vsi_programyearmargin6used",
+          "enum": [
+            "No",
+            "Yes"
+          ],
+          "x-ms-enum-values": [
+            0,
+            1
+          ],
+          "Color": [
+            null,
+            null
+          ],
+          "x-ms-optionsetmetadataid": "cf4fdf51-e84b-ed11-bba3-0022483c0cc5",
+          "x-ms-isGlobal": false,
+          "x-ms-optionsetdisplayname": "Program Year Margin 6 Used?",
+          "x-ms-optionSetType": "Boolean"
+        },
+        "vsi_programyearmargin6usedname": {
+          "type": "string",
+          "title": "vsi_programyearmargin6usedname",
+          "x-ms-dataverse-attribute": "vsi_programyearmargin6usedname",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "vsi_programyearmargin6usedName",
+          "x-ms-read-only": true
+        },
+        "vsi_programyearoptoutdate": {
+          "type": "string",
+          "title": "Program Year Opt-Out Date",
+          "x-ms-dataverse-attribute": "vsi_programyearoptoutdate",
+          "x-ms-dataverse-type": "DateTimeType",
+          "x-ms-schema-name": "vsi_ProgramYearOptOutDate"
+        },
+        "vsi_provincialsupplementalreceiveddate": {
+          "type": "string",
+          "title": "Provincial Supplemental Received Date",
+          "x-ms-dataverse-attribute": "vsi_provincialsupplementalreceiveddate",
+          "x-ms-dataverse-type": "DateTimeType",
+          "x-ms-schema-name": "vsi_ProvincialSupplementalReceivedDate"
+        },
+        "vsi_representativeid": {
+          "type": "string",
+          "title": "Contact",
+          "x-ms-dataverse-attribute": "vsi_representativeid",
+          "x-ms-dataverse-type": "LookupType",
+          "x-ms-schema-name": "vsi_RepresentativeId"
+        },
+        "vsi_representativeidname": {
+          "type": "string",
+          "title": "vsi_representativeidname",
+          "x-ms-dataverse-attribute": "vsi_representativeidname",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vsi_RepresentativeIdName",
+          "x-ms-read-only": true,
+          "maxLength": 160
+        },
+        "vsi_representativeidyominame": {
+          "type": "string",
+          "title": "vsi_representativeidyominame",
+          "x-ms-dataverse-attribute": "vsi_representativeidyominame",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vsi_RepresentativeIdYomiName",
+          "x-ms-read-only": true,
+          "maxLength": 450
+        },
+        "vsi_secondmonthlateinformationfee": {
+          "type": "string",
+          "title": "Second Month Late Filing Penalty",
+          "x-ms-dataverse-attribute": "vsi_secondmonthlateinformationfee",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_SecondMonthLateInformationFee"
+        },
+        "vsi_secondmonthlateinformationfee_base": {
+          "type": "string",
+          "title": "Second Month Late Filing Penalty (Base)",
+          "x-ms-dataverse-attribute": "vsi_secondmonthlateinformationfee_base",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_secondmonthlateinformationfee_Base",
+          "x-ms-read-only": true
+        },
+        "vsi_sendto": {
+          "type": "string",
+          "title": "Send To",
+          "x-ms-dataverse-attribute": "vsi_sendto",
+          "x-ms-dataverse-type": "PicklistType",
+          "x-ms-schema-name": "vsi_SendTo",
+          "enum": [
+            "Participant",
+            "Representative"
+          ],
+          "x-ms-enum-values": [
+            865520000,
+            865520001
+          ],
+          "Color": [
+            null,
+            null
+          ],
+          "x-ms-optionsetmetadataid": "d84fdf51-e84b-ed11-bba3-0022483c0cc5",
+          "x-ms-isGlobal": false,
+          "x-ms-optionsetdisplayname": "Send To",
+          "x-ms-optionSetType": "Picklist"
+        },
+        "vsi_sendtoname": {
+          "type": "string",
+          "title": "vsi_sendtoname",
+          "x-ms-dataverse-attribute": "vsi_sendtoname",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "vsi_sendtoName",
+          "x-ms-read-only": true
+        },
+        "vsi_sharepointdocumentfolder": {
+          "type": "string",
+          "title": "SharePoint Document Folder",
+          "x-ms-dataverse-attribute": "vsi_sharepointdocumentfolder",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vsi_SharePointDocumentFolder",
+          "maxLength": 100
+        },
+        "vsi_taskstatus": {
+          "type": "string",
+          "title": "Task Status",
+          "x-ms-dataverse-attribute": "vsi_taskstatus",
+          "x-ms-dataverse-type": "PicklistType",
+          "x-ms-schema-name": "vsi_TaskStatus",
+          "enum": [
+            "Manual",
+            "Supervisor",
+            "Ready"
+          ],
+          "x-ms-enum-values": [
+            865520000,
+            865520001,
+            865520002
+          ],
+          "Color": [
+            null,
+            null,
+            null
+          ],
+          "x-ms-optionsetmetadataid": "4a7023b4-8524-f111-88b4-002248b0209d",
+          "x-ms-isGlobal": true,
+          "x-ms-optionsetdisplayname": "Enrolment Task Status",
+          "x-ms-optionSetType": "Picklist"
+        },
+        "vsi_taskstatusname": {
+          "type": "string",
+          "title": "vsi_taskstatusname",
+          "x-ms-dataverse-attribute": "vsi_taskstatusname",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "vsi_taskstatusName",
+          "x-ms-read-only": true
+        },
+        "vsi_thirdmonthlateinformationfee": {
+          "type": "string",
+          "title": "Third Month Late Filing Penalty",
+          "x-ms-dataverse-attribute": "vsi_thirdmonthlateinformationfee",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_ThirdMonthLateInformationFee"
+        },
+        "vsi_thirdmonthlateinformationfee_base": {
+          "type": "string",
+          "title": "Third Month Late Filing Penalty (Base)",
+          "x-ms-dataverse-attribute": "vsi_thirdmonthlateinformationfee_base",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_thirdmonthlateinformationfee_Base",
+          "x-ms-read-only": true
+        },
+        "vsi_totalfeesowed": {
+          "type": "string",
+          "title": "Total Fees Owed",
+          "x-ms-dataverse-attribute": "vsi_totalfeesowed",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_TotalFeesOwed"
+        },
+        "vsi_totalfeesowed_base": {
+          "type": "string",
+          "title": "Total Fees Owed (Base)",
+          "x-ms-dataverse-attribute": "vsi_totalfeesowed_base",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_totalfeesowed_Base",
+          "x-ms-read-only": true
+        },
+        "vsi_totalfeesowedcalculated": {
+          "type": "string",
+          "title": "Total Fees Owed",
+          "x-ms-dataverse-attribute": "vsi_totalfeesowedcalculated",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_TotalFeesOwedCalculated",
+          "x-ms-read-only": true
+        },
+        "vsi_totalfeesowedcalculated_base": {
+          "type": "string",
+          "title": "Total Fees Owed Calculated (Base)",
+          "x-ms-dataverse-attribute": "vsi_totalfeesowedcalculated_base",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_totalfeesowedcalculated_Base",
+          "x-ms-read-only": true
+        },
+        "vsi_totalfeespaid": {
+          "type": "string",
+          "title": "Total Fees Paid",
+          "x-ms-dataverse-attribute": "vsi_totalfeespaid",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_TotalFeesPaid"
+        },
+        "vsi_totalfeespaid_base": {
+          "type": "string",
+          "title": "Total Fees Paid (Base)",
+          "x-ms-dataverse-attribute": "vsi_totalfeespaid_base",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_totalfeespaid_Base",
+          "x-ms-read-only": true
+        },
+        "vsi_updatedfeesreceivedafternoticesent": {
+          "type": "string",
+          "title": "Updated Fees Received After Notice Sent",
+          "x-ms-dataverse-attribute": "vsi_updatedfeesreceivedafternoticesent",
+          "x-ms-dataverse-type": "BooleanType",
+          "x-ms-schema-name": "vsi_UpdatedFeesReceivedAfterNoticeSent",
+          "enum": [
+            "No",
+            "Yes"
+          ],
+          "x-ms-enum-values": [
+            0,
+            1
+          ],
+          "Color": [
+            null,
+            null
+          ],
+          "x-ms-optionsetmetadataid": "5efda7cc-fb65-ed11-9569-0022483c0cc5",
+          "x-ms-isGlobal": false,
+          "x-ms-optionsetdisplayname": "Updated Fees Received After Notice Sent",
+          "x-ms-optionSetType": "Boolean"
+        },
+        "vsi_updatedfeesreceivedafternoticesentname": {
+          "type": "string",
+          "title": "vsi_updatedfeesreceivedafternoticesentname",
+          "x-ms-dataverse-attribute": "vsi_updatedfeesreceivedafternoticesentname",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "vsi_updatedfeesreceivedafternoticesentName",
+          "x-ms-read-only": true
+        },
+        "vsi_waitingforinformation": {
+          "type": "string",
+          "title": "Waiting for Information",
+          "x-ms-dataverse-attribute": "vsi_waitingforinformation",
+          "x-ms-dataverse-type": "BooleanType",
+          "x-ms-schema-name": "vsi_WaitingforInformation",
+          "enum": [
+            "No",
+            "Yes"
+          ],
+          "x-ms-enum-values": [
+            0,
+            1
+          ],
+          "Color": [
+            null,
+            null
+          ],
+          "x-ms-optionsetmetadataid": "60fda7cc-fb65-ed11-9569-0022483c0cc5",
+          "x-ms-isGlobal": false,
+          "x-ms-optionsetdisplayname": "Waiting for Information",
+          "x-ms-optionSetType": "Boolean"
+        },
+        "vsi_waitingforinformationname": {
+          "type": "string",
+          "title": "vsi_waitingforinformationname",
+          "x-ms-dataverse-attribute": "vsi_waitingforinformationname",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "vsi_waitingforinformationName",
+          "x-ms-read-only": true
+        },
+        "vsi_waitingforpayment": {
+          "type": "string",
+          "title": "Waiting For Payment",
+          "x-ms-dataverse-attribute": "vsi_waitingforpayment",
+          "x-ms-dataverse-type": "BooleanType",
+          "x-ms-schema-name": "vsi_WaitingForPayment",
+          "enum": [
+            "No",
+            "Yes"
+          ],
+          "x-ms-enum-values": [
+            0,
+            1
+          ],
+          "Color": [
+            null,
+            null
+          ],
+          "x-ms-optionsetmetadataid": "63fda7cc-fb65-ed11-9569-0022483c0cc5",
+          "x-ms-isGlobal": false,
+          "x-ms-optionsetdisplayname": "Waiting For Payment",
+          "x-ms-optionSetType": "Boolean"
+        },
+        "vsi_waitingforpaymentname": {
+          "type": "string",
+          "title": "vsi_waitingforpaymentname",
+          "x-ms-dataverse-attribute": "vsi_waitingforpaymentname",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "vsi_waitingforpaymentName",
+          "x-ms-read-only": true
+        }
+      },
+      "required": [
+        "createdbyyominame",
+        "createdonbehalfbyyominame",
+        "modifiedbyyominame",
+        "modifiedonbehalfbyyominame",
+        "ownerid",
+        "owneridname",
+        "owneridtype",
+        "owneridyominame",
+        "owningbusinessunitname",
+        "statecode",
+        "vsi_enrolmentstatus",
+        "vsi_generatedfromenwscenario",
+        "vsi_haspartners",
+        "vsi_incombinedfarm",
+        "vsi_name",
+        "vsi_participantid",
+        "vsi_participantprogramyearid",
+        "vsi_programyearid"
+      ]
+    }
+  }
+}

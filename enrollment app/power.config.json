@@ -1,0 +1,40 @@
+{
+  "appId": "f19458f1-ddb2-438a-9089-82ba678268a1",
+  "appDisplayName": "Enrollment App",
+  "description": null,
+  "environmentId": "dcd88fe8-d919-ee82-8313-8376a1e413f4",
+  "buildPath": "./dist",
+  "buildEntryPoint": "index.html",
+  "logoPath": "Default",
+  "localAppUrl": "http://localhost:3000/",
+  "region": "prod",
+  "connectionReferences": {
+    "7c4f6926-b8a7-479c-bb62-014dcfd9bd48": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_farms-20api-5fe39d1efd21a19d13-5f571039b465579741",
+      "displayName": "FARMS API",
+      "dataSources": [
+        "farms_20api_5fe39d1efd21a19d13_5f571039b465579741"
+      ],
+      "authenticationType": "oAuthClientCredentials",
+      "sharedConnectionId": "/providers/Microsoft.PowerApps/apis/shared_farms-20api-5fe39d1efd21a19d13-5f571039b465579741/connections/7f0dbaddf90e498e82c553b27272a705",
+      "dataSets": {}
+    }
+  },
+  "databaseReferences": {
+    "default.cds": {
+      "state": "Configured",
+      "instanceUrl": "https://aff-brmb-crm-dev.crm3.dynamics.com/",
+      "webApiVersion": "v9.0",
+      "dataSources": {
+        "enrolments": {
+          "entitySetName": "vsi_participantprogramyears",
+          "logicalName": "vsi_participantprogramyear",
+          "isHidden": false
+        }
+      },
+      "version": "v9.0",
+      "environmentVariableName": ""
+    }
+  },
+  "version": "1.0"
+}
