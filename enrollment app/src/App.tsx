@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 import type { Vsi_participantprogramyears } from "./generated/models/Vsi_participantprogramyearsModel";
 import { FARMSAPIService } from "./generated/services/FARMSAPIService";
@@ -7,10 +7,32 @@ import { Vsi_participantprogramyearsService } from "./generated/services/Vsi_par
 
 function App() {
   type FarmsRow = Record<string, unknown>;
+  type DataverseRow = Vsi_participantprogramyears & Record<string, unknown>;
+  type SortDirection = "asc" | "desc";
+  type EnrollmentColumnId =
+    | "pin"
+    | "producerName"
+    | "year"
+    | "taskStatus"
+    | "enrolStatus"
+    | "calculatedFee"
+    | "lastAction"
+    | "sharepoint";
+
+  type EnrollmentColumn = {
+    id: EnrollmentColumnId;
+    header: string;
+    getDisplay: (row: Vsi_participantprogramyears) => string;
+    getSortValue: (row: Vsi_participantprogramyears) => string | number;
+  };
 
   const [rows, setRows] = useState<Vsi_participantprogramyears[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [sortColumn, setSortColumn] = useState<EnrollmentColumnId>("lastAction");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [selectedRowKeys, setSelectedRowKeys] = useState<Set<string>>(new Set());
+  const selectAllCheckboxRef = useRef<HTMLInputElement | null>(null);
 
   const [farmsData, setFarmsData] = useState<FarmsRow[]>([]);
   const [farmsRaw, setFarmsRaw] = useState<string>("");
@@ -18,30 +40,48 @@ function App() {
   const [farmsError, setFarmsError] = useState("");
 
   useEffect(() => {
+    let cancelled = false;
+
     const loadEnrollments = async () => {
       try {
         setLoading(true);
         setError("");
-
-        const result = await Vsi_participantprogramyearsService.getAll({
-          top: 20,
+        const baseQuery = {
+          orderBy: ["modifiedon desc"],
+          top : 200,
           select: [
             "vsi_name",
-            "vsi_participantid",
-            "vsi_programyearid",
+            "_vsi_participantid_value",
+            "_vsi_programyearid_value",
             "vsi_enrolmentstatus",
             "vsi_taskstatus",
             "vsi_calculatedenfee",
             "vsi_sharepointdocumentfolder",
             "modifiedon",
           ],
-        });
+        };
 
-        if (!result?.success) {
-          throw result.error ?? new Error("Dataverse query not successful");
+        const allRows: Vsi_participantprogramyears[] = [];
+        let skipToken: string | undefined = undefined;
+
+        do {
+          const result = await Vsi_participantprogramyearsService.getAll({
+            ...baseQuery,
+            skipToken,
+          });
+
+          if (!result?.success) {
+            throw result.error ?? new Error("Dataverse query not successful");
+          }
+
+          allRows.push(...(result.data ?? []));
+          skipToken = result.skipToken;
+        } while (skipToken);
+
+        if (!cancelled) {
+          setRows(allRows);
+          setSelectedRowKeys(new Set());
         }
-
-        setRows(result?.data ?? []);
       } catch (err: unknown) {
         console.error(err);
         let errMsg = "";
@@ -52,13 +92,21 @@ function App() {
         } else if (err !== null && err !== undefined) {
           errMsg = JSON.stringify(err);
         }
-        setError(errMsg || "Failed to load enrollment records.");
+        if (!cancelled) {
+          setError(errMsg || "Failed to load enrollment records.");
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     loadEnrollments();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const normalizeFarmsRows = (payload: unknown): FarmsRow[] => {
@@ -86,6 +134,61 @@ function App() {
     }
 
     return JSON.stringify(payload, null, 2);
+  };
+
+  const getFormattedValue = (row: DataverseRow, field: string) => {
+    const value = row[`${field}@OData.Community.Display.V1.FormattedValue`];
+    return value === undefined || value === null ? "" : String(value);
+  };
+
+  const parseNumber = (value: unknown) => {
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    if (typeof value !== "string") return Number.NaN;
+
+    const normalized = value.replace(/[^0-9.-]/g, "");
+    if (!normalized) return Number.NaN;
+
+    return Number(normalized);
+  };
+
+  const getRowKey = (row: Vsi_participantprogramyears) => {
+    const fallback = `${row.vsi_name ?? "row"}-${row.modifiedon ?? ""}-${row.vsi_calculatedenfee ?? ""}`;
+    return String(row.vsi_participantprogramyearid ?? row._vsi_participantid_value ?? row.ownerid ?? fallback);
+  };
+
+  const formatCurrency = (value: unknown) => {
+    const parsed = parseNumber(value);
+    if (Number.isNaN(parsed)) return "";
+    return `$${parsed.toFixed(2)}`;
+  };
+
+  const formatDateTime = (value: unknown) => {
+    if (typeof value !== "string" || !value) return "";
+    const parsed = Date.parse(value);
+    if (Number.isNaN(parsed)) return value;
+
+    return new Date(parsed).toLocaleString();
+  };
+
+  const compareValues = (a: string | number, b: string | number) => {
+    if (typeof a === "number" && typeof b === "number") {
+      return a - b;
+    }
+
+    return String(a).localeCompare(String(b), undefined, {
+      numeric: true,
+      sensitivity: "base",
+    });
+  };
+
+  const toggleSort = (columnId: EnrollmentColumnId) => {
+    if (sortColumn === columnId) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+      return;
+    }
+
+    setSortColumn(columnId);
+    setSortDirection("asc");
   };
 
   const callFarmsApi = async () => {
@@ -119,102 +222,246 @@ function App() {
     }
   };
 
-  if (loading) {
-    return <div style={{ padding: "24px" }}>Loading enrollment records...</div>;
-  }
-
-  if (error) {
-    return (
-      <div style={{ padding: "24px" }}>
-        <h2>Error</h2>
-        <p>{error}</p>
-      </div>
-    );
-  }
-
-  type ColumnField =
-    | "vsi_name"
-    | "vsi_participantid"
-    | "vsi_programyearid"
-    | "vsi_enrolmentstatus"
-    | "vsi_taskstatus"
-    | "vsi_calculatedenfee"
-    | "vsi_sharepointdocumentfolder"
-    | "modifiedon";
-
-  const columns: Array<{ header: string; field: ColumnField }> = [
-    { header: "PIN", field: "vsi_name" },
-    { header: "Producer Name", field: "vsi_participantid" },
-    { header: "Year", field: "vsi_programyearid" },
-    { header: "Enrol Status", field: "vsi_enrolmentstatus" },
-    { header: "Task Status", field: "vsi_taskstatus" },
-    { header: "Calculated Fee", field: "vsi_calculatedenfee" },
-    { header: "SharePoint Doc", field: "vsi_sharepointdocumentfolder" },
-    { header: "Last Action", field: "modifiedon" },
+  const columns: EnrollmentColumn[] = [
+    {
+      id: "pin",
+      header: "PIN",
+      getDisplay: (row) => String(row.vsi_name ?? ""),
+      getSortValue: (row) => String(row.vsi_name ?? ""),
+    },
+    {
+      id: "producerName",
+      header: "Producer name",
+      getDisplay: (row) =>
+        String(
+          getFormattedValue(row as DataverseRow, "_vsi_participantid_value") ||
+          row.vsi_participantidname ||
+          row._vsi_participantid_value ||
+          ""
+        ),
+      getSortValue: (row) =>
+        getFormattedValue(row as DataverseRow, "_vsi_participantid_value") ||
+        row.vsi_participantidname ||
+        row._vsi_participantid_value ||
+        "",
+    },
+    {
+      id: "year",
+      header: "Year",
+      getDisplay: (row) =>
+        String(
+          getFormattedValue(row as DataverseRow, "_vsi_programyearid_value") ||
+          row.vsi_programyearidname ||
+          row._vsi_programyearid_value ||
+          ""
+        ),
+      getSortValue: (row) =>
+        getFormattedValue(row as DataverseRow, "_vsi_programyearid_value") ||
+        row.vsi_programyearidname ||
+        row._vsi_programyearid_value ||
+        "",
+    },
+    {
+      id: "taskStatus",
+      header: "Task Status",
+      getDisplay: (row) =>
+        String(
+          getFormattedValue(row as DataverseRow, "vsi_taskstatus") ||
+          row.vsi_taskstatusname ||
+          row.vsi_taskstatus ||
+          ""
+        ),
+      getSortValue: (row) =>
+        getFormattedValue(row as DataverseRow, "vsi_taskstatus") ||
+        row.vsi_taskstatusname ||
+        row.vsi_taskstatus ||
+        "",
+    },
+    {
+      id: "enrolStatus",
+      header: "Enrol status",
+      getDisplay: (row) =>
+        String(
+          getFormattedValue(row as DataverseRow, "vsi_enrolmentstatus") ||
+          row.vsi_enrolmentstatusname ||
+          row.vsi_enrolmentstatus ||
+          ""
+        ),
+      getSortValue: (row) =>
+        getFormattedValue(row as DataverseRow, "vsi_enrolmentstatus") ||
+        row.vsi_enrolmentstatusname ||
+        row.vsi_enrolmentstatus ||
+        "",
+    },
+    {
+      id: "calculatedFee",
+      header: "Calculated fee",
+      getDisplay: (row) => formatCurrency(row.vsi_calculatedenfee),
+      getSortValue: (row) => {
+        const parsed = parseNumber(row.vsi_calculatedenfee);
+        return Number.isNaN(parsed) ? Number.NEGATIVE_INFINITY : parsed;
+      },
+    },
+    {
+      id: "lastAction",
+      header: "Last Action",
+      getDisplay: (row) => formatDateTime(row.modifiedon),
+      getSortValue: (row) => {
+        const parsed = Date.parse(String(row.modifiedon ?? ""));
+        return Number.isNaN(parsed) ? 0 : parsed;
+      },
+    },
+    {
+      id: "sharepoint",
+      header: "Sharepoint",
+      getDisplay: (row) => String(row.vsi_sharepointdocumentfolder ?? ""),
+      getSortValue: (row) => String(row.vsi_sharepointdocumentfolder ?? ""),
+    },
   ];
 
-  return (
-    <div style={{ padding: "24px" }}>
-      <h1>Enrolment Dashboard</h1>
+  const sortedRows = useMemo(() => {
+    const activeColumn = columns.find((column) => column.id === sortColumn);
+    if (!activeColumn) return rows;
 
-      {rows.length === 0 ? (
+    const directionMultiplier = sortDirection === "asc" ? 1 : -1;
+
+    return [...rows].sort((left, right) => {
+      const leftValue = activeColumn.getSortValue(left);
+      const rightValue = activeColumn.getSortValue(right);
+      return compareValues(leftValue, rightValue) * directionMultiplier;
+    });
+  }, [rows, sortColumn, sortDirection]);
+
+  const rowKeys = useMemo(() => sortedRows.map((row) => getRowKey(row)), [sortedRows]);
+  const allRowsSelected = rowKeys.length > 0 && rowKeys.every((rowKey) => selectedRowKeys.has(rowKey));
+  const someRowsSelected = rowKeys.some((rowKey) => selectedRowKeys.has(rowKey));
+
+  useEffect(() => {
+    if (!selectAllCheckboxRef.current) return;
+    selectAllCheckboxRef.current.indeterminate = someRowsSelected && !allRowsSelected;
+  }, [allRowsSelected, someRowsSelected]);
+
+  const toggleRowSelection = (rowKey: string) => {
+    setSelectedRowKeys((previous) => {
+      const next = new Set(previous);
+      if (next.has(rowKey)) {
+        next.delete(rowKey);
+      } else {
+        next.add(rowKey);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAllRows = (checked: boolean) => {
+    if (checked) {
+      setSelectedRowKeys(new Set(rowKeys));
+      return;
+    }
+    setSelectedRowKeys(new Set());
+  };
+
+  return (
+    <div className="dashboard-shell">
+      <h1 className="dashboard-title">Enrolment Dashboard</h1>
+      {!loading && !error && <p className="record-count">Total records loaded: {rows.length}</p>}
+      {loading ? (
+        <p>Loading enrollment records...</p>
+      ) : error ? (
+        <p className="error-text">{error}</p>
+      ) : rows.length === 0 ? (
         <p>No records found.</p>
       ) : (
-        <table
-          style={{
-            width: "100%",
-            borderCollapse: "collapse",
-            marginTop: "16px",
-          }}
-        >
-          <thead>
-            <tr>
-              {columns.map((col) => (
-                <th
-                  key={col.field}
-                  style={{
-                    border: "1px solid #ccc",
-                    padding: "8px",
-                    textAlign: "left",
-                    backgroundColor: "#f5f5f5",
-                  }}
-                >
-                  {col.header}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => {
-              const keyValue = row.vsi_participantprogramyearid ?? row.ownerid ?? row.vsi_participantid ?? "row-" + Math.random();
-              return (
-                <tr key={String(keyValue)}>
-                  {columns.map((col) => {
-                    const value = row[col.field];
+        <div className="table-card">
+          <div className="table-wrap">
+            <table className="enrolment-table">
+              <thead>
+                <tr>
+                  <th className="selection-cell">
+                    <input
+                      ref={selectAllCheckboxRef}
+                      type="checkbox"
+                      checked={allRowsSelected}
+                      onChange={(event) => toggleSelectAllRows(event.target.checked)}
+                      className="table-checkbox select-all-checkbox"
+                      aria-label="Select all rows"
+                    />
+                  </th>
+                  {columns.map((column) => {
+                    const isActive = sortColumn === column.id;
                     return (
-                      <td
-                        key={col.field}
-                        style={{
-                          border: "1px solid #ccc",
-                          padding: "8px",
-                          verticalAlign: "top",
-                        }}
-                      >
-                        {value === undefined || value === null ? "" : String(value)}
-                      </td>
+                      <th key={column.id}>
+                        <button
+                          type="button"
+                          className={`sort-btn ${isActive ? "active" : ""}`}
+                          onClick={() => toggleSort(column.id)}
+                        >
+                          <span
+                            className={`sort-glyph ${isActive ? `active ${sortDirection}` : ""}`}
+                            aria-hidden="true"
+                          >
+                            <span className="caret up" />
+                            <span className="caret down" />
+                          </span>
+                          <span>{column.header}</span>
+                        </button>
+                      </th>
                     );
                   })}
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              </thead>
+              <tbody>
+                {sortedRows.map((row) => {
+                  const keyValue = getRowKey(row);
+                  const isSelected = selectedRowKeys.has(keyValue);
+
+                  return (
+                    <tr key={String(keyValue)}>
+                      <td className="selection-cell">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleRowSelection(keyValue)}
+                          className="table-checkbox row-checkbox"
+                          aria-label={`Select row ${keyValue}`}
+                        />
+                      </td>
+                      {columns.map((column) => {
+                        const value = column.getDisplay(row);
+
+                        if (column.id === "sharepoint") {
+                          return (
+                            <td key={column.id}>
+                              {value ? (
+                                <a href={value} target="_blank" rel="noreferrer" className="sharepoint-link">
+                                  sharepint
+                                </a>
+                              ) : (
+                                <span className="empty-value">-</span>
+                              )}
+                            </td>
+                          );
+                        }
+
+                        return (
+                          <td key={column.id}>
+                            {value || <span className="empty-value">-</span>}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
 
-      <section style={{ marginTop: "36px" }}>
+      <section className="secondary-panel">
         <h2>FARMS Connector Result</h2>
         {farmsLoading && <p>Loading FARMS connector data...</p>}
-        {farmsError && <p style={{ color: "red" }}>{farmsError}</p>}
+        {farmsError && <p className="error-text">{farmsError}</p>}
         {!farmsLoading && !farmsError && !farmsRaw && farmsData.length === 0 && <p>No FARMS data yet.</p>}
 
         {farmsData.length > 0 && (
@@ -252,29 +499,17 @@ function App() {
         )}
       </section>
 
-      <section style={{ marginTop: "36px" }}>
+      <section className="secondary-panel">
         <h2>FARMS CheckHealth</h2>
-        <div style={{ marginBottom: "10px", display: "flex", gap: "12px", alignItems: "center" }}>
-          <button onClick={callFarmsApi} disabled={farmsLoading} style={{ padding: "8px 14px" }}>
+        <div className="health-actions">
+          <button onClick={callFarmsApi} disabled={farmsLoading} className="health-btn">
             {farmsLoading ? "Loading..." : "Call FARMS CheckHealth"}
           </button>
         </div>
 
-        <div
-          style={{
-            border: "1px solid #ccc",
-            borderRadius: "8px",
-            padding: "12px",
-            backgroundColor: "#fafafa",
-            minHeight: "120px",
-            whiteSpace: "pre-wrap",
-            fontFamily: "monospace",
-            fontSize: "13px",
-            overflow: "auto",
-          }}
-        >
+        <div className="health-output">
           {farmsError ? (
-            <span style={{ color: "#b00020" }}>{farmsError}</span>
+            <span className="error-text">{farmsError}</span>
           ) : farmsLoading ? (
             "Calling FARMS connector..."
           ) : farmsData.length > 0 ? (
