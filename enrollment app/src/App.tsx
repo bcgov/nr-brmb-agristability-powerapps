@@ -1,529 +1,205 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import "./App.css";
-import type { Vsi_participantprogramyears } from "./generated/models/Vsi_participantprogramyearsModel";
-import { FARMSAPIService } from "./generated/services/FARMSAPIService";
-import { Vsi_participantprogramyearsService } from "./generated/services/Vsi_participantprogramyearsService";
+import { EnrollmentFiltersBar } from "./components/EnrollmentFiltersBar";
+import { EnrollmentsTable } from "./components/EnrollmentsTable";
+import { PaginationControls } from "./components/PaginationControls";
+import { useEnrollmentData } from "./hooks/useEnrollmentData";
+import type {
+  EnrollmentFilterState,
+  EnrollmentRecord,
+  SortColumn,
+  SortDirection,
+} from "./types/enrollment";
 
+const PAGE_SIZE = 20;
+
+const DEFAULT_FILTERS: EnrollmentFilterState = {
+  verifiedCalculated: false,
+  unverifiedCalculated: false,
+  flaggedFiles: false,
+  partnershipsCombined: false,
+};
+
+const compareValues = (left: string | number | null, right: string | number | null) => {
+  if (typeof left === "number" && typeof right === "number") {
+    return left - right;
+  }
+
+  return String(left ?? "").localeCompare(String(right ?? ""), undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
+};
+
+const getSortValue = (row: EnrollmentRecord, column: SortColumn): string | number | null => {
+  switch (column) {
+    case "pin":
+      return row.pin;
+    case "producerName":
+      return row.producerName;
+    case "year":
+      return row.year;
+    case "taskStatus":
+      return row.taskStatus;
+    case "enrolStatus":
+      return row.enrolStatus;
+    case "calculatedFee":
+      return row.calculatedFee;
+    case "sharepoint":
+      return row.sharepointUrl;
+    case "modifiedOn": {
+      const parsed = Date.parse(row.modifiedOn);
+      return Number.isNaN(parsed) ? 0 : parsed;
+    }
+    default:
+      return "";
+  }
+};
+
+const matchesFilters = (row: EnrollmentRecord, filters: EnrollmentFilterState) => {
+  const activeFilterKeys = Object.entries(filters)
+    .filter(([, enabled]) => enabled)
+    .map(([key]) => key as keyof EnrollmentFilterState);
+
+  if (activeFilterKeys.length === 0) {
+    return true;
+  }
+
+  return activeFilterKeys.some((key) => row.flags[key]);
+};
 
 function App() {
-  type FarmsRow = Record<string, unknown>;
-  type DataverseRow = Vsi_participantprogramyears & Record<string, unknown>;
-  type SortDirection = "asc" | "desc";
-  type EnrollmentColumnId =
-    | "pin"
-    | "producerName"
-    | "year"
-    | "taskStatus"
-    | "enrolStatus"
-    | "calculatedFee"
-    | "lastAction"
-    | "sharepoint";
+  const { rows, loading, error } = useEnrollmentData();
 
-  type EnrollmentColumn = {
-    id: EnrollmentColumnId;
-    header: string;
-    getDisplay: (row: Vsi_participantprogramyears) => string;
-    getSortValue: (row: Vsi_participantprogramyears) => string | number;
-  };
-
-  const [rows, setRows] = useState<Vsi_participantprogramyears[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [sortColumn, setSortColumn] = useState<EnrollmentColumnId>("lastAction");
+  const [filters, setFilters] = useState<EnrollmentFilterState>(DEFAULT_FILTERS);
+  const [sortColumn, setSortColumn] = useState<SortColumn>("modifiedOn");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
-  const [selectedRowKeys, setSelectedRowKeys] = useState<Set<string>>(new Set());
-  const selectAllCheckboxRef = useRef<HTMLInputElement | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const [farmsData, setFarmsData] = useState<FarmsRow[]>([]);
-  const [farmsRaw, setFarmsRaw] = useState<string>("");
-  const [farmsLoading, setFarmsLoading] = useState(false);
-  const [farmsError, setFarmsError] = useState("");
+  const filteredRows = useMemo(() => rows.filter((row) => matchesFilters(row, filters)), [rows, filters]);
+
+  const sortedRows = useMemo(() => {
+    const direction = sortDirection === "asc" ? 1 : -1;
+    return [...filteredRows].sort((left, right) => {
+      const leftValue = getSortValue(left, sortColumn);
+      const rightValue = getSortValue(right, sortColumn);
+      return compareValues(leftValue, rightValue) * direction;
+    });
+  }, [filteredRows, sortColumn, sortDirection]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedRows.length / PAGE_SIZE));
 
   useEffect(() => {
-    let cancelled = false;
+    setCurrentPage(1);
+  }, [filters]);
 
-    const loadEnrollments = async () => {
-      try {
-        setLoading(true);
-        setError("");
-        const baseQuery = {
-          orderBy: ["modifiedon desc"],
-          top : 200,
-          select: [
-            "vsi_name",
-            "_vsi_participantid_value",
-            "_vsi_programyearid_value",
-            "vsi_enrolmentstatus",
-            "vsi_taskstatus",
-            "vsi_calculatedenfee",
-            "vsi_sharepointdocumentfolder",
-            "modifiedon",
-          ],
-        };
+  useEffect(() => {
+    setCurrentPage((previous) => Math.min(previous, totalPages));
+  }, [totalPages]);
 
-        const allRows: Vsi_participantprogramyears[] = [];
-        let skipToken: string | undefined = undefined;
+  useEffect(() => {
+    const validIds = new Set(rows.map((row) => row.id));
+    setSelectedIds((previous) => {
+      let changed = false;
+      const next = new Set<string>();
 
-        do {
-          const result = await Vsi_participantprogramyearsService.getAll({
-            ...baseQuery,
-            skipToken,
-          });
-
-          if (!result?.success) {
-            throw result.error ?? new Error("Dataverse query not successful");
-          }
-
-          allRows.push(...(result.data ?? []));
-          skipToken = result.skipToken;
-        } while (skipToken);
-
-        if (!cancelled) {
-          setRows(allRows);
-          setSelectedRowKeys(new Set());
+      previous.forEach((id) => {
+        if (validIds.has(id)) {
+          next.add(id);
+        } else {
+          changed = true;
         }
-      } catch (err: unknown) {
-        console.error(err);
-        let errMsg = "";
-        if (err instanceof Error) {
-          errMsg = err.message;
-        } else if (typeof err === "string") {
-          errMsg = err;
-        } else if (err !== null && err !== undefined) {
-          errMsg = JSON.stringify(err);
-        }
-        if (!cancelled) {
-          setError(errMsg || "Failed to load enrollment records.");
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    };
+      });
 
-    loadEnrollments();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const normalizeFarmsRows = (payload: unknown): FarmsRow[] => {
-    const isRow = (value: unknown): value is FarmsRow =>
-      typeof value === "object" && value !== null && !Array.isArray(value);
-
-    if (Array.isArray(payload)) {
-      return payload.filter(isRow);
-    }
-
-    if (isRow(payload) && Array.isArray(payload.items)) {
-      return payload.items.filter(isRow);
-    }
-
-    return [];
-  };
-
-  const formatFarmsPayload = (payload: unknown): string => {
-    if (typeof payload === "string") {
-      return payload;
-    }
-
-    if (payload == null) {
-      return "";
-    }
-
-    return JSON.stringify(payload, null, 2);
-  };
-
-  const getFormattedValue = (row: DataverseRow, field: string) => {
-    const value = row[`${field}@OData.Community.Display.V1.FormattedValue`];
-    return value === undefined || value === null ? "" : String(value);
-  };
-
-  const parseNumber = (value: unknown) => {
-    if (typeof value === "number" && Number.isFinite(value)) return value;
-    if (typeof value !== "string") return Number.NaN;
-
-    const normalized = value.replace(/[^0-9.-]/g, "");
-    if (!normalized) return Number.NaN;
-
-    return Number(normalized);
-  };
-
-  const getRowKey = (row: Vsi_participantprogramyears) => {
-    const fallback = `${row.vsi_name ?? "row"}-${row.modifiedon ?? ""}-${row.vsi_calculatedenfee ?? ""}`;
-    return String(row.vsi_participantprogramyearid ?? row._vsi_participantid_value ?? row.ownerid ?? fallback);
-  };
-
-  const formatCurrency = (value: unknown) => {
-    const parsed = parseNumber(value);
-    if (Number.isNaN(parsed)) return "";
-    return `$${parsed.toFixed(2)}`;
-  };
-
-  const formatDateTime = (value: unknown) => {
-    if (typeof value !== "string" || !value) return "";
-    const parsed = Date.parse(value);
-    if (Number.isNaN(parsed)) return value;
-
-    return new Date(parsed).toLocaleString();
-  };
-
-  const compareValues = (a: string | number, b: string | number) => {
-    if (typeof a === "number" && typeof b === "number") {
-      return a - b;
-    }
-
-    return String(a).localeCompare(String(b), undefined, {
-      numeric: true,
-      sensitivity: "base",
+      return changed ? next : previous;
     });
-  };
+  }, [rows]);
 
-  const toggleSort = (columnId: EnrollmentColumnId) => {
-    if (sortColumn === columnId) {
-      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+  const pageStart = (currentPage - 1) * PAGE_SIZE;
+  const pageRows = sortedRows.slice(pageStart, pageStart + PAGE_SIZE);
+  const pageRowIds = pageRows.map((row) => row.id);
+
+  const allVisibleSelected = pageRowIds.length > 0 && pageRowIds.every((id) => selectedIds.has(id));
+  const someVisibleSelected = pageRowIds.some((id) => selectedIds.has(id));
+
+  const handleSortChange = (column: SortColumn) => {
+    if (sortColumn === column) {
+      setSortDirection((previous) => (previous === "asc" ? "desc" : "asc"));
       return;
     }
 
-    setSortColumn(columnId);
-    setSortDirection("asc");
+    setSortColumn(column);
+    setSortDirection(column === "modifiedOn" ? "desc" : "asc");
   };
 
-  const callFarmsApi = async () => {
-    setFarmsLoading(true);
-    setFarmsError("");
-    setFarmsRaw("");
-    setFarmsData([]);
-
-    try {
-      const result = (await FARMSAPIService.GetBenchmarkPerUnitsByProgramYear(2025)) as {
-        success?: boolean;
-        data?: unknown;
-        error?: unknown;
-      };
-
-      if (!result?.success) {
-        throw result.error ?? new Error("FARMS connector query not successful");
-      }
-
-      const payload = result.data;
-      setFarmsRaw(formatFarmsPayload(payload));
-      setFarmsData(normalizeFarmsRows(payload));
-    } catch (err: unknown) {
-      let errMsg = "";
-      if (err instanceof Error) errMsg = err.message;
-      else if (typeof err === "string") errMsg = err;
-      else if (err != null) errMsg = JSON.stringify(err);
-      setFarmsError(errMsg || "Failed to load FARMS data");
-    } finally {
-      setFarmsLoading(false);
-    }
-  };
-
-  const columns: EnrollmentColumn[] = [
-    {
-      id: "pin",
-      header: "PIN",
-      getDisplay: (row) => String(row.vsi_name ?? ""),
-      getSortValue: (row) => String(row.vsi_name ?? ""),
-    },
-    {
-      id: "producerName",
-      header: "Producer name",
-      getDisplay: (row) =>
-        String(
-          getFormattedValue(row as DataverseRow, "_vsi_participantid_value") ||
-          row.vsi_participantidname ||
-          row._vsi_participantid_value ||
-          ""
-        ),
-      getSortValue: (row) =>
-        getFormattedValue(row as DataverseRow, "_vsi_participantid_value") ||
-        row.vsi_participantidname ||
-        row._vsi_participantid_value ||
-        "",
-    },
-    {
-      id: "year",
-      header: "Year",
-      getDisplay: (row) =>
-        String(
-          getFormattedValue(row as DataverseRow, "_vsi_programyearid_value") ||
-          row.vsi_programyearidname ||
-          row._vsi_programyearid_value ||
-          ""
-        ),
-      getSortValue: (row) =>
-        getFormattedValue(row as DataverseRow, "_vsi_programyearid_value") ||
-        row.vsi_programyearidname ||
-        row._vsi_programyearid_value ||
-        "",
-    },
-    {
-      id: "taskStatus",
-      header: "Task Status",
-      getDisplay: (row) =>
-        String(
-          getFormattedValue(row as DataverseRow, "vsi_taskstatus") ||
-          row.vsi_taskstatusname ||
-          row.vsi_taskstatus ||
-          ""
-        ),
-      getSortValue: (row) =>
-        getFormattedValue(row as DataverseRow, "vsi_taskstatus") ||
-        row.vsi_taskstatusname ||
-        row.vsi_taskstatus ||
-        "",
-    },
-    {
-      id: "enrolStatus",
-      header: "Enrol status",
-      getDisplay: (row) =>
-        String(
-          getFormattedValue(row as DataverseRow, "vsi_enrolmentstatus") ||
-          row.vsi_enrolmentstatusname ||
-          row.vsi_enrolmentstatus ||
-          ""
-        ),
-      getSortValue: (row) =>
-        getFormattedValue(row as DataverseRow, "vsi_enrolmentstatus") ||
-        row.vsi_enrolmentstatusname ||
-        row.vsi_enrolmentstatus ||
-        "",
-    },
-    {
-      id: "calculatedFee",
-      header: "Calculated fee",
-      getDisplay: (row) => formatCurrency(row.vsi_calculatedenfee),
-      getSortValue: (row) => {
-        const parsed = parseNumber(row.vsi_calculatedenfee);
-        return Number.isNaN(parsed) ? Number.NEGATIVE_INFINITY : parsed;
-      },
-    },
-    {
-      id: "lastAction",
-      header: "Last Action",
-      getDisplay: (row) => formatDateTime(row.modifiedon),
-      getSortValue: (row) => {
-        const parsed = Date.parse(String(row.modifiedon ?? ""));
-        return Number.isNaN(parsed) ? 0 : parsed;
-      },
-    },
-    {
-      id: "sharepoint",
-      header: "Sharepoint",
-      getDisplay: (row) => String(row.vsi_sharepointdocumentfolder ?? ""),
-      getSortValue: (row) => String(row.vsi_sharepointdocumentfolder ?? ""),
-    },
-  ];
-
-  const sortedRows = useMemo(() => {
-    const activeColumn = columns.find((column) => column.id === sortColumn);
-    if (!activeColumn) return rows;
-
-    const directionMultiplier = sortDirection === "asc" ? 1 : -1;
-
-    return [...rows].sort((left, right) => {
-      const leftValue = activeColumn.getSortValue(left);
-      const rightValue = activeColumn.getSortValue(right);
-      return compareValues(leftValue, rightValue) * directionMultiplier;
-    });
-  }, [rows, sortColumn, sortDirection]);
-
-  const rowKeys = useMemo(() => sortedRows.map((row) => getRowKey(row)), [sortedRows]);
-  const allRowsSelected = rowKeys.length > 0 && rowKeys.every((rowKey) => selectedRowKeys.has(rowKey));
-  const someRowsSelected = rowKeys.some((rowKey) => selectedRowKeys.has(rowKey));
-
-  useEffect(() => {
-    if (!selectAllCheckboxRef.current) return;
-    selectAllCheckboxRef.current.indeterminate = someRowsSelected && !allRowsSelected;
-  }, [allRowsSelected, someRowsSelected]);
-
-  const toggleRowSelection = (rowKey: string) => {
-    setSelectedRowKeys((previous) => {
+  const handleToggleRow = (rowId: string) => {
+    setSelectedIds((previous) => {
       const next = new Set(previous);
-      if (next.has(rowKey)) {
-        next.delete(rowKey);
+      if (next.has(rowId)) {
+        next.delete(rowId);
       } else {
-        next.add(rowKey);
+        next.add(rowId);
       }
       return next;
     });
   };
 
-  const toggleSelectAllRows = (checked: boolean) => {
-    if (checked) {
-      setSelectedRowKeys(new Set(rowKeys));
+  const handleToggleAllVisible = (checked: boolean) => {
+    setSelectedIds((previous) => {
+      const next = new Set(previous);
+
+      if (checked) {
+        pageRowIds.forEach((id) => next.add(id));
+      } else {
+        pageRowIds.forEach((id) => next.delete(id));
+      }
+
+      return next;
+    });
+  };
+
+  const handlePageChange = (nextPage: number) => {
+    if (nextPage < 1 || nextPage > totalPages) {
       return;
     }
-    setSelectedRowKeys(new Set());
+    setCurrentPage(nextPage);
   };
 
   return (
-    <div className="dashboard-shell">
-      <h1 className="dashboard-title">Enrolment Dashboard</h1>
-      {!loading && !error && <p className="record-count">Total records loaded: {rows.length}</p>}
-      {loading ? (
-        <p>Loading enrollment records...</p>
-      ) : error ? (
-        <p className="error-text">{error}</p>
-      ) : rows.length === 0 ? (
-        <p>No records found.</p>
-      ) : (
-        <div className="table-card">
-          <div className="table-wrap">
-            <table className="enrolment-table">
-              <thead>
-                <tr>
-                  <th className="selection-cell">
-                    <input
-                      ref={selectAllCheckboxRef}
-                      type="checkbox"
-                      checked={allRowsSelected}
-                      onChange={(event) => toggleSelectAllRows(event.target.checked)}
-                      className="table-checkbox select-all-checkbox"
-                      aria-label="Select all rows"
-                    />
-                  </th>
-                  {columns.map((column) => {
-                    const isActive = sortColumn === column.id;
-                    return (
-                      <th key={column.id}>
-                        <button
-                          type="button"
-                          className={`sort-btn ${isActive ? "active" : ""}`}
-                          onClick={() => toggleSort(column.id)}
-                        >
-                          <span
-                            className={`sort-glyph ${isActive ? `active ${sortDirection}` : ""}`}
-                            aria-hidden="true"
-                          >
-                            <span className="caret up" />
-                            <span className="caret down" />
-                          </span>
-                          <span>{column.header}</span>
-                        </button>
-                      </th>
-                    );
-                  })}
-                </tr>
-              </thead>
-              <tbody>
-                {sortedRows.map((row) => {
-                  const keyValue = getRowKey(row);
-                  const isSelected = selectedRowKeys.has(keyValue);
+    <main className="dashboard">
+      <h1>Enrolments</h1>
 
-                  return (
-                    <tr key={String(keyValue)}>
-                      <td className="selection-cell">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => toggleRowSelection(keyValue)}
-                          className="table-checkbox row-checkbox"
-                          aria-label={`Select row ${keyValue}`}
-                        />
-                      </td>
-                      {columns.map((column) => {
-                        const value = column.getDisplay(row);
+      <EnrollmentFiltersBar filters={filters} onChange={setFilters} />
 
-                        if (column.id === "sharepoint") {
-                          return (
-                            <td key={column.id}>
-                              {value ? (
-                                <a href={value} target="_blank" rel="noreferrer" className="sharepoint-link">
-                                  sharepint
-                                </a>
-                              ) : (
-                                <span className="empty-value">-</span>
-                              )}
-                            </td>
-                          );
-                        }
+      {loading ? <p className="state-message">Loading enrolments...</p> : null}
+      {error ? <p className="state-message error">{error}</p> : null}
 
-                        return (
-                          <td key={column.id}>
-                            {value || <span className="empty-value">-</span>}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      {!loading && !error ? (
+        <>
+          <EnrollmentsTable
+            rows={pageRows}
+            selectedIds={selectedIds}
+            allVisibleSelected={allVisibleSelected}
+            someVisibleSelected={someVisibleSelected}
+            sortColumn={sortColumn}
+            sortDirection={sortDirection}
+            onToggleRow={handleToggleRow}
+            onToggleAllVisible={handleToggleAllVisible}
+            onSortChange={handleSortChange}
+          />
 
-      <section className="secondary-panel">
-        <h2>FARMS Connector Result</h2>
-        {farmsLoading && <p>Loading FARMS connector data...</p>}
-        {farmsError && <p className="error-text">{farmsError}</p>}
-        {!farmsLoading && !farmsError && !farmsRaw && farmsData.length === 0 && <p>No FARMS data yet.</p>}
-
-        {farmsData.length > 0 && (
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              marginTop: "12px",
-            }}
-          >
-            <thead>
-              <tr>
-                {Object.keys(farmsData[0]).map((col) => (
-                  <th
-                    key={col}
-                    style={{ border: "1px solid #ccc", padding: "8px", backgroundColor: "#f5f5f5" }}
-                  >
-                    {col}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {farmsData.map((row, idx) => (
-                <tr key={idx}>
-                  {Object.keys(farmsData[0]).map((col) => (
-                    <td key={col} style={{ border: "1px solid #ccc", padding: "8px" }}>
-                      {String(row[col] ?? "")}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
-
-      <section className="secondary-panel">
-        <h2>FARMS CheckHealth</h2>
-        <div className="health-actions">
-          <button onClick={callFarmsApi} disabled={farmsLoading} className="health-btn">
-            {farmsLoading ? "Loading..." : "Call FARMS CheckHealth"}
-          </button>
-        </div>
-
-        <div className="health-output">
-          {farmsError ? (
-            <span className="error-text">{farmsError}</span>
-          ) : farmsLoading ? (
-            "Calling FARMS connector..."
-          ) : farmsData.length > 0 ? (
-            <code>{JSON.stringify(farmsData, null, 2)}</code>
-          ) : farmsRaw ? (
-            <code>{farmsRaw}</code>
-          ) : (
-            "No FARMS data yet. Click Call FARMS CheckHealth."
-          )}
-        </div>
-      </section>
-
-    </div>
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalRecords={sortedRows.length}
+            onPageChange={handlePageChange}
+          />
+        </>
+      ) : null}
+    </main>
   );
 }
 
 export default App;
+
