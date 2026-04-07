@@ -1360,9 +1360,16 @@
           "type": "string",
           "title": "Previous Year Calculated EN Fee",
           "x-ms-dataverse-attribute": "vsi_previousyearcalculatedenfee",
-          "x-ms-dataverse-type": "StringType",
-          "x-ms-schema-name": "vsi_PreviousYearCalculatedENFee",
-          "maxLength": 100
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_PreviousYearCalculatedENFee"
+        },
+        "vsi_previousyearcalculatedenfee_base": {
+          "type": "string",
+          "title": "Previous Year Calculated EN Fee (Base)",
+          "x-ms-dataverse-attribute": "vsi_previousyearcalculatedenfee_base",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_previousyearcalculatedenfee_Base",
+          "x-ms-read-only": true
         },
         "vsi_primaryenrolmenthistory": {
           "type": "string",

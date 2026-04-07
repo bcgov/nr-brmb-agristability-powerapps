@@ -5,6 +5,13 @@
  */
 
 export const dataSourcesInfo = {
+  "vsi_enrolmenthistories": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "vsi_enrolmenthistoryid",
+    "dataSourceType": "Dataverse",
+    "apis": {}
+  },
   "vsi_participantprogramyears": {
     "tableId": "",
     "version": "",

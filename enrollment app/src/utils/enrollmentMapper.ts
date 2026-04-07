@@ -41,6 +41,7 @@ export const mapDataverseEnrollment = (row: Vsi_participantprogramyears): Enroll
   const taskStatusLower = taskStatus.toLowerCase();
 
   const calculatedFee = parseNumber(row.vsi_calculatedenfee);
+  const previousYearCalculatedFee = parseNumber(row.vsi_previousyearcalculatedenfee);
 
   return {
     id: String(
@@ -54,6 +55,7 @@ export const mapDataverseEnrollment = (row: Vsi_participantprogramyears): Enroll
     taskStatus,
     enrolStatus,
     calculatedFee,
+    previousYearCalculatedFee,
     sharepointUrl: String(row.vsi_sharepointdocumentfolder ?? ""),
     modifiedOn: String(row.modifiedon ?? ""),
     flags: {
@@ -77,6 +79,19 @@ export const formatCurrency = (value: number | null) => {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+};
+
+export const calculateVariancePercentage = (current: number | null, previous: number | null) => {
+  if (current == null || previous == null || previous === 0) return null;
+  return ((current - previous) / previous) * 100;
+};
+
+export const formatVariancePercentage = (value: number | null) => {
+  if (value == null) return "";
+
+  const rounded = Math.round(value);
+  const sign = rounded > 0 ? "+" : "";
+  return `${sign}${rounded}%`;
 };
 
 export const formatShortDate = (iso: string) => {

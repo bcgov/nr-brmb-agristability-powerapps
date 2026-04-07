@@ -25,6 +25,7 @@ export interface EnrollmentRecord {
   taskStatus: string;
   enrolStatus: string;
   calculatedFee: number | null;
+  previousYearCalculatedFee: number | null;
   sharepointUrl: string;
   modifiedOn: string;
   flags: {

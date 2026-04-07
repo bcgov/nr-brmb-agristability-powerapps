@@ -6,8 +6,10 @@
 // Models
 export * as CommonModels from './models/CommonModels';
 export * as FARMSAPIModel from './models/FARMSAPIModel';
+export * as Vsi_enrolmenthistoriesModel from './models/Vsi_enrolmenthistoriesModel';
 export * as Vsi_participantprogramyearsModel from './models/Vsi_participantprogramyearsModel';
 
 // Services
 export * from './services/FARMSAPIService';
+export * from './services/Vsi_enrolmenthistoriesService';
 export * from './services/Vsi_participantprogramyearsService';

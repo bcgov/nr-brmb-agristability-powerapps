@@ -330,6 +330,7 @@ export interface Vsi_participantprogramyears extends Vsi_participantprogramyears
   vsi_manualreviewname?: string;
   vsi_participantidname?: string;
   vsi_participantidyominame?: string;
+  vsi_previousyearcalculatedenfee_base?: string;
   vsi_primaryenrolmenthistoryname?: string;
   vsi_programyearidname?: string;
   vsi_programyearmargin1_base?: string;

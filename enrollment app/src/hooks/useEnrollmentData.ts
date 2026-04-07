@@ -16,6 +16,7 @@ const QUERY_OPTIONS: IGetAllOptions = {
     "vsi_enrolmentstatus",
     "vsi_taskstatus",
     "vsi_calculatedenfee",
+    "vsi_previousyearcalculatedenfee",
     "vsi_sharepointdocumentfolder",
     "modifiedon",
     "vsi_checkfordatafix",

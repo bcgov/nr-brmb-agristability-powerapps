@@ -1,6 +1,7 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import "./App.css";
 import { EnrollmentFiltersBar } from "./components/EnrollmentFiltersBar";
+import { EnrollmentSearchBar } from "./components/EnrollmentSearchBar";
 import { EnrollmentsTable } from "./components/EnrollmentsTable";
 import { PaginationControls } from "./components/PaginationControls";
 import { useEnrollmentData } from "./hooks/useEnrollmentData";
@@ -68,16 +69,29 @@ const matchesFilters = (row: EnrollmentRecord, filters: EnrollmentFilterState) =
   return activeFilterKeys.some((key) => row.flags[key]);
 };
 
+const matchesSearch = (row: EnrollmentRecord, query: string) => {
+  const term = query.trim().toLowerCase();
+  if (!term) {
+    return true;
+  }
+
+  return [row.pin, row.producerName].some((value) => value.toLowerCase().includes(term));
+};
+
 function App() {
   const { rows, loading, error } = useEnrollmentData();
 
   const [filters, setFilters] = useState<EnrollmentFilterState>(DEFAULT_FILTERS);
+  const [searchQuery, setSearchQuery] = useState("");
   const [sortColumn, setSortColumn] = useState<SortColumn>("modifiedOn");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const filteredRows = useMemo(() => rows.filter((row) => matchesFilters(row, filters)), [rows, filters]);
+  const filteredRows = useMemo(
+    () => rows.filter((row) => matchesFilters(row, filters) && matchesSearch(row, searchQuery)),
+    [rows, filters, searchQuery]
+  );
 
   const sortedRows = useMemo(() => {
     const direction = sortDirection === "asc" ? 1 : -1;
@@ -92,7 +106,7 @@ function App() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [filters]);
+  }, [filters, searchQuery]);
 
   useEffect(() => {
     setCurrentPage((previous) => Math.min(previous, totalPages));
@@ -170,6 +184,7 @@ function App() {
     <main className="dashboard">
       <h1>Enrolments</h1>
 
+      <EnrollmentSearchBar value={searchQuery} onChange={setSearchQuery} />
       <EnrollmentFiltersBar filters={filters} onChange={setFilters} />
 
       {loading ? <p className="state-message">Loading enrolments...</p> : null}

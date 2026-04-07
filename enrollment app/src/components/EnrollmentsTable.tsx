@@ -1,9 +1,11 @@
 ﻿import { useEffect, useRef } from "react";
 import type { EnrollmentRecord, SortColumn, SortDirection } from "../types/enrollment";
 import {
+  calculateVariancePercentage,
   enrolStatusTone,
   formatCurrency,
   formatShortDate,
+  formatVariancePercentage,
   taskStatusTone,
 } from "../utils/enrollmentMapper";
 
@@ -86,6 +88,9 @@ export function EnrollmentsTable({
             const enrolTone = enrolStatusTone(row.enrolStatus);
             const isChecked = selectedIds.has(row.id);
             const taskStatusText = row.taskStatus?.trim() ?? "";
+            const variance = calculateVariancePercentage(row.calculatedFee, row.previousYearCalculatedFee);
+            const varianceClass =
+              variance == null ? "neutral" : variance < 0 ? "negative" : variance > 0 ? "positive" : "neutral";
 
             return (
               <tr key={row.id}>
@@ -117,7 +122,16 @@ export function EnrollmentsTable({
                 <td>
                   <span className={`status-badge ${enrolTone}`}>{row.enrolStatus || "-"}</span>
                 </td>
-                <td className="numeric-cell">{formatCurrency(row.calculatedFee) || "-"}</td>
+                <td className="numeric-cell">
+                  <div className="calculated-fee-cell">
+                    <span className="calculated-fee-value">{formatCurrency(row.calculatedFee) || "-"}</span>
+                    {variance != null ? (
+                      <span className={`variance-pill ${varianceClass}`}>
+                        {formatVariancePercentage(variance)}
+                      </span>
+                    ) : null}
+                  </div>
+                </td>
                 <td>
                   {row.sharepointUrl ? (
                     <a href={row.sharepointUrl} target="_blank" rel="noreferrer" className="sharepoint-link">

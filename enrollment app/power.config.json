@@ -28,8 +28,11 @@
       "dataSources": {
         "enrolments": {
           "entitySetName": "vsi_participantprogramyears",
-          "logicalName": "vsi_participantprogramyear",
-          "isHidden": false
+          "logicalName": "vsi_participantprogramyear"
+        },
+        "enrolmenthistory": {
+          "entitySetName": "vsi_enrolmenthistories",
+          "logicalName": "vsi_enrolmenthistory"
         }
       },
       "version": "v9.0",
