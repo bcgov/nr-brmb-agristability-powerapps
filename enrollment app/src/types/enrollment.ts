@@ -1,38 +1,68 @@
-﻿export type SortDirection = "asc" | "desc";
+﻿import type { Vsi_participantprogramyears } from "../generated/models/Vsi_participantprogramyearsModel";
 
-export type SortColumn =
-  | "pin"
-  | "producerName"
-  | "year"
-  | "taskStatus"
-  | "enrolStatus"
-  | "calculatedFee"
-  | "sharepoint"
-  | "modifiedOn";
+export type SortDir = 'asc' | 'desc';
 
-export interface EnrollmentFilterState {
-  verifiedCalculated: boolean;
-  unverifiedCalculated: boolean;
-  flaggedFiles: boolean;
-  partnershipsCombined: boolean;
+export type SortKey =
+  | 'pin' | 'producer' | 'year' | 'taskStatus' | 'enrolStatus' | 'fee'
+  | 'modifiedBy' | 'sharepoint' | 'totalFeesOwed' | 'totalFeesPaid'
+  | 'enrolmentFee' | 'latePay' | 'regionalOffice' | 'farmingSector'
+  | 'bringForward' | 'broughtForward' | 'hasPartners' | 'inCombinedFarm'
+  | 'manualReview' | 'enrolNoticeDate' | 'fileReceivedDate' | 'feesPaidDate'
+  | 'modifiedOn';
+
+export type ColumnIcon = '🔤' | '🔢' | '📋' | '🔗' | '👤' | '☑' | '📅';
+
+export interface ColumnDef {
+  key: SortKey;
+  label: string;
+  icon: ColumnIcon;
+  removable: boolean;
 }
 
-export interface EnrollmentRecord {
+export type FilterOperator = 'equals' | 'notEquals';
+
+export type AdvFilterField = 'taskStatus' | 'enrolStatus' | 'pin' | 'producer' | 'fee';
+export type AdvFilterOp = 'equals' | 'notEquals' | 'contains' | 'notContains' | 'beginsWith' | 'endsWith';
+export type LogicOp = 'AND' | 'OR';
+
+export interface AdvFilterRow {
+  kind: 'row';
+  id: number;
+  field: AdvFilterField;
+  operator: AdvFilterOp;
+  values: Set<string>;
+  textValue: string;
+}
+
+export interface AdvFilterGroup {
+  kind: 'group';
+  id: number;
+  logic: LogicOp;
+  children: AdvFilterNode[];
+}
+
+export type AdvFilterNode = AdvFilterRow | AdvFilterGroup;
+
+export interface ViewPayload {
+  visibleColumnKeys: SortKey[];
+  columnWidths: Partial<Record<SortKey, number>>;
+  sortKey: SortKey | null;
+  sortDir: SortDir;
+  filters: { verifiedCalc: boolean; unverifiedCalc: boolean; flagged: boolean; partnerships: boolean };
+  taskStatusFilter: string[];
+  enrolStatusFilter: string[];
+  taskFilterOp: FilterOperator;
+  enrolFilterOp: FilterOperator;
+  advFilterNodes: unknown[];
+  advLogicOp: LogicOp;
+}
+
+export type ViewSource = 'personal' | 'system';
+
+export interface PersonalView extends ViewPayload {
   id: string;
-  pin: string;
-  producerName: string;
-  year: string;
-  taskStatus: string;
-  enrolStatus: string;
-  calculatedFee: number | null;
-  previousYearCalculatedFee: number | null;
-  sharepointUrl: string;
-  modifiedOn: string;
-  flags: {
-    verifiedCalculated: boolean;
-    unverifiedCalculated: boolean;
-    flaggedFiles: boolean;
-    partnershipsCombined: boolean;
-  };
+  name: string;
+  source: ViewSource;
 }
 
+export type EnrolmentRow = Vsi_participantprogramyears;

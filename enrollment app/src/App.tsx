@@ -1,220 +1,295 @@
-﻿import { useEffect, useMemo, useState } from "react";
-import "./App.css";
-import { EnrollmentFiltersBar } from "./components/EnrollmentFiltersBar";
-import { EnrollmentSearchBar } from "./components/EnrollmentSearchBar";
-import { EnrollmentsTable } from "./components/EnrollmentsTable";
-import { PaginationControls } from "./components/PaginationControls";
-import { useEnrollmentData } from "./hooks/useEnrollmentData";
-import type {
-  EnrollmentFilterState,
-  EnrollmentRecord,
-  SortColumn,
-  SortDirection,
-} from "./types/enrollment";
+import { useEffect, useMemo, useState } from 'react';
+import './App.css';
+
+import type { SortKey, SortDir, FilterOperator, AdvFilterNode, LogicOp } from './types/enrollment';
+import { ALL_COLUMNS, DEFAULT_VISIBLE_KEYS } from './constants/columns';
+import { countActiveNodes } from './utils/filterTree';
+import { useEnrolmentData, useSortedAndFilteredRows } from './hooks/useEnrolmentData';
+import { useViews } from './hooks/useViews';
+
+import { ViewsMenu } from './components/ViewsMenu';
+import { ColumnHeaderMenu } from './components/ColumnHeaderMenu';
+import { EditColumnsPanel } from './components/EditColumnsPanel';
+import { EditFiltersPanel } from './components/EditFiltersPanel';
+import { BulkNoticesModal } from './components/BulkNoticesModal';
+import { renderCell } from './components/renderCell';
 
 const PAGE_SIZE = 20;
 
-const DEFAULT_FILTERS: EnrollmentFilterState = {
-  verifiedCalculated: false,
-  unverifiedCalculated: false,
-  flaggedFiles: false,
-  partnershipsCombined: false,
-};
-
-const compareValues = (left: string | number | null, right: string | number | null) => {
-  if (typeof left === "number" && typeof right === "number") {
-    return left - right;
-  }
-
-  return String(left ?? "").localeCompare(String(right ?? ""), undefined, {
-    numeric: true,
-    sensitivity: "base",
-  });
-};
-
-const getSortValue = (row: EnrollmentRecord, column: SortColumn): string | number | null => {
-  switch (column) {
-    case "pin":
-      return row.pin;
-    case "producerName":
-      return row.producerName;
-    case "year":
-      return row.year;
-    case "taskStatus":
-      return row.taskStatus;
-    case "enrolStatus":
-      return row.enrolStatus;
-    case "calculatedFee":
-      return row.calculatedFee;
-    case "sharepoint":
-      return row.sharepointUrl;
-    case "modifiedOn": {
-      const parsed = Date.parse(row.modifiedOn);
-      return Number.isNaN(parsed) ? 0 : parsed;
-    }
-    default:
-      return "";
-  }
-};
-
-const matchesFilters = (row: EnrollmentRecord, filters: EnrollmentFilterState) => {
-  const activeFilterKeys = Object.entries(filters)
-    .filter(([, enabled]) => enabled)
-    .map(([key]) => key as keyof EnrollmentFilterState);
-
-  if (activeFilterKeys.length === 0) {
-    return true;
-  }
-
-  return activeFilterKeys.some((key) => row.flags[key]);
-};
-
-const matchesSearch = (row: EnrollmentRecord, query: string) => {
-  const term = query.trim().toLowerCase();
-  if (!term) {
-    return true;
-  }
-
-  return [row.pin, row.producerName].some((value) => value.toLowerCase().includes(term));
-};
-
 function App() {
-  const { rows, loading, error } = useEnrollmentData();
+  const { rows, loading, error, avatarUrls } = useEnrolmentData();
 
-  const [filters, setFilters] = useState<EnrollmentFilterState>(DEFAULT_FILTERS);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sortColumn, setSortColumn] = useState<SortColumn>("modifiedOn");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  // Column & sort state
+  const [visibleColumnKeys, setVisibleColumnKeys] = useState<SortKey[]>([...DEFAULT_VISIBLE_KEYS]);
+  const [columnWidths, setColumnWidths] = useState<Partial<Record<SortKey, number>>>({});
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
+
+  // Filter state
+  const [filters, setFilters] = useState({ verifiedCalc: false, unverifiedCalc: false, flagged: false, partnerships: false });
+  const [taskStatusFilter, setTaskStatusFilter] = useState<Set<string>>(new Set());
+  const [enrolStatusFilter, setEnrolStatusFilter] = useState<Set<string>>(new Set());
+  const [taskFilterOp, setTaskFilterOp] = useState<FilterOperator>('equals');
+  const [enrolFilterOp, setEnrolFilterOp] = useState<FilterOperator>('equals');
+  const [advFilterNodes, setAdvFilterNodes] = useState<AdvFilterNode[]>([]);
+  const [advLogicOp, setAdvLogicOp] = useState<LogicOp>('AND');
+
+  // Pagination & selection
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const filteredRows = useMemo(
-    () => rows.filter((row) => matchesFilters(row, filters) && matchesSearch(row, searchQuery)),
-    [rows, filters, searchQuery]
+  // Panel visibility
+  const [showEditColumns, setShowEditColumns] = useState(false);
+  const [showEditFilters, setShowEditFilters] = useState(false);
+  const [showBulkModal, setShowBulkModal] = useState(false);
+
+  // Column drag-and-drop
+  const [colDragIdx, setColDragIdx] = useState<number | null>(null);
+  const handleColDragStart = (i: number) => setColDragIdx(i);
+  const handleColDragOver = (e: React.DragEvent, i: number) => {
+    e.preventDefault();
+    if (colDragIdx === null || colDragIdx === i) return;
+    setVisibleColumnKeys(prev => {
+      const next = [...prev];
+      const [moved] = next.splice(colDragIdx, 1);
+      next.splice(i, 0, moved);
+      return next;
+    });
+    setColDragIdx(i);
+  };
+  const handleColDragEnd = () => setColDragIdx(null);
+
+  // Views hook
+  const viewSetters = useMemo(() => ({
+    setVisibleColumnKeys, setColumnWidths, setSortKey, setSortDir,
+    setFilters, setTaskStatusFilter, setEnrolStatusFilter,
+    setTaskFilterOp, setEnrolFilterOp, setAdvFilterNodes, setAdvLogicOp,
+  }), []);
+
+  const viewState = useMemo(() => ({
+    visibleColumnKeys, columnWidths, sortKey, sortDir, filters,
+    taskStatusFilter, enrolStatusFilter, taskFilterOp, enrolFilterOp,
+    advFilterNodes, advLogicOp,
+  }), [visibleColumnKeys, columnWidths, sortKey, sortDir, filters,
+    taskStatusFilter, enrolStatusFilter, taskFilterOp, enrolFilterOp,
+    advFilterNodes, advLogicOp]);
+
+  const {
+    savedViews, viewsLoading, activeViewId, hasUnsavedChanges,
+    handleSelectView, handleSaveAsNew, handleSaveCurrentView,
+    handleDeleteView, handleRenameView, handleResetDefault,
+  } = useViews(viewState, viewSetters);
+
+  // Sorting & filtering
+  const { filteredRows, taskStatusOptions, enrolStatusOptions } = useSortedAndFilteredRows(
+    rows, sortKey, sortDir, filters,
+    taskStatusFilter, enrolStatusFilter, taskFilterOp, enrolFilterOp,
+    advFilterNodes, advLogicOp,
   );
 
-  const sortedRows = useMemo(() => {
-    const direction = sortDirection === "asc" ? 1 : -1;
-    return [...filteredRows].sort((left, right) => {
-      const leftValue = getSortValue(left, sortColumn);
-      const rightValue = getSortValue(right, sortColumn);
-      return compareValues(leftValue, rightValue) * direction;
-    });
-  }, [filteredRows, sortColumn, sortDirection]);
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
+  const pagedRows = filteredRows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
-  const totalPages = Math.max(1, Math.ceil(sortedRows.length / PAGE_SIZE));
+  const allPageSelected = pagedRows.length > 0 && pagedRows.every(r => selectedIds.has(r.vsi_participantprogramyearid));
+  const somePageSelected = pagedRows.some(r => selectedIds.has(r.vsi_participantprogramyearid));
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [filters, searchQuery]);
-
-  useEffect(() => {
-    setCurrentPage((previous) => Math.min(previous, totalPages));
-  }, [totalPages]);
-
-  useEffect(() => {
-    const validIds = new Set(rows.map((row) => row.id));
-    setSelectedIds((previous) => {
-      let changed = false;
-      const next = new Set<string>();
-
-      previous.forEach((id) => {
-        if (validIds.has(id)) {
-          next.add(id);
-        } else {
-          changed = true;
-        }
-      });
-
-      return changed ? next : previous;
-    });
-  }, [rows]);
-
-  const pageStart = (currentPage - 1) * PAGE_SIZE;
-  const pageRows = sortedRows.slice(pageStart, pageStart + PAGE_SIZE);
-  const pageRowIds = pageRows.map((row) => row.id);
-
-  const allVisibleSelected = pageRowIds.length > 0 && pageRowIds.every((id) => selectedIds.has(id));
-  const someVisibleSelected = pageRowIds.some((id) => selectedIds.has(id));
-
-  const handleSortChange = (column: SortColumn) => {
-    if (sortColumn === column) {
-      setSortDirection((previous) => (previous === "asc" ? "desc" : "asc"));
-      return;
-    }
-
-    setSortColumn(column);
-    setSortDirection(column === "modifiedOn" ? "desc" : "asc");
-  };
-
-  const handleToggleRow = (rowId: string) => {
-    setSelectedIds((previous) => {
-      const next = new Set(previous);
-      if (next.has(rowId)) {
-        next.delete(rowId);
+  const toggleSelectAll = () => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (allPageSelected) {
+        pagedRows.forEach(r => next.delete(r.vsi_participantprogramyearid));
       } else {
-        next.add(rowId);
+        pagedRows.forEach(r => next.add(r.vsi_participantprogramyearid));
       }
       return next;
     });
   };
 
-  const handleToggleAllVisible = (checked: boolean) => {
-    setSelectedIds((previous) => {
-      const next = new Set(previous);
-
-      if (checked) {
-        pageRowIds.forEach((id) => next.add(id));
-      } else {
-        pageRowIds.forEach((id) => next.delete(id));
-      }
-
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
   };
 
-  const handlePageChange = (nextPage: number) => {
-    if (nextPage < 1 || nextPage > totalPages) {
-      return;
-    }
-    setCurrentPage(nextPage);
-  };
+  const toggleFilter = (key: keyof typeof filters) =>
+    setFilters(f => ({ ...f, [key]: !f[key] }));
+
+  const setSort = (key: SortKey, dir: SortDir) => { setSortKey(key); setSortDir(dir); };
+
+  const setColumnWidth = (key: SortKey) => (w: number | undefined) =>
+    setColumnWidths(prev => {
+      const next = { ...prev };
+      if (w === undefined) delete next[key]; else next[key] = w;
+      return next;
+    });
+
+  // Reset page on filter change
+  useEffect(() => { setCurrentPage(1); }, [filters, taskStatusFilter, enrolStatusFilter, advFilterNodes, advLogicOp]);
 
   return (
-    <main className="dashboard">
-      <h1>Enrolments</h1>
+    <div className="enrolment-wrapper">
+      <ViewsMenu
+        views={savedViews}
+        activeViewId={activeViewId}
+        hasUnsavedChanges={hasUnsavedChanges}
+        onSelectView={handleSelectView}
+        onSaveAsNew={handleSaveAsNew}
+        onSaveCurrentView={handleSaveCurrentView}
+        onResetDefault={handleResetDefault}
+        onDeleteView={handleDeleteView}
+        onRenameView={handleRenameView}
+        viewsLoading={viewsLoading}
+      />
 
-      <EnrollmentSearchBar value={searchQuery} onChange={setSearchQuery} />
-      <EnrollmentFiltersBar filters={filters} onChange={setFilters} />
+      {loading && <p className="enrolment-loading">Loading…</p>}
+      {error && <p className="enrolment-error">{error}</p>}
 
-      {loading ? <p className="state-message">Loading enrolments...</p> : null}
-      {error ? <p className="state-message error">{error}</p> : null}
-
-      {!loading && !error ? (
+      {!loading && !error && (
         <>
-          <EnrollmentsTable
-            rows={pageRows}
-            selectedIds={selectedIds}
-            allVisibleSelected={allVisibleSelected}
-            someVisibleSelected={someVisibleSelected}
-            sortColumn={sortColumn}
-            sortDirection={sortDirection}
-            onToggleRow={handleToggleRow}
-            onToggleAllVisible={handleToggleAllVisible}
-            onSortChange={handleSortChange}
-          />
+          <div className="enrolment-filters">
+            <strong>Apply Filters</strong>
+            <label><input type="checkbox" checked={filters.verifiedCalc} onChange={() => toggleFilter('verifiedCalc')} /> Verified, EN Calculated</label>
+            <label><input type="checkbox" checked={filters.unverifiedCalc} onChange={() => toggleFilter('unverifiedCalc')} /> Unverified, EN Calculated</label>
+            <label><input type="checkbox" checked={filters.flagged} onChange={() => toggleFilter('flagged')} /> Flagged files</label>
+            <label><input type="checkbox" checked={filters.partnerships} onChange={() => toggleFilter('partnerships')} /> Partnerships/Combined</label>
+            <button className="ef-edit-btn" onClick={() => setShowEditColumns(true)}>
+              <span className="ef-edit-icon">&#x1F5C2;</span> Edit columns
+            </button>
+            <button className="ef-edit-btn" onClick={() => setShowEditFilters(true)}>
+              <span className="ef-edit-icon">&#x25BD;</span> Edit filters
+            </button>
+            {advFilterNodes.length > 0 && (
+              <span className="ef-active-count">{countActiveNodes(advFilterNodes)} advanced filter(s)</span>
+            )}
+          </div>
 
-          <PaginationControls
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalRecords={sortedRows.length}
-            onPageChange={handlePageChange}
-          />
+          <div className="enrolment-table-container">
+            <table className="enrolment-table">
+              <thead>
+                <tr>
+                  <th style={{ width: '2rem' }}>
+                    <input
+                      type="checkbox"
+                      checked={allPageSelected}
+                      ref={el => { if (el) el.indeterminate = somePageSelected && !allPageSelected; }}
+                      onChange={toggleSelectAll}
+                    />
+                  </th>
+                  {visibleColumnKeys.map((k, colIdx) => {
+                    const def = ALL_COLUMNS.find(c => c.key === k)!;
+                    const extra: Record<string, unknown> = {};
+                    if (k === 'taskStatus') {
+                      extra.filterOptions = taskStatusOptions;
+                      extra.selectedFilters = taskStatusFilter;
+                      extra.filterOperator = taskFilterOp;
+                      extra.onFilterChange = setTaskStatusFilter;
+                      extra.onFilterOperatorChange = setTaskFilterOp;
+                    }
+                    if (k === 'enrolStatus') {
+                      extra.filterOptions = enrolStatusOptions;
+                      extra.selectedFilters = enrolStatusFilter;
+                      extra.filterOperator = enrolFilterOp;
+                      extra.onFilterChange = setEnrolStatusFilter;
+                      extra.onFilterOperatorChange = setEnrolFilterOp;
+                    }
+                    const dragProps = {
+                      draggable: true,
+                      onDragStart: () => handleColDragStart(colIdx),
+                      onDragOver: (e: React.DragEvent) => handleColDragOver(e, colIdx),
+                      onDragEnd: handleColDragEnd,
+                      className: colDragIdx === colIdx ? 'col-dragging' : undefined,
+                    };
+                    if (k === 'sharepoint') return <th key={k} {...dragProps} style={{ cursor: 'grab' }}>SharePoint</th>;
+                    return (
+                      <ColumnHeaderMenu
+                        key={k}
+                        label={def.label}
+                        sortKey={k}
+                        currentSortKey={sortKey}
+                        currentSortDir={sortDir}
+                        onSort={setSort}
+                        columnWidth={columnWidths[k]}
+                        onColumnWidthChange={setColumnWidth(k)}
+                        dragProps={dragProps}
+                        {...extra as any}
+                      />
+                    );
+                  })}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.length === 0 ? (
+                  <tr><td colSpan={visibleColumnKeys.length + 1} className="enrolment-empty">No records found</td></tr>
+                ) : pagedRows.length === 0 ? (
+                  <tr><td colSpan={visibleColumnKeys.length + 1} className="enrolment-empty">No rows returned</td></tr>
+                ) : (
+                  pagedRows.map((row, i) => {
+                    const raw = row as unknown as Record<string, unknown>;
+                    return (
+                      <tr key={row.vsi_participantprogramyearid ?? i}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(row.vsi_participantprogramyearid)}
+                            onChange={() => toggleSelect(row.vsi_participantprogramyearid)}
+                          />
+                        </td>
+                        {visibleColumnKeys.map(k => renderCell(k, row, raw, avatarUrls))}
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="enrolment-pagination">
+            <button disabled={currentPage <= 1} onClick={() => setCurrentPage(1)}>&laquo;</button>
+            <button disabled={currentPage <= 1} onClick={() => setCurrentPage(p => p - 1)}>&lsaquo; Prev</button>
+            <span>Page {currentPage} of {totalPages} ({filteredRows.length} records)</span>
+            <button disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => p + 1)}>Next &rsaquo;</button>
+            <button disabled={currentPage >= totalPages} onClick={() => setCurrentPage(totalPages)}>&raquo;</button>
+          </div>
+
+          <div className="enrolment-actions">
+            <button className="btn-bulk" onClick={() => setShowBulkModal(true)}>
+              <span className="btn-bulk-icon">&#x1F5B6;</span> Bulk EN Notices
+            </button>
+          </div>
         </>
-      ) : null}
-    </main>
+      )}
+
+      {showEditColumns && (
+        <EditColumnsPanel
+          visibleKeys={visibleColumnKeys}
+          onApply={(keys) => { setVisibleColumnKeys(keys); setShowEditColumns(false); }}
+          onCancel={() => setShowEditColumns(false)}
+        />
+      )}
+      {showEditFilters && (
+        <EditFiltersPanel
+          filterNodes={advFilterNodes}
+          logicOp={advLogicOp}
+          onApply={(nodes, logic) => {
+            setAdvFilterNodes(nodes);
+            setAdvLogicOp(logic);
+            setShowEditFilters(false);
+          }}
+          onCancel={() => setShowEditFilters(false)}
+        />
+      )}
+      {showBulkModal && (
+        <BulkNoticesModal
+          selectedIds={selectedIds}
+          rows={rows}
+          onClose={() => setShowBulkModal(false)}
+        />
+      )}
+    </div>
   );
 }
 
 export default App;
-

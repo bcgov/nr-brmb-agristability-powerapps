@@ -33,6 +33,14 @@
         "enrolmenthistory": {
           "entitySetName": "vsi_enrolmenthistories",
           "logicalName": "vsi_enrolmenthistory"
+        },
+        "savedviews": {
+          "entitySetName": "userqueries",
+          "logicalName": "userquery"
+        },
+        "views": {
+          "entitySetName": "savedqueries",
+          "logicalName": "savedquery"
         }
       },
       "version": "v9.0",
