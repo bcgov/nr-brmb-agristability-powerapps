@@ -100,7 +100,7 @@ export function summarizeGroup(group: AdvFilterGroup): string {
       return labels[(c as AdvFilterRow).operator] ?? '';
     })
     .join(', ');
-  return `${group.logic} (… ${ops})`;
+  return `${group.logic} (... ${ops})`;
 }
 
 export function serializeFilterNodes(nodes: AdvFilterNode[]): unknown[] {
@@ -111,8 +111,38 @@ export function serializeFilterNodes(nodes: AdvFilterNode[]): unknown[] {
 }
 
 export function deserializeFilterNodes(raw: unknown[]): AdvFilterNode[] {
-  return (raw ?? []).map((n: any) => {
-    if (n.kind === 'row') return { ...n, values: new Set(n.values ?? []) } as AdvFilterRow;
-    return { ...n, children: deserializeFilterNodes(n.children ?? []) } as AdvFilterGroup;
+  return (raw ?? []).map((n) => {
+    if (typeof n !== 'object' || n === null) return emptyFilterRow();
+
+    const node = n as {
+      kind?: unknown;
+      id?: unknown;
+      field?: unknown;
+      operator?: unknown;
+      values?: unknown;
+      textValue?: unknown;
+      logic?: unknown;
+      children?: unknown;
+    };
+
+    if (node.kind === 'row') {
+      const values = Array.isArray(node.values) ? node.values.map(String) : [];
+      return {
+        kind: 'row',
+        id: typeof node.id === 'number' ? node.id : nextFilterId(),
+        field: typeof node.field === 'string' ? (node.field as AdvFilterField) : ('' as AdvFilterField),
+        operator: typeof node.operator === 'string' ? (node.operator as AdvFilterRow['operator']) : 'equals',
+        values: new Set(values),
+        textValue: typeof node.textValue === 'string' ? node.textValue : '',
+      };
+    }
+
+    const children = Array.isArray(node.children) ? node.children : [];
+    return {
+      kind: 'group',
+      id: typeof node.id === 'number' ? node.id : nextFilterId(),
+      logic: node.logic === 'OR' ? 'OR' : 'AND',
+      children: deserializeFilterNodes(children),
+    };
   });
 }

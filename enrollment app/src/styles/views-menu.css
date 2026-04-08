@@ -1,0 +1,264 @@
+/* ═══════════════════════════════════════════
+   Views Menu (Power Apps personal views)
+   ═══════════════════════════════════════════ */
+.vm-wrapper {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 1rem;
+}
+.vm-trigger {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem 0.25rem 0;
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: inherit;
+}
+.vm-trigger:hover {
+  color: #2b6cb0;
+}
+.vm-chevron {
+  font-size: 0.85rem;
+  opacity: 0.55;
+}
+.vm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+}
+.vm-panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 1000;
+  background: #fff;
+  border: 1px solid #e4e8ed;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.13);
+  min-width: 300px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+.vm-search {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #eef0f3;
+}
+.vm-search-input {
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  outline: none;
+  box-sizing: border-box;
+}
+.vm-search-input:focus {
+  border-color: #3b82f6;
+}
+.vm-list {
+  padding: 0.25rem 0;
+}
+.vm-item {
+  display: flex;
+  align-items: center;
+  padding: 0 0.75rem;
+  min-height: 36px;
+}
+.vm-item:hover {
+  background: #f5f7fa;
+}
+.vm-item-active {
+  background: #f0f5ff;
+}
+.vm-item-btn {
+  flex: 1;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.4rem 0;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+  color: #1a1a1a;
+  font-family: inherit;
+}
+.vm-check {
+  color: #3b82f6;
+  font-weight: 700;
+  font-size: 0.95rem;
+  width: 1.2rem;
+  text-align: center;
+}
+.vm-item-name {
+  flex: 1;
+}
+.vm-item-tag {
+  font-size: 0.72rem;
+  background: #e4e8ed;
+  color: #5a6a7e;
+  padding: 0.1rem 0.45rem;
+  border-radius: 3px;
+  margin-left: 0.5rem;
+}
+.vm-item-actions {
+  display: flex;
+  gap: 0.15rem;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.vm-item:hover .vm-item-actions {
+  opacity: 1;
+}
+.vm-item-action {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.82rem;
+  padding: 0.2rem 0.3rem;
+  border-radius: 3px;
+  color: #5a6a7e;
+}
+.vm-item-action:hover {
+  background: #e4e8ed;
+  color: #1a1a1a;
+}
+.vm-divider {
+  height: 1px;
+  background: #e4e8ed;
+  margin: 0.25rem 0;
+}
+.vm-action {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.88rem;
+  color: #1a1a1a;
+  text-align: left;
+  font-family: inherit;
+}
+.vm-action:hover {
+  background: #f5f7fa;
+}
+.vm-action-icon {
+  font-size: 0.92rem;
+  width: 1.2rem;
+  text-align: center;
+}
+/* Save-as sub-panel */
+.vm-save-as {
+  padding: 0.75rem;
+}
+.vm-save-as-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+.vm-save-as-header h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.vm-save-as-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  color: #5a6a7e;
+  padding: 0.15rem 0.3rem;
+}
+.vm-save-as-label {
+  display: block;
+  font-size: 0.82rem;
+  color: #5a6a7e;
+  margin-bottom: 0.3rem;
+}
+.vm-save-as-input {
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 0.88rem;
+  outline: none;
+  box-sizing: border-box;
+  margin-bottom: 0.75rem;
+}
+.vm-save-as-input:focus {
+  border-color: #3b82f6;
+}
+.vm-save-as-footer {
+  display: flex;
+  gap: 0.5rem;
+}
+.vm-save-as-ok {
+  padding: 0.4rem 1rem;
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.vm-save-as-ok:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.vm-save-as-cancel {
+  padding: 0.4rem 1rem;
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+/* Rename inline */
+.vm-rename-row {
+  display: flex;
+  flex: 1;
+  gap: 0.3rem;
+  align-items: center;
+}
+.vm-rename-input {
+  flex: 1;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid #3b82f6;
+  border-radius: 3px;
+  font-size: 0.85rem;
+  outline: none;
+}
+.vm-rename-ok {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #3b82f6;
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 0.15rem 0.3rem;
+}
+.vm-loading {
+  padding: 0.6rem 0.75rem;
+  color: #9ca3af;
+  font-size: 0.84rem;
+  font-style: italic;
+}
+.vm-section-label {
+  padding: 0.45rem 0.75rem 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #5a6a7e;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}

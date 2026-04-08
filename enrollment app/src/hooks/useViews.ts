@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { PersonalView, ViewPayload, SortKey, SortDir, FilterOperator, AdvFilterNode, LogicOp } from '../types/enrollment';
+import type {
+  PersonalView,
+  ViewPayload,
+  SortKey,
+  SortDir,
+  FilterOperator,
+  AdvFilterNode,
+  LogicOp,
+  QuickFilterState,
+} from '../types/enrollment';
 import { DEFAULT_VIEW_SNAPSHOT, USERQUERY_ENTITY, USERQUERY_TYPE } from '../constants/columns';
 import { UserqueriesService } from '../generated/services/UserqueriesService';
 import { SavedqueriesService } from '../generated/services/SavedqueriesService';
@@ -11,7 +20,7 @@ export interface ViewState {
   columnWidths: Partial<Record<SortKey, number>>;
   sortKey: SortKey | null;
   sortDir: SortDir;
-  filters: { verifiedCalc: boolean; unverifiedCalc: boolean; flagged: boolean; partnerships: boolean };
+  filters: QuickFilterState;
   taskStatusFilter: Set<string>;
   enrolStatusFilter: Set<string>;
   taskFilterOp: FilterOperator;
@@ -25,7 +34,7 @@ export function useViews(state: ViewState, setters: {
   setColumnWidths: (w: Partial<Record<SortKey, number>>) => void;
   setSortKey: (k: SortKey | null) => void;
   setSortDir: (d: SortDir) => void;
-  setFilters: (f: { verifiedCalc: boolean; unverifiedCalc: boolean; flagged: boolean; partnerships: boolean }) => void;
+  setFilters: (f: QuickFilterState) => void;
   setTaskStatusFilter: (s: Set<string>) => void;
   setEnrolStatusFilter: (s: Set<string>) => void;
   setTaskFilterOp: (op: FilterOperator) => void;
@@ -70,8 +79,20 @@ export function useViews(state: ViewState, setters: {
     if (activeViewId) {
       const view = savedViews.find(v => v.id === activeViewId);
       if (!view) return true;
-      const { id: _id, name: _name, source: _source, ...rest } = view;
-      return current !== JSON.stringify(rest);
+      const savedSnapshot: ViewPayload = {
+        visibleColumnKeys: [...view.visibleColumnKeys],
+        columnWidths: { ...view.columnWidths },
+        sortKey: view.sortKey,
+        sortDir: view.sortDir,
+        filters: { ...view.filters },
+        taskStatusFilter: [...view.taskStatusFilter],
+        enrolStatusFilter: [...view.enrolStatusFilter],
+        taskFilterOp: view.taskFilterOp,
+        enrolFilterOp: view.enrolFilterOp,
+        advFilterNodes: [...view.advFilterNodes],
+        advLogicOp: view.advLogicOp,
+      };
+      return current !== JSON.stringify(savedSnapshot);
     }
     return current !== JSON.stringify(DEFAULT_VIEW_SNAPSHOT);
   }, [captureCurrentSnapshot, activeViewId, savedViews]);
@@ -149,7 +170,7 @@ export function useViews(state: ViewState, setters: {
       layoutxml: generateLayoutXml(snap.visibleColumnKeys, snap.columnWidths),
     };
     try {
-      const result = await UserqueriesService.create(payload as any);
+      const result = await UserqueriesService.create(payload as unknown as Parameters<typeof UserqueriesService.create>[0]);
       const created = result.data;
       if (created) {
         const newView: PersonalView = { id: created.userqueryid, name, source: 'personal', ...snap };

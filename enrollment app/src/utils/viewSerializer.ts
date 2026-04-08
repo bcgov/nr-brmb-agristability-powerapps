@@ -36,7 +36,7 @@ export function userqueryToView(uq: Userqueries): PersonalView {
       return { id: uq.userqueryid, name: uq.name, source: 'personal', ...payload };
     }
   } catch { /* layoutjson not in our format */ }
-  const xmlCols = parseLayoutXml((uq as any).layoutxml);
+  const xmlCols = parseLayoutXml(uq.layoutxml);
   const snapshot: ViewPayload = xmlCols
     ? { ...DEFAULT_VIEW_SNAPSHOT, visibleColumnKeys: xmlCols }
     : { ...DEFAULT_VIEW_SNAPSHOT };
@@ -44,7 +44,7 @@ export function userqueryToView(uq: Userqueries): PersonalView {
 }
 
 export function savedqueryToView(sq: Savedqueries): PersonalView {
-  const xmlCols = parseLayoutXml((sq as any).layoutxml);
+  const xmlCols = parseLayoutXml(sq.layoutxml);
   const snapshot: ViewPayload = xmlCols
     ? { ...DEFAULT_VIEW_SNAPSHOT, visibleColumnKeys: xmlCols }
     : { ...DEFAULT_VIEW_SNAPSHOT };

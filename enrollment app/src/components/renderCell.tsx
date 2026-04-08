@@ -16,7 +16,8 @@ export function renderCell(
   avatarUrls: Record<string, string>,
 ) {
   const yesNo = (v: unknown) => v === 1 ? 'Yes' : v === 0 ? 'No' : '';
-  const enumLabel = (map: Record<number, string>, v: unknown) => v != null ? (map as any)[v as number] ?? String(v) : '';
+  const enumLabel = (map: Record<number, string>, v: unknown) =>
+    v != null ? map[Number(v)] ?? String(v) : '';
   const fmtDate = (v: unknown) => { if (!v) return ''; try { return new Date(v as string).toLocaleDateString(); } catch { return String(v); } };
   const toNumber = (v: unknown) => {
     if (typeof v === 'number' && Number.isFinite(v)) return v;
