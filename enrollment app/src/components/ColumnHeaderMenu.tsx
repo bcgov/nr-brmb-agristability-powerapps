@@ -3,6 +3,33 @@ import type { SortKey, SortDir, FilterOperator } from '../types/enrollment';
 
 type MenuView = 'main' | 'filter' | 'width';
 
+export type ColumnHeaderDragProps = {
+  draggable: boolean;
+  onDragStart: () => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDragEnd: () => void;
+  className?: string;
+};
+
+export type ColumnHeaderFilterProps = {
+  filterOptions?: string[];
+  selectedFilters?: Set<string>;
+  filterOperator?: FilterOperator;
+  onFilterChange?: (next: Set<string>) => void;
+  onFilterOperatorChange?: (op: FilterOperator) => void;
+};
+
+export type ColumnHeaderMenuProps = {
+  label: string;
+  sortKey: SortKey;
+  currentSortKey: SortKey | null;
+  currentSortDir: SortDir;
+  onSort: (key: SortKey, dir: SortDir) => void;
+  columnWidth: number | undefined;
+  onColumnWidthChange: (w: number | undefined) => void;
+  dragProps?: ColumnHeaderDragProps;
+} & ColumnHeaderFilterProps;
+
 export function ColumnHeaderMenu({
   label,
   sortKey,
@@ -17,21 +44,7 @@ export function ColumnHeaderMenu({
   columnWidth,
   onColumnWidthChange,
   dragProps,
-}: {
-  label: string;
-  sortKey: SortKey;
-  currentSortKey: SortKey | null;
-  currentSortDir: SortDir;
-  onSort: (key: SortKey, dir: SortDir) => void;
-  filterOptions?: string[];
-  selectedFilters?: Set<string>;
-  filterOperator?: FilterOperator;
-  onFilterChange?: (next: Set<string>) => void;
-  onFilterOperatorChange?: (op: FilterOperator) => void;
-  columnWidth: number | undefined;
-  onColumnWidthChange: (w: number | undefined) => void;
-  dragProps?: { draggable: boolean; onDragStart: () => void; onDragOver: (e: React.DragEvent) => void; onDragEnd: () => void; className?: string };
-}) {
+}: ColumnHeaderMenuProps) {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<MenuView>('main');
   const [operatorOpen, setOperatorOpen] = useState(false);

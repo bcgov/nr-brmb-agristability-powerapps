@@ -1,19 +1,21 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, type DragEvent } from 'react';
 import './App.css';
 
-import type { SortKey, SortDir, FilterOperator, AdvFilterNode, LogicOp } from './types/enrollment';
-import { ALL_COLUMNS, DEFAULT_VISIBLE_KEYS } from './constants/columns';
+import type { SortKey, SortDir, FilterOperator, AdvFilterNode, LogicOp, QuickFilterState } from './types/enrollment';
+import { DEFAULT_VISIBLE_KEYS } from './constants/columns';
 import { countActiveNodes } from './utils/filterTree';
 import { useEnrolmentData, useSortedAndFilteredRows } from './hooks/useEnrolmentData';
 import { useViews } from './hooks/useViews';
 
 import { ViewsMenu } from './components/ViewsMenu';
-import { ColumnHeaderMenu } from './components/ColumnHeaderMenu';
 import { EditColumnsPanel } from './components/EditColumnsPanel';
 import { EditFiltersPanel } from './components/EditFiltersPanel';
 import { BulkNoticesModal } from './components/BulkNoticesModal';
 import { EnrollmentSearchBar } from './components/EnrollmentSearchBar';
-import { renderCell } from './components/renderCell';
+import { EnrolmentQuickFilters } from './components/EnrolmentQuickFilters';
+import { EnrolmentDataTable } from './components/EnrolmentDataTable';
+import { EnrolmentPagination } from './components/EnrolmentPagination';
+import { EnrolmentActionsBar } from './components/EnrolmentActionsBar';
 
 const PAGE_SIZE = 20;
 
@@ -27,7 +29,12 @@ function App() {
   const [sortDir, setSortDir] = useState<SortDir>('asc');
 
   // Filter state
-  const [filters, setFilters] = useState({ verifiedCalc: false, unverifiedCalc: false, flagged: false, partnerships: false });
+  const [filters, setFilters] = useState<QuickFilterState>({
+    verifiedCalc: false,
+    unverifiedCalc: false,
+    flagged: false,
+    partnerships: false,
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [taskStatusFilter, setTaskStatusFilter] = useState<Set<string>>(new Set());
   const [enrolStatusFilter, setEnrolStatusFilter] = useState<Set<string>>(new Set());
@@ -45,10 +52,39 @@ function App() {
   const [showEditFilters, setShowEditFilters] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
 
+  const setFiltersAndReset = useCallback((next: QuickFilterState) => {
+    setFilters(next);
+    setCurrentPage(1);
+  }, []);
+  const setTaskStatusFilterAndReset = useCallback((next: Set<string>) => {
+    setTaskStatusFilter(next);
+    setCurrentPage(1);
+  }, []);
+  const setEnrolStatusFilterAndReset = useCallback((next: Set<string>) => {
+    setEnrolStatusFilter(next);
+    setCurrentPage(1);
+  }, []);
+  const setTaskFilterOpAndReset = useCallback((next: FilterOperator) => {
+    setTaskFilterOp(next);
+    setCurrentPage(1);
+  }, []);
+  const setEnrolFilterOpAndReset = useCallback((next: FilterOperator) => {
+    setEnrolFilterOp(next);
+    setCurrentPage(1);
+  }, []);
+  const setAdvFilterNodesAndReset = useCallback((next: AdvFilterNode[]) => {
+    setAdvFilterNodes(next);
+    setCurrentPage(1);
+  }, []);
+  const setAdvLogicOpAndReset = useCallback((next: LogicOp) => {
+    setAdvLogicOp(next);
+    setCurrentPage(1);
+  }, []);
+
   // Column drag-and-drop
   const [colDragIdx, setColDragIdx] = useState<number | null>(null);
   const handleColDragStart = (i: number) => setColDragIdx(i);
-  const handleColDragOver = (e: React.DragEvent, i: number) => {
+  const handleColDragOver = (e: DragEvent, i: number) => {
     e.preventDefault();
     if (colDragIdx === null || colDragIdx === i) return;
     setVisibleColumnKeys(prev => {
@@ -64,9 +100,22 @@ function App() {
   // Views hook
   const viewSetters = useMemo(() => ({
     setVisibleColumnKeys, setColumnWidths, setSortKey, setSortDir,
-    setFilters, setTaskStatusFilter, setEnrolStatusFilter,
-    setTaskFilterOp, setEnrolFilterOp, setAdvFilterNodes, setAdvLogicOp,
-  }), []);
+    setFilters: setFiltersAndReset,
+    setTaskStatusFilter: setTaskStatusFilterAndReset,
+    setEnrolStatusFilter: setEnrolStatusFilterAndReset,
+    setTaskFilterOp: setTaskFilterOpAndReset,
+    setEnrolFilterOp: setEnrolFilterOpAndReset,
+    setAdvFilterNodes: setAdvFilterNodesAndReset,
+    setAdvLogicOp: setAdvLogicOpAndReset,
+  }), [
+    setFiltersAndReset,
+    setTaskStatusFilterAndReset,
+    setEnrolStatusFilterAndReset,
+    setTaskFilterOpAndReset,
+    setEnrolFilterOpAndReset,
+    setAdvFilterNodesAndReset,
+    setAdvLogicOpAndReset,
+  ]);
 
   const viewState = useMemo(() => ({
     visibleColumnKeys, columnWidths, sortKey, sortDir, filters,
@@ -130,8 +179,10 @@ function App() {
     });
   };
 
-  const toggleFilter = (key: keyof typeof filters) =>
-    setFilters(f => ({ ...f, [key]: !f[key] }));
+  const toggleFilter = (key: keyof QuickFilterState) => {
+    setFilters(current => ({ ...current, [key]: !current[key] }));
+    setCurrentPage(1);
+  };
 
   const setSort = (key: SortKey, dir: SortDir) => { setSortKey(key); setSortDir(dir); };
 
@@ -141,9 +192,6 @@ function App() {
       if (w === undefined) delete next[key]; else next[key] = w;
       return next;
     });
-
-  // Reset page on filter change
-  useEffect(() => { setCurrentPage(1); }, [filters, taskStatusFilter, enrolStatusFilter, advFilterNodes, advLogicOp, searchQuery]);
 
   return (
     <div className="enrolment-wrapper">
@@ -165,118 +213,64 @@ function App() {
 
       {!loading && !error && (
         <>
-          <EnrollmentSearchBar value={searchQuery} onChange={setSearchQuery} />
+          <EnrollmentSearchBar
+            value={searchQuery}
+            onChange={(nextValue) => {
+              setSearchQuery(nextValue);
+              setCurrentPage(1);
+            }}
+          />
 
-          <div className="enrolment-filters">
-            <strong>Apply Filters</strong>
-            <label><input type="checkbox" checked={filters.verifiedCalc} onChange={() => toggleFilter('verifiedCalc')} /> Verified, EN Calculated</label>
-            <label><input type="checkbox" checked={filters.unverifiedCalc} onChange={() => toggleFilter('unverifiedCalc')} /> Unverified, EN Calculated</label>
-            <label><input type="checkbox" checked={filters.flagged} onChange={() => toggleFilter('flagged')} /> Flagged files</label>
-            <label><input type="checkbox" checked={filters.partnerships} onChange={() => toggleFilter('partnerships')} /> Partnerships/Combined</label>
-            <button className="ef-edit-btn" onClick={() => setShowEditColumns(true)}>
-              <span className="ef-edit-icon">&#x1F5C2;</span> Edit columns
-            </button>
-            <button className="ef-edit-btn" onClick={() => setShowEditFilters(true)}>
-              <span className="ef-edit-icon">&#x25BD;</span> Edit filters
-            </button>
-            {advFilterNodes.length > 0 && (
-              <span className="ef-active-count">{countActiveNodes(advFilterNodes)} advanced filter(s)</span>
-            )}
-          </div>
+          <EnrolmentQuickFilters
+            filters={filters}
+            onToggleFilter={toggleFilter}
+            onOpenEditColumns={() => setShowEditColumns(true)}
+            onOpenEditFilters={() => setShowEditFilters(true)}
+            activeAdvancedCount={countActiveNodes(advFilterNodes)}
+          />
 
-          <div className="enrolment-table-container">
-            <table className="enrolment-table">
-              <thead>
-                <tr>
-                  <th style={{ width: '2rem' }}>
-                    <input
-                      type="checkbox"
-                      checked={allPageSelected}
-                      ref={el => { if (el) el.indeterminate = somePageSelected && !allPageSelected; }}
-                      onChange={toggleSelectAll}
-                    />
-                  </th>
-                  {visibleColumnKeys.map((k, colIdx) => {
-                    const def = ALL_COLUMNS.find(c => c.key === k)!;
-                    const extra: Record<string, unknown> = {};
-                    if (k === 'taskStatus') {
-                      extra.filterOptions = taskStatusOptions;
-                      extra.selectedFilters = taskStatusFilter;
-                      extra.filterOperator = taskFilterOp;
-                      extra.onFilterChange = setTaskStatusFilter;
-                      extra.onFilterOperatorChange = setTaskFilterOp;
-                    }
-                    if (k === 'enrolStatus') {
-                      extra.filterOptions = enrolStatusOptions;
-                      extra.selectedFilters = enrolStatusFilter;
-                      extra.filterOperator = enrolFilterOp;
-                      extra.onFilterChange = setEnrolStatusFilter;
-                      extra.onFilterOperatorChange = setEnrolFilterOp;
-                    }
-                    const dragProps = {
-                      draggable: true,
-                      onDragStart: () => handleColDragStart(colIdx),
-                      onDragOver: (e: React.DragEvent) => handleColDragOver(e, colIdx),
-                      onDragEnd: handleColDragEnd,
-                      className: colDragIdx === colIdx ? 'col-dragging' : undefined,
-                    };
-                    if (k === 'sharepoint') return <th key={k} {...dragProps} style={{ cursor: 'grab' }}>SharePoint</th>;
-                    return (
-                      <ColumnHeaderMenu
-                        key={k}
-                        label={def.label}
-                        sortKey={k}
-                        currentSortKey={sortKey}
-                        currentSortDir={sortDir}
-                        onSort={setSort}
-                        columnWidth={columnWidths[k]}
-                        onColumnWidthChange={setColumnWidth(k)}
-                        dragProps={dragProps}
-                        {...extra as any}
-                      />
-                    );
-                  })}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.length === 0 ? (
-                  <tr><td colSpan={visibleColumnKeys.length + 1} className="enrolment-empty">No records found</td></tr>
-                ) : pagedRows.length === 0 ? (
-                  <tr><td colSpan={visibleColumnKeys.length + 1} className="enrolment-empty">No rows returned</td></tr>
-                ) : (
-                  pagedRows.map((row, i) => {
-                    const raw = row as unknown as Record<string, unknown>;
-                    return (
-                      <tr key={row.vsi_participantprogramyearid ?? i}>
-                        <td>
-                          <input
-                            type="checkbox"
-                            checked={selectedIds.has(row.vsi_participantprogramyearid)}
-                            onChange={() => toggleSelect(row.vsi_participantprogramyearid)}
-                          />
-                        </td>
-                        {visibleColumnKeys.map(k => renderCell(k, row, raw, avatarUrls))}
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+          <EnrolmentDataTable
+            allRowsCount={rows.length}
+            pagedRows={pagedRows}
+            visibleColumnKeys={visibleColumnKeys}
+            allPageSelected={allPageSelected}
+            somePageSelected={somePageSelected}
+            onToggleSelectAll={toggleSelectAll}
+            selectedIds={selectedIds}
+            onToggleSelect={toggleSelect}
+            colDragIdx={colDragIdx}
+            onColDragStart={handleColDragStart}
+            onColDragOver={handleColDragOver}
+            onColDragEnd={handleColDragEnd}
+            taskStatusOptions={taskStatusOptions}
+            taskStatusFilter={taskStatusFilter}
+            taskFilterOp={taskFilterOp}
+            onTaskStatusFilterChange={setTaskStatusFilterAndReset}
+            onTaskFilterOperatorChange={setTaskFilterOpAndReset}
+            enrolStatusOptions={enrolStatusOptions}
+            enrolStatusFilter={enrolStatusFilter}
+            enrolFilterOp={enrolFilterOp}
+            onEnrolStatusFilterChange={setEnrolStatusFilterAndReset}
+            onEnrolFilterOperatorChange={setEnrolFilterOpAndReset}
+            sortKey={sortKey}
+            sortDir={sortDir}
+            onSort={setSort}
+            columnWidths={columnWidths}
+            onColumnWidthChange={setColumnWidth}
+            avatarUrls={avatarUrls}
+          />
 
-          <div className="enrolment-pagination">
-            <button disabled={currentPage <= 1} onClick={() => setCurrentPage(1)}>&laquo;</button>
-            <button disabled={currentPage <= 1} onClick={() => setCurrentPage(p => p - 1)}>&lsaquo; Prev</button>
-            <span>Page {currentPage} of {totalPages} ({searchedRows.length} records)</span>
-            <button disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => p + 1)}>Next &rsaquo;</button>
-            <button disabled={currentPage >= totalPages} onClick={() => setCurrentPage(totalPages)}>&raquo;</button>
-          </div>
+          <EnrolmentPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalRecords={searchedRows.length}
+            onFirstPage={() => setCurrentPage(1)}
+            onPrevPage={() => setCurrentPage(previous => previous - 1)}
+            onNextPage={() => setCurrentPage(previous => previous + 1)}
+            onLastPage={() => setCurrentPage(totalPages)}
+          />
 
-          <div className="enrolment-actions">
-            <button className="btn-bulk" onClick={() => setShowBulkModal(true)}>
-              <span className="btn-bulk-icon">&#x1F5B6;</span> Bulk EN Notices
-            </button>
-          </div>
+          <EnrolmentActionsBar onOpenBulkNotices={() => setShowBulkModal(true)} />
         </>
       )}
 
@@ -292,8 +286,8 @@ function App() {
           filterNodes={advFilterNodes}
           logicOp={advLogicOp}
           onApply={(nodes, logic) => {
-            setAdvFilterNodes(nodes);
-            setAdvLogicOp(logic);
+            setAdvFilterNodesAndReset(nodes);
+            setAdvLogicOpAndReset(logic);
             setShowEditFilters(false);
           }}
           onCancel={() => setShowEditFilters(false)}

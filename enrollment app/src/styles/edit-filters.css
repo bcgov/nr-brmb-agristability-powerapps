@@ -1,0 +1,502 @@
+/* ══════════════════════════════════════════
+   Edit Filters panel (Power Apps style)
+   ══════════════════════════════════════════ */
+
+/* trigger button in toolbar */
+.ef-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.75rem;
+  border: 1px solid #3b82f6;
+  border-radius: 4px;
+  background: #fff;
+  color: #3b82f6;
+  font-size: 0.84rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ef-edit-btn:hover {
+  background: #eff6ff;
+}
+.ef-edit-icon {
+  font-size: 0.7rem;
+}
+.ef-active-count {
+  font-size: 0.78rem;
+  color: #3b82f6;
+  font-weight: 500;
+}
+
+/* overlay */
+.ef-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 60px;
+  z-index: 1000;
+}
+.ef-panel {
+  background: #fff;
+  border-radius: 8px;
+  width: 780px;
+  max-width: 95vw;
+  max-height: calc(100vh - 120px);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.22);
+}
+
+/* header */
+.ef-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e4e8ed;
+}
+.ef-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+.ef-close {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: #5a6a7e;
+  padding: 0 0.2rem;
+}
+.ef-close:hover {
+  color: #3b82f6;
+}
+
+/* toolbar */
+.ef-toolbar {
+  display: flex;
+  gap: 1rem;
+  padding: 0.6rem 1.5rem;
+  border-bottom: 1px solid #e4e8ed;
+}
+.ef-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: none;
+  border: none;
+  font-size: 0.82rem;
+  color: #5a6a7e;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+}
+.ef-toolbar-btn:hover {
+  color: #1a1a1a;
+}
+.ef-tb-icon {
+  font-size: 0.75rem;
+  color: #3b82f6;
+}
+
+/* body */
+.ef-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 1.5rem;
+  min-height: 200px;
+}
+
+/* ── Tree structure ── */
+.ef-tree {
+  position: relative;
+}
+
+/* top bar: AND/OR + column headers */
+.ef-tree-top {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 6px;
+  padding-bottom: 0;
+}
+.ef-logic-select {
+  padding: 0.3rem 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #1a1a1a;
+  background: #f7f8fa;
+  cursor: pointer;
+  min-width: 60px;
+}
+.ef-logic-select-sm {
+  padding: 0.25rem 0.4rem;
+  font-size: 0.78rem;
+}
+.ef-col-hdr {
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: #5a6a7e;
+}
+.ef-col-field { flex: 1.2; min-width: 0; }
+.ef-col-op { flex: 1; min-width: 0; }
+.ef-col-val { flex: 1.5; min-width: 0; }
+.ef-col-actions { width: 28px; }
+
+/* tree connector lines */
+.ef-tree-nodes {
+  position: relative;
+  padding-left: 30px;
+}
+.ef-tree-item {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+.ef-tree-connector {
+  position: absolute;
+  left: -30px;
+  top: 0;
+  bottom: 0;
+  width: 30px;
+}
+.ef-tree-vline {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: -8px;
+  width: 2px;
+  background: #3b82f6;
+}
+.ef-tree-item-last > .ef-tree-connector > .ef-tree-vline {
+  bottom: auto;
+  height: 16px;
+}
+.ef-tree-hline {
+  position: absolute;
+  left: 0;
+  top: 14px;
+  width: 28px;
+  height: 2px;
+  background: #3b82f6;
+}
+.ef-tree-content {
+  flex: 1;
+  min-width: 0;
+  padding-bottom: 8px;
+}
+.ef-tree-item:last-child > .ef-tree-content {
+  padding-bottom: 0;
+}
+
+/* ── Checkbox on rows/groups ── */
+.ef-node-check {
+  width: 16px;
+  height: 16px;
+  margin-right: 0.4rem;
+  accent-color: #3b82f6;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* ── Filter row ── */
+.ef-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.ef-cell-field { flex: 1.2; min-width: 0; }
+.ef-cell-op { flex: 1; min-width: 0; }
+.ef-cell-val { flex: 1.5; min-width: 0; }
+
+.ef-select {
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 0.84rem;
+  color: #1a1a1a;
+  background: #fff;
+}
+.ef-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+.ef-text-input {
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 0.84rem;
+  color: #1a1a1a;
+}
+.ef-text-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+/* value choice dropdown */
+.ef-val-choice-wrapper {
+  position: relative;
+}
+.ef-val-choice-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #fff;
+  font-size: 0.84rem;
+  color: #1a1a1a;
+  cursor: pointer;
+  text-align: left;
+  gap: 0.3rem;
+  min-height: 32px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ef-val-choice-btn:hover {
+  border-color: #9ca3af;
+}
+.ef-val-placeholder {
+  color: #9ca3af;
+}
+.ef-val-chevron {
+  font-size: 0.6rem;
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+.ef-val-dropdown {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  z-index: 110;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 0.25rem 0;
+}
+.ef-val-opt {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.65rem;
+  font-size: 0.84rem;
+  color: #1a1a1a;
+  cursor: pointer;
+}
+.ef-val-opt:hover {
+  background: #f5f5f5;
+}
+.ef-val-opt input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #3b82f6;
+}
+
+/* ── ⋯ Context menu ── */
+.ef-ctx-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+.ef-ctx-btn {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 0.1rem 0.3rem;
+  line-height: 1;
+  letter-spacing: 1px;
+}
+.ef-ctx-btn:hover {
+  color: #1a1a1a;
+}
+.ef-ctx-menu {
+  position: absolute;
+  top: calc(100% + 2px);
+  right: 0;
+  z-index: 110;
+  min-width: 150px;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.14);
+  padding: 0.3rem 0;
+}
+.ef-ctx-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 0.85rem;
+  background: none;
+  border: none;
+  font-size: 0.85rem;
+  color: #1a1a1a;
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+}
+.ef-ctx-item:hover {
+  background: #f5f5f5;
+}
+.ef-ctx-icon {
+  font-size: 0.85rem;
+  color: #5a6a7e;
+  width: 18px;
+  text-align: center;
+}
+
+/* + Add button */
+.ef-add-wrapper {
+  position: relative;
+  display: inline-block;
+}
+.ef-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #fff;
+  font-size: 0.84rem;
+  color: #1a1a1a;
+  cursor: pointer;
+}
+.ef-add-btn:hover {
+  background: #f5f5f5;
+}
+.ef-add-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 109;
+}
+.ef-add-menu {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  z-index: 110;
+  min-width: 170px;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  padding: 0.3rem 0;
+}
+.ef-add-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 0.85rem;
+  background: none;
+  border: none;
+  font-size: 0.85rem;
+  color: #1a1a1a;
+  cursor: pointer;
+  text-align: left;
+}
+.ef-add-menu-item:hover {
+  background: #f5f5f5;
+}
+.ef-add-icon {
+  font-size: 0.9rem;
+  color: #5a6a7e;
+}
+
+/* ── Groups ── */
+.ef-group {
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 0.6rem 0.75rem;
+  background: #f5f6f8;
+}
+.ef-group-top {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 6px;
+}
+.ef-group-nodes {
+  position: relative;
+  padding-left: 30px;
+}
+.ef-group-collapsed {
+  padding: 0;
+}
+.ef-group-collapsed-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  background: #eef0f3;
+  border-radius: 4px;
+}
+.ef-group-summary {
+  font-size: 0.8rem;
+  color: #5a6a7e;
+  font-style: italic;
+  margin-left: auto;
+}
+.ef-collapse-btn {
+  background: none;
+  border: none;
+  font-size: 0.9rem;
+  color: #3b82f6;
+  cursor: pointer;
+  padding: 0.1rem 0.3rem;
+  line-height: 1;
+}
+.ef-collapse-btn:hover {
+  color: #1d4ed8;
+}
+
+/* footer */
+.ef-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.9rem 1.5rem;
+  border-top: 1px solid #e4e8ed;
+}
+.ef-apply {
+  padding: 0.45rem 1.6rem;
+  border: 1px solid #3b82f6;
+  border-radius: 4px;
+  background: #3b82f6;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.ef-apply:hover {
+  background: #2563eb;
+}
+.ef-cancel {
+  padding: 0.45rem 1.6rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #fff;
+  color: #374151;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.ef-cancel:hover {
+  background: #f5f5f5;
+}
+

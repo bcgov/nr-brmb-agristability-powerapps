@@ -6,7 +6,15 @@ import {
 } from '../generated/models/Vsi_participantprogramyearsModel';
 import { Vsi_participantprogramyearsService } from '../generated/services/Vsi_participantprogramyearsService';
 import { Office365UsersService } from '../generated/services/Office365UsersService';
-import type { SortKey, SortDir, FilterOperator, AdvFilterNode, AdvFilterField, LogicOp } from '../types/enrollment';
+import type {
+  SortKey,
+  SortDir,
+  FilterOperator,
+  AdvFilterNode,
+  AdvFilterField,
+  LogicOp,
+  QuickFilterState,
+} from '../types/enrollment';
 import { ADV_FIELD_OPTIONS } from '../constants/columns';
 import { getEnrolmentStatusLabel, getTaskStatusLabel, getSortValue } from '../utils/helpers';
 import { isNodeActive } from '../utils/filterTree';
@@ -106,7 +114,7 @@ export function useSortedAndFilteredRows(
   rows: Vsi_participantprogramyears[],
   sortKey: SortKey | null,
   sortDir: SortDir,
-  filters: { verifiedCalc: boolean; unverifiedCalc: boolean; flagged: boolean; partnerships: boolean },
+  filters: QuickFilterState,
   taskStatusFilter: Set<string>,
   enrolStatusFilter: Set<string>,
   taskFilterOp: FilterOperator,
@@ -158,11 +166,14 @@ export function useSortedAndFilteredRows(
   }, [getRowFieldValue]);
 
   const matchAdvNode = useCallback((row: Vsi_participantprogramyears, node: AdvFilterNode): boolean => {
-    if (node.kind === 'row') return matchAdvRow(row, node);
-    const activeChildren = node.children.filter(isNodeActive);
-    if (activeChildren.length === 0) return true;
-    if (node.logic === 'AND') return activeChildren.every(ch => matchAdvNode(row, ch));
-    return activeChildren.some(ch => matchAdvNode(row, ch));
+    const evaluate = (currentNode: AdvFilterNode): boolean => {
+      if (currentNode.kind === 'row') return matchAdvRow(row, currentNode);
+      const activeChildren = currentNode.children.filter(isNodeActive);
+      if (activeChildren.length === 0) return true;
+      if (currentNode.logic === 'AND') return activeChildren.every(ch => evaluate(ch));
+      return activeChildren.some(ch => evaluate(ch));
+    };
+    return evaluate(node);
   }, [matchAdvRow]);
 
   const sortedRows = useMemo(() => {
@@ -182,17 +193,35 @@ export function useSortedAndFilteredRows(
 
   const anyFilter = filters.verifiedCalc || filters.unverifiedCalc || filters.flagged || filters.partnerships;
 
+  const isYesValue = useCallback((value: unknown): boolean => {
+    if (value === true || value === 1 || value === '1') return true;
+    if (typeof value === 'string') {
+      const normalized = value.trim().toLowerCase();
+      return normalized === 'yes' || normalized === 'true';
+    }
+    return false;
+  }, []);
+
+  const isReadyTaskStatus = useCallback((value: unknown): boolean => {
+    if (typeof value === 'number') return value === 865520002;
+    if (typeof value === 'string') {
+      const normalized = value.trim().toLowerCase();
+      return normalized === '865520002' || normalized === 'ready';
+    }
+    return false;
+  }, []);
+
   const filteredRows = useMemo(() => {
     let result = sortedRows;
 
     if (anyFilter) {
       result = result.filter(row => {
-        const isEnCalc = row.vsi_enrolmentfeecalculated === 1;
-        const isReady = row.vsi_taskstatus === 865520002;
+        const isEnCalc = isYesValue(row.vsi_enrolmentfeecalculated);
+        const isReady = isReadyTaskStatus(row.vsi_taskstatus);
         if (filters.verifiedCalc && isReady && isEnCalc) return true;
         if (filters.unverifiedCalc && !isReady && isEnCalc) return true;
         if (filters.flagged && !!row.vsi_sharepointdocumentfolder) return true;
-        if (filters.partnerships && (row.vsi_haspartners === 1 || row.vsi_incombinedfarm === 1)) return true;
+        if (filters.partnerships && (isYesValue(row.vsi_haspartners) || isYesValue(row.vsi_incombinedfarm))) return true;
         return false;
       });
     }
@@ -219,7 +248,7 @@ export function useSortedAndFilteredRows(
     }
 
     return result;
-  }, [sortedRows, filters, anyFilter, taskStatusFilter, enrolStatusFilter, taskFilterOp, enrolFilterOp, advFilterNodes, advLogicOp, matchAdvNode]);
+  }, [sortedRows, filters, anyFilter, taskStatusFilter, enrolStatusFilter, taskFilterOp, enrolFilterOp, advFilterNodes, advLogicOp, matchAdvNode, isYesValue, isReadyTaskStatus]);
 
   return { filteredRows, taskStatusOptions, enrolStatusOptions };
 }

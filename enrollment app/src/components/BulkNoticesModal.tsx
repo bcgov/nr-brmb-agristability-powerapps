@@ -43,29 +43,37 @@ export function BulkNoticesModal({
           </label>
         </div>
         <div className="modal-footer">
-          <button className="btn-ok" disabled={bulkSubmitting || selectedIds.size === 0} onClick={async () => {
-            setBulkSubmitting(true);
-            setBulkError(null);
-            try {
-              const client = getClient(dataSourcesInfo);
-              await (client as any).executeAsync({
-                dataverseRequest: {
-                  action: 'vsi_GenerateBulkEnrolmentNotices',
-                  parameters: {
-                    EnrolmentIds: JSON.stringify([...selectedIds]),
-                    EnrolmentSentDate: bulkSentDate,
-                    EnrolmentFeeDate: bulkFeeDate,
-                    ProduceMergedPdf: bulkMergedPdf,
+          <button
+            className="btn-ok"
+            disabled={bulkSubmitting || selectedIds.size === 0}
+            onClick={async () => {
+              setBulkSubmitting(true);
+              setBulkError(null);
+              try {
+                const client = getClient(dataSourcesInfo);
+                const request = {
+                  dataverseRequest: {
+                    action: 'vsi_GenerateBulkEnrolmentNotices',
+                    parameters: {
+                      EnrolmentIds: JSON.stringify([...selectedIds]),
+                      EnrolmentSentDate: bulkSentDate,
+                      EnrolmentFeeDate: bulkFeeDate,
+                      ProduceMergedPdf: bulkMergedPdf,
+                    },
                   },
-                },
-              });
-              onClose();
-            } catch (err) {
-              setBulkError(err instanceof Error ? err.message : 'Workflow failed');
-            } finally {
-              setBulkSubmitting(false);
-            }
-          }}>{bulkSubmitting ? 'Submitting…' : 'OK'}</button>
+                } as unknown as Parameters<typeof client.executeAsync>[0];
+
+                await client.executeAsync(request);
+                onClose();
+              } catch (err) {
+                setBulkError(err instanceof Error ? err.message : 'Workflow failed');
+              } finally {
+                setBulkSubmitting(false);
+              }
+            }}
+          >
+            {bulkSubmitting ? 'Submitting...' : 'OK'}
+          </button>
           <button className="btn-cancel" disabled={bulkSubmitting} onClick={onClose}>Cancel</button>
           {bulkError && <span className="modal-error">{bulkError}</span>}
         </div>

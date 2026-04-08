@@ -1,0 +1,417 @@
+/* Enrolment table */
+.enrolment-wrapper {
+  max-width: 1720px;
+  margin: 1rem auto;
+  padding: 0;
+  text-align: left;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+.enrolment-wrapper h2 {
+  margin-bottom: 1rem;
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+.enrolment-loading {
+  color: #555;
+}
+.enrolment-error {
+  color: #d32f2f;
+}
+.enrolment-table-container {
+  overflow-x: auto;
+  border: 1px solid #e4e8ed;
+  border-radius: 6px;
+  background: #fff;
+}
+.enrolment-table {
+  width: 100%;
+  min-width: 100%;
+  table-layout: auto;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  color: #2d3748;
+}
+
+/* ── header ── */
+.enrolment-table thead th {
+  background: #f7f8fa;
+  font-weight: 600;
+  font-size: 0.84rem;
+  color: #5a6a7e;
+  text-transform: none;
+  padding: 0.45rem 0.6rem;
+  border-bottom: 2px solid #e4e8ed;
+  white-space: nowrap;
+  user-select: none;
+}
+.sort-arrows {
+  display: inline-block;
+  margin-left: 4px;
+  font-size: 0.7rem;
+  opacity: 0.45;
+  vertical-align: middle;
+}
+
+/* ── body rows ── */
+.enrolment-table tbody tr {
+  border-bottom: 1px solid #eef0f3;
+  transition: background 0.12s;
+}
+.enrolment-table tbody tr:hover {
+  background: #f0f5ff;
+}
+.enrolment-table td {
+  padding: 0.38rem 0.6rem;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.calculated-fee-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.calculated-fee-value {
+  color: #2065d1;
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+.variance-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 54px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.variance-pill.negative {
+  color: #c81e1e;
+  background: #fdecec;
+}
+
+.variance-pill.positive {
+  color: #1f7a3e;
+  background: #e8f4ea;
+}
+
+.variance-pill.neutral {
+  color: #667085;
+  background: #eceff3;
+}
+
+
+/* PIN column – blue link style */
+.cell-pin {
+  color: #2b6cb0;
+  text-decoration: underline;
+  font-weight: 500;
+  cursor: pointer;
+}
+.cell-pin:hover {
+  color: #1a4f8b;
+}
+
+/* ── Task Status badges ── */
+.task-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 500;
+  font-size: 0.82rem;
+}
+.ts-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 0.7rem;
+  line-height: 1;
+}
+/* Manual – amber/orange warning */
+.task-manual .ts-icon { background: #fff3e0; color: #e65100; }
+.task-manual { color: #6d4c00; }
+
+/* Supervisor – blue search */
+.task-supervisor .ts-icon { background: #e3f2fd; color: #1565c0; }
+.task-supervisor { color: #1565c0; }
+
+/* Ready – green check */
+.task-ready .ts-icon { background: #e8f5e9; color: #2e7d32; }
+.task-ready { color: #2e7d32; }
+
+/* ── Enrolment status badges ── */
+.enrol-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: normal;
+}
+.es-enrolled   { background: #e8f5e9; color: #1b5e20; }
+.es-notpaid    { background: #fff8e1; color: #795548; }
+.es-calculated { background: #e3f2fd; color: #0d47a1; }
+.es-notice     { background: #f3e5f5; color: #6a1b9a; }
+.es-init       { background: #eceff1; color: #37474f; }
+.es-ineligible { background: #fbe9e7; color: #bf360c; }
+.es-optedout   { background: #eceff1; color: #546e7a; }
+.es-review     { background: #fff3e0; color: #e65100; }
+.es-dormant    { background: #eceff1; color: #78909c; }
+
+/* Calculated fee */
+.cell-fee {
+  font-variant-numeric: tabular-nums;
+  color: #2d3748;
+}
+
+/* SharePoint link-style */
+.sp-link {
+  color: #2b6cb0;
+  cursor: pointer;
+}
+.sp-link:hover { text-decoration: underline; }
+
+/* Date */
+.cell-date {
+  color: #5a6a7e;
+}
+
+/* Modified-by avatar */
+.cell-modified-by {
+  text-align: center;
+}
+.avatar-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #4a6fa5;
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  cursor: default;
+  object-fit: cover;
+}
+
+/* empty state */
+.enrolment-empty {
+  text-align: center;
+  padding: 2.5rem 1rem !important;
+  color: #888;
+  font-style: italic;
+}
+
+/* ── Filters bar ── */
+.enrolment-filters {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.84rem;
+  color: #2d3748;
+}
+.enrolment-filters strong {
+  font-weight: 700;
+  white-space: nowrap;
+}
+.enrolment-filters label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* ── Pagination ── */
+.enrolment-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  font-size: 0.84rem;
+  color: #2d3748;
+}
+.enrolment-pagination button {
+  padding: 0.3rem 0.7rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #fff;
+  color: #2d3748;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.enrolment-pagination button:hover:not(:disabled) {
+  background: #f0f5ff;
+  border-color: #90b0e0;
+}
+.enrolment-pagination button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+
+/* ── Bulk Actions ── */
+.enrolment-actions {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 0.75rem;
+}
+
+.btn-bulk {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1.1rem;
+  border: 1px solid #3b82f6;
+  border-radius: 4px;
+  background: #3b82f6;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.btn-bulk:hover {
+  background: #2563eb;
+}
+.btn-bulk-icon {
+  font-size: 1rem;
+}
+
+/* ── Modal ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.modal-box {
+  background: #fff;
+  border-radius: 8px;
+  width: 420px;
+  max-width: 95vw;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem 1.2rem;
+  background: #3b82f6;
+  color: #fff;
+}
+.modal-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+.modal-close {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 1.3rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 0.2rem;
+}
+.modal-body {
+  padding: 1.25rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: #374151;
+}
+.modal-field input[type="date"] {
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+.modal-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: #374151;
+  cursor: pointer;
+}
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.8rem 1.2rem;
+  border-top: 1px solid #e5e7eb;
+}
+.btn-ok,
+.btn-cancel {
+  padding: 0.4rem 1.4rem;
+  border: 1px solid #3b82f6;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.btn-ok {
+  background: #3b82f6;
+  color: #fff;
+}
+.btn-ok:hover {
+  background: #2563eb;
+}
+.btn-cancel {
+  background: #fff;
+  color: #3b82f6;
+}
+.btn-cancel:hover {
+  background: #eff6ff;
+}
+
+.modal-selected-list {
+  padding: 0.8rem 1.2rem;
+  border-top: 1px solid #e5e7eb;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.selected-enrolments-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.selected-enrolments-table td {
+  padding: 0.25rem 0.5rem;
+}
+.selected-row-num {
+  width: 2rem;
+  text-align: right;
+  color: #3b82f6;
+  font-weight: 600;
+}
+.modal-error {
+  color: #dc2626;
+  font-size: 0.8rem;
+  margin-left: 0.5rem;
+}
+
