@@ -10,7 +10,7 @@ export type SortKey =
   | 'manualReview' | 'enrolNoticeDate' | 'fileReceivedDate' | 'feesPaidDate'
   | 'modifiedOn';
 
-export type ColumnIcon = '🔤' | '🔢' | '📋' | '🔗' | '👤' | '☑' | '📅';
+export type ColumnIcon = 'text' | 'number' | 'list' | 'link' | 'user' | 'check' | 'date';
 
 export interface ColumnDef {
   key: SortKey;

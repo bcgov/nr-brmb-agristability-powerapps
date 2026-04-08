@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { SortKey } from '../types/enrollment';
 import { ALL_COLUMNS, DEFAULT_VISIBLE_KEYS } from '../constants/columns';
+import { COLUMN_ICON_GLYPHS } from '../constants/columnIcons';
 
 function AddColumnsPanel({
   visibleKeys,
@@ -46,17 +47,21 @@ function AddColumnsPanel({
           {filtered.length === 0 ? (
             <div className="ec-empty">No columns available</div>
           ) : (
-            filtered.map(c => (
-              <label key={c.key} className="ec-add-item">
-                <input
-                  type="checkbox"
-                  checked={selected.has(c.key)}
-                  onChange={() => toggle(c.key)}
-                />
-                <span className="ec-col-icon">{c.icon}</span>
-                <span className="ec-col-label">{c.label}</span>
-              </label>
-            ))
+            filtered.map(c => {
+              return (
+                <label key={c.key} className="ec-add-item">
+                  <input
+                    type="checkbox"
+                    checked={selected.has(c.key)}
+                    onChange={() => toggle(c.key)}
+                  />
+                  <span className="ec-col-icon">
+                    {COLUMN_ICON_GLYPHS[c.icon]}
+                  </span>
+                  <span className="ec-col-label">{c.label}</span>
+                </label>
+              );
+            })
           )}
         </div>
         <div className="ec-footer">
@@ -146,7 +151,9 @@ export function EditColumnsPanel({
                 onDragOver={e => handleDragOver(e, i)}
                 onDragEnd={handleDragEnd}
               >
-                <span className="ec-col-icon">{def.icon}</span>
+                <span className="ec-col-icon">
+                  {COLUMN_ICON_GLYPHS[def.icon]}
+                </span>
                 <span className="ec-col-label">{def.label}</span>
                 {def.removable && (
                   <button className="ec-col-remove" onClick={() => remove(k)} title="Remove column">&times;</button>
