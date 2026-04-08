@@ -66,3 +66,36 @@ export interface PersonalView extends ViewPayload {
 }
 
 export type EnrolmentRow = Vsi_participantprogramyears;
+
+// Legacy compatibility types for old dashboard modules still present in src/
+export type SortDirection = SortDir;
+export type SortColumn =
+  | 'pin'
+  | 'producerName'
+  | 'year'
+  | 'taskStatus'
+  | 'enrolStatus'
+  | 'calculatedFee'
+  | 'sharepoint'
+  | 'modifiedOn';
+
+export interface EnrollmentFilterState {
+  verifiedCalculated: boolean;
+  unverifiedCalculated: boolean;
+  flaggedFiles: boolean;
+  partnershipsCombined: boolean;
+}
+
+export interface EnrollmentRecord {
+  id: string;
+  pin: string;
+  producerName: string;
+  year: string;
+  taskStatus: string;
+  enrolStatus: string;
+  calculatedFee: number | null;
+  previousYearCalculatedFee: number | null;
+  sharepointUrl: string;
+  modifiedOn: string;
+  flags: EnrollmentFilterState;
+}
