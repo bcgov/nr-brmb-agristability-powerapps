@@ -18,6 +18,14 @@ export function renderCell(
   const yesNo = (v: unknown) => v === 1 ? 'Yes' : v === 0 ? 'No' : '';
   const enumLabel = (map: Record<number, string>, v: unknown) => v != null ? (map as any)[v as number] ?? String(v) : '';
   const fmtDate = (v: unknown) => { if (!v) return ''; try { return new Date(v as string).toLocaleDateString(); } catch { return String(v); } };
+  const toNumber = (v: unknown) => {
+    if (typeof v === 'number' && Number.isFinite(v)) return v;
+    if (typeof v !== 'string') return null;
+    const normalized = v.replace(/[^0-9.-]/g, '');
+    if (!normalized) return null;
+    const parsed = Number(normalized);
+    return Number.isNaN(parsed) ? null : parsed;
+  };
 
   switch (key) {
     case 'pin': return <td key={key} className="cell-pin">{row.vsi_name ?? ''}</td>;
@@ -37,7 +45,24 @@ export function renderCell(
       const l = getEnrolmentStatusLabel(row.vsi_enrolmentstatus);
       return <td key={key}><span className={`enrol-badge ${enrolmentStatusClass(l)}`}>{l}</span></td>;
     }
-    case 'fee': return <td key={key} className="cell-fee">{formatCurrency(row.vsi_calculatedenfee)}</td>;
+    case 'fee': {
+      const currentFee = toNumber(row.vsi_calculatedenfee);
+      const previousFee = toNumber(row.vsi_previousyearcalculatedenfee);
+      const variance = currentFee != null && previousFee != null && previousFee !== 0
+        ? ((currentFee - previousFee) / previousFee) * 100
+        : null;
+      const varianceClass = variance == null ? 'neutral' : variance < 0 ? 'negative' : variance > 0 ? 'positive' : 'neutral';
+      const varianceText = variance == null ? '' : `${variance > 0 ? '+' : ''}${Math.round(variance)}%`;
+
+      return (
+        <td key={key} className="cell-fee">
+          <div className="calculated-fee-cell">
+            <span className="calculated-fee-value">{formatCurrency(row.vsi_calculatedenfee)}</span>
+            {variance != null ? <span className={`variance-pill ${varianceClass}`}>{varianceText}</span> : null}
+          </div>
+        </td>
+      );
+    }
     case 'totalFeesOwed': return <td key={key} className="cell-fee">{formatCurrency(row.vsi_totalfeesowed)}</td>;
     case 'totalFeesPaid': return <td key={key} className="cell-fee">{formatCurrency(row.vsi_totalfeespaid)}</td>;
     case 'enrolmentFee': return <td key={key} className="cell-fee">{formatCurrency(row.vsi_enrolmentfee)}</td>;

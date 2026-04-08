@@ -12,6 +12,7 @@ import { ColumnHeaderMenu } from './components/ColumnHeaderMenu';
 import { EditColumnsPanel } from './components/EditColumnsPanel';
 import { EditFiltersPanel } from './components/EditFiltersPanel';
 import { BulkNoticesModal } from './components/BulkNoticesModal';
+import { EnrollmentSearchBar } from './components/EnrollmentSearchBar';
 import { renderCell } from './components/renderCell';
 
 const PAGE_SIZE = 20;
@@ -27,6 +28,7 @@ function App() {
 
   // Filter state
   const [filters, setFilters] = useState({ verifiedCalc: false, unverifiedCalc: false, flagged: false, partnerships: false });
+  const [searchQuery, setSearchQuery] = useState('');
   const [taskStatusFilter, setTaskStatusFilter] = useState<Set<string>>(new Set());
   const [enrolStatusFilter, setEnrolStatusFilter] = useState<Set<string>>(new Set());
   const [taskFilterOp, setTaskFilterOp] = useState<FilterOperator>('equals');
@@ -87,9 +89,23 @@ function App() {
     advFilterNodes, advLogicOp,
   );
 
+  const searchedRows = useMemo(() => {
+    const term = searchQuery.trim().toLowerCase();
+    if (!term) return filteredRows;
+
+    return filteredRows.filter((row) => {
+      const raw = row as unknown as Record<string, unknown>;
+      const pin = row.vsi_name ?? '';
+      const participant = (row.vsi_participantidname ?? raw['_vsi_participantid_value@OData.Community.Display.V1.FormattedValue'] ?? '') as string;
+      const farmCorp = (row.new_combinedfarmname ?? row.vsi_partnershipnames ?? '') as string;
+
+      return [pin, participant, farmCorp].some((value) => String(value).toLowerCase().includes(term));
+    });
+  }, [filteredRows, searchQuery]);
+
   // Pagination
-  const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
-  const pagedRows = filteredRows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(searchedRows.length / PAGE_SIZE));
+  const pagedRows = searchedRows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const allPageSelected = pagedRows.length > 0 && pagedRows.every(r => selectedIds.has(r.vsi_participantprogramyearid));
   const somePageSelected = pagedRows.some(r => selectedIds.has(r.vsi_participantprogramyearid));
@@ -127,7 +143,7 @@ function App() {
     });
 
   // Reset page on filter change
-  useEffect(() => { setCurrentPage(1); }, [filters, taskStatusFilter, enrolStatusFilter, advFilterNodes, advLogicOp]);
+  useEffect(() => { setCurrentPage(1); }, [filters, taskStatusFilter, enrolStatusFilter, advFilterNodes, advLogicOp, searchQuery]);
 
   return (
     <div className="enrolment-wrapper">
@@ -149,6 +165,8 @@ function App() {
 
       {!loading && !error && (
         <>
+          <EnrollmentSearchBar value={searchQuery} onChange={setSearchQuery} />
+
           <div className="enrolment-filters">
             <strong>Apply Filters</strong>
             <label><input type="checkbox" checked={filters.verifiedCalc} onChange={() => toggleFilter('verifiedCalc')} /> Verified, EN Calculated</label>
@@ -249,7 +267,7 @@ function App() {
           <div className="enrolment-pagination">
             <button disabled={currentPage <= 1} onClick={() => setCurrentPage(1)}>&laquo;</button>
             <button disabled={currentPage <= 1} onClick={() => setCurrentPage(p => p - 1)}>&lsaquo; Prev</button>
-            <span>Page {currentPage} of {totalPages} ({filteredRows.length} records)</span>
+            <span>Page {currentPage} of {totalPages} ({searchedRows.length} records)</span>
             <button disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => p + 1)}>Next &rsaquo;</button>
             <button disabled={currentPage >= totalPages} onClick={() => setCurrentPage(totalPages)}>&raquo;</button>
           </div>
