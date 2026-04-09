@@ -27,7 +27,7 @@ export class Vsi_participantprogramyearsService {
   public static async update(id: string, changedFields: Partial<Omit<Vsi_participantprogramyearsBase, 'vsi_participantprogramyearid'>>): Promise<IOperationResult<Vsi_participantprogramyears>> {
     const result = await Vsi_participantprogramyearsService.client.updateRecordAsync<Partial<Omit<Vsi_participantprogramyearsBase, 'vsi_participantprogramyearid'>>, Vsi_participantprogramyears>(
       Vsi_participantprogramyearsService.dataSourceName,
-      id.toString(),
+      id,
       changedFields
     );
     return result;
@@ -36,13 +36,13 @@ export class Vsi_participantprogramyearsService {
   public static async delete(id: string): Promise<void> {
     await Vsi_participantprogramyearsService.client.deleteRecordAsync(
       Vsi_participantprogramyearsService.dataSourceName,
-      id.toString());
+      id);
   }
 
   public static async get(id: string, options?: IGetOptions): Promise<IOperationResult<Vsi_participantprogramyears>> {
     const result = await Vsi_participantprogramyearsService.client.retrieveRecordAsync<Vsi_participantprogramyears>(
       Vsi_participantprogramyearsService.dataSourceName,
-      id.toString(),
+      id,
       options
     );
     return result;

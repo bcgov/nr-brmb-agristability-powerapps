@@ -41,6 +41,14 @@
         "views": {
           "entitySetName": "savedqueries",
           "logicalName": "savedquery"
+        },
+        "queues": {
+          "entitySetName": "queues",
+          "logicalName": "queue"
+        },
+        "queueitems": {
+          "entitySetName": "queueitems",
+          "logicalName": "queueitem"
         }
       },
       "version": "v9.0",
