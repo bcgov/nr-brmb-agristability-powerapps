@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { SortKey } from '../types/enrollment';
 import { ALL_COLUMNS, DEFAULT_VISIBLE_KEYS } from '../constants/columns';
-import { COLUMN_ICON_GLYPHS } from '../constants/columnIcons';
+import { COLUMN_ICON_COMPONENTS } from '../constants/columnIcons';
 
 function AddColumnsPanel({
   visibleKeys,
@@ -48,6 +48,7 @@ function AddColumnsPanel({
             <div className="ec-empty">No columns available</div>
           ) : (
             filtered.map(c => {
+              const Icon = COLUMN_ICON_COMPONENTS[c.icon];
               return (
                 <label key={c.key} className="ec-add-item">
                   <input
@@ -56,7 +57,7 @@ function AddColumnsPanel({
                     onChange={() => toggle(c.key)}
                   />
                   <span className="ec-col-icon">
-                    {COLUMN_ICON_GLYPHS[c.icon]}
+                    <Icon className="ec-col-icon-svg" aria-hidden="true" />
                   </span>
                   <span className="ec-col-label">{c.label}</span>
                 </label>
@@ -142,6 +143,7 @@ export function EditColumnsPanel({
           {keys.map((k, i) => {
             const def = ALL_COLUMNS.find(c => c.key === k);
             if (!def) return null;
+            const Icon = COLUMN_ICON_COMPONENTS[def.icon];
             return (
               <div
                 key={k}
@@ -152,7 +154,7 @@ export function EditColumnsPanel({
                 onDragEnd={handleDragEnd}
               >
                 <span className="ec-col-icon">
-                  {COLUMN_ICON_GLYPHS[def.icon]}
+                  <Icon className="ec-col-icon-svg" aria-hidden="true" />
                 </span>
                 <span className="ec-col-label">{def.label}</span>
                 {def.removable && (

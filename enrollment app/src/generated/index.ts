@@ -5,6 +5,7 @@
 
 // Models
 export * as CommonModels from './models/CommonModels';
+export * as Cr4dd_enrolmentappenvironmentvariablesModel from './models/Cr4dd_enrolmentappenvironmentvariablesModel';
 export * as FARMSAPIModel from './models/FARMSAPIModel';
 export * as Office365UsersModel from './models/Office365UsersModel';
 export * as SavedqueriesModel from './models/SavedqueriesModel';
@@ -13,6 +14,7 @@ export * as Vsi_enrolmenthistoriesModel from './models/Vsi_enrolmenthistoriesMod
 export * as Vsi_participantprogramyearsModel from './models/Vsi_participantprogramyearsModel';
 
 // Services
+export * from './services/Cr4dd_enrolmentappenvironmentvariablesService';
 export * from './services/FARMSAPIService';
 export * from './services/Office365UsersService';
 export * from './services/SavedqueriesService';
