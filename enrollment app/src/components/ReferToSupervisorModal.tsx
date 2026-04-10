@@ -90,9 +90,9 @@ export function ReferToSupervisorModal({
           let createResult;
           try {
             createResult = await QueueitemsService.create({
-              'QueueId@odata.bind': `/queues(${queue.queueid})`,
-              'ObjectId@odata.bind': `/vsi_participantprogramyears(${enrolmentId})`,
-            } as Parameters<typeof QueueitemsService.create>[0]);
+              'queueid@odata.bind': `/queues(${queue.queueid})`,
+              'objectid_vsi_participantprogramyear@odata.bind': `/vsi_participantprogramyears(${enrolmentId})`,
+            } as unknown as Parameters<typeof QueueitemsService.create>[0]);
             console.log('QueueItem create result for', enrolmentId, JSON.stringify(createResult));
             if (!createResult.success) {
               throw new Error(createResult.error?.message || 'Queue item creation failed');
