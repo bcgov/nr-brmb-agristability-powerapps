@@ -56,3 +56,9 @@
   outline-offset: 1px;
 }
 
+.ts-icon.ts-approved {
+  color: #219653;
+  font-size: 1.2em;
+  vertical-align: middle;
+}
+

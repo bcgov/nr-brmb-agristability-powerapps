@@ -107,7 +107,7 @@ export function useEnrolmentData() {
     return () => { cancelled = true; };
   }, [rows]);
 
-  return { rows, loading, error, avatarUrls };
+  return { rows, setRows, loading, error, avatarUrls };
 }
 
 export function useSortedAndFilteredRows(

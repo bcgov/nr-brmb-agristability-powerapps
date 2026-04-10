@@ -1782,14 +1782,17 @@
           "enum": [
             "Manual",
             "Supervisor",
-            "Ready"
+            "Ready",
+            "Approved"
           ],
           "x-ms-enum-values": [
             865520000,
             865520001,
-            865520002
+            865520002,
+            865520003
           ],
           "Color": [
+            null,
             null,
             null,
             null
