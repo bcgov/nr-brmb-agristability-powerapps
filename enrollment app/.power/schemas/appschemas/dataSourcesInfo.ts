@@ -19,6 +19,20 @@ export const dataSourcesInfo = {
     "dataSourceType": "Dataverse",
     "apis": {}
   },
+  "queueitems": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "queueitemid",
+    "dataSourceType": "Dataverse",
+    "apis": {}
+  },
+  "queues": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "queueid",
+    "dataSourceType": "Dataverse",
+    "apis": {}
+  },
   "userqueries": {
     "tableId": "",
     "version": "",

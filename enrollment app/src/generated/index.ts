@@ -7,6 +7,8 @@
 export * as CommonModels from './models/CommonModels';
 export * as FARMSAPIModel from './models/FARMSAPIModel';
 export * as Office365UsersModel from './models/Office365UsersModel';
+export * as QueueitemsModel from './models/QueueitemsModel';
+export * as QueuesModel from './models/QueuesModel';
 export * as SavedqueriesModel from './models/SavedqueriesModel';
 export * as UserqueriesModel from './models/UserqueriesModel';
 export * as Vsi_enrolmenthistoriesModel from './models/Vsi_enrolmenthistoriesModel';
@@ -15,6 +17,8 @@ export * as Vsi_participantprogramyearsModel from './models/Vsi_participantprogr
 // Services
 export * from './services/FARMSAPIService';
 export * from './services/Office365UsersService';
+export * from './services/QueueitemsService';
+export * from './services/QueuesService';
 export * from './services/SavedqueriesService';
 export * from './services/UserqueriesService';
 export * from './services/Vsi_enrolmenthistoriesService';

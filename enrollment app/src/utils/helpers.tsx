@@ -29,6 +29,8 @@ export function taskStatusIcon(label: string): React.ReactNode {
       return <span className="ts-icon ts-supervisor" title="Supervisor">&#x1F50D;</span>;
     case 'Ready':
       return <span className="ts-icon ts-ready" title="Ready">&#x2714;</span>;
+    case 'Approved':
+      return <span className="ts-icon ts-approved" title="Approved">&#x2705;</span>;
     default:
       return null;
   }

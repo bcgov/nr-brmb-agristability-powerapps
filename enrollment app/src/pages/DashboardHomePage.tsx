@@ -10,6 +10,8 @@ import { ViewsMenu } from '../components/ViewsMenu';
 import { EditColumnsPanel } from '../components/EditColumnsPanel';
 import { EditFiltersPanel } from '../components/EditFiltersPanel';
 import { BulkNoticesModal } from '../components/BulkNoticesModal';
+import { ReferToSupervisorModal } from '../components/ReferToSupervisorModal';
+import { ApproveCalculatedFeesModal } from '../components/ApproveCalculatedFeesModal';
 import { EnrollmentSearchBar } from '../components/EnrollmentSearchBar';
 import { EnrolmentQuickFilters } from '../components/EnrolmentQuickFilters';
 import { EnrolmentDataTable } from '../components/EnrolmentDataTable';
@@ -19,7 +21,7 @@ import { EnrolmentActionsBar } from '../components/EnrolmentActionsBar';
 const PAGE_SIZE = 20;
 
 export function DashboardHomePage() {
-  const { rows, loading, error, avatarUrls } = useEnrolmentData();
+  const { rows, setRows, loading, error, avatarUrls } = useEnrolmentData();
 
   // Column & sort state
   const [visibleColumnKeys, setVisibleColumnKeys] = useState<SortKey[]>([...DEFAULT_VISIBLE_KEYS]);
@@ -50,6 +52,8 @@ export function DashboardHomePage() {
   const [showEditColumns, setShowEditColumns] = useState(false);
   const [showEditFilters, setShowEditFilters] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
+  const [showSupervisorModal, setShowSupervisorModal] = useState(false);
+  const [showApproveFeesModal, setShowApproveFeesModal] = useState(false);
 
   const setFiltersAndReset = useCallback((next: QuickFilterState) => {
     setFilters(next);
@@ -269,7 +273,27 @@ export function DashboardHomePage() {
             onLastPage={() => setCurrentPage(totalPages)}
           />
 
-          <EnrolmentActionsBar onOpenBulkNotices={() => setShowBulkModal(true)} />
+          <EnrolmentActionsBar
+            onOpenBulkNotices={() => setShowBulkModal(true)}
+            onOpenReferToSupervisor={() => setShowSupervisorModal(true)}
+            onOpenApproveCalculatedFees={() => setShowApproveFeesModal(true)}
+          />
+
+          {showApproveFeesModal && (
+            <ApproveCalculatedFeesModal
+              selectedIds={selectedIds}
+              rows={rows}
+              onClose={() => setShowApproveFeesModal(false)}
+              onComplete={(updatedIds) => {
+                setRows(prev => prev.map(r =>
+                  updatedIds.includes(r.vsi_participantprogramyearid)
+                    ? { ...r, vsi_taskstatus: 865520003 }
+                    : r
+                ));
+                setSelectedIds(new Set());
+              }}
+            />
+          )}
         </>
       )}
 
@@ -297,6 +321,21 @@ export function DashboardHomePage() {
           selectedIds={selectedIds}
           rows={rows}
           onClose={() => setShowBulkModal(false)}
+        />
+      )}
+      {showSupervisorModal && (
+        <ReferToSupervisorModal
+          selectedIds={selectedIds}
+          rows={rows}
+          onClose={() => setShowSupervisorModal(false)}
+          onComplete={(updatedIds) => {
+            setRows(prev => prev.map(r =>
+              updatedIds.includes(r.vsi_participantprogramyearid)
+                ? { ...r, vsi_taskstatus: 865520001 }
+                : r
+            ));
+            setSelectedIds(new Set());
+          }}
         />
       )}
     </div>

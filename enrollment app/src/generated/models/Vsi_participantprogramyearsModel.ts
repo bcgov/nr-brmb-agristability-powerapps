@@ -12,36 +12,6 @@ export const Vsi_participantprogramyearsstatuscode = {
   2: 'Inactive'
 } as const;
 export type Vsi_participantprogramyearsstatuscode = keyof typeof Vsi_participantprogramyearsstatuscode;
-export const Vsi_participantprogramyearsvsi_bringforward = {
-  0: 'No',
-  1: 'Yes'
-} as const;
-export type Vsi_participantprogramyearsvsi_bringforward = keyof typeof Vsi_participantprogramyearsvsi_bringforward;
-export const Vsi_participantprogramyearsvsi_broughtforward = {
-  0: 'No',
-  1: 'Yes'
-} as const;
-export type Vsi_participantprogramyearsvsi_broughtforward = keyof typeof Vsi_participantprogramyearsvsi_broughtforward;
-export const Vsi_participantprogramyearsvsi_checkfordatafix = {
-  0: 'No',
-  1: 'Yes'
-} as const;
-export type Vsi_participantprogramyearsvsi_checkfordatafix = keyof typeof Vsi_participantprogramyearsvsi_checkfordatafix;
-export const Vsi_participantprogramyearsvsi_cleandata = {
-  0: 'No',
-  1: 'Yes'
-} as const;
-export type Vsi_participantprogramyearsvsi_cleandata = keyof typeof Vsi_participantprogramyearsvsi_cleandata;
-export const Vsi_participantprogramyearsvsi_createtaskinbarn = {
-  0: 'No',
-  1: 'Yes'
-} as const;
-export type Vsi_participantprogramyearsvsi_createtaskinbarn = keyof typeof Vsi_participantprogramyearsvsi_createtaskinbarn;
-export const Vsi_participantprogramyearsvsi_datafixapplied = {
-  0: 'No',
-  1: 'Yes'
-} as const;
-export type Vsi_participantprogramyearsvsi_datafixapplied = keyof typeof Vsi_participantprogramyearsvsi_datafixapplied;
 export const Vsi_participantprogramyearsvsi_enrollmentregionaloffice = {
   865520000: 'Abbotsford',
   865520001: 'FortSt_John',
@@ -49,16 +19,6 @@ export const Vsi_participantprogramyearsvsi_enrollmentregionaloffice = {
   865520003: 'Oliver'
 } as const;
 export type Vsi_participantprogramyearsvsi_enrollmentregionaloffice = keyof typeof Vsi_participantprogramyearsvsi_enrollmentregionaloffice;
-export const Vsi_participantprogramyearsvsi_enrolmentcandidate = {
-  0: 'No',
-  1: 'Yes'
-} as const;
-export type Vsi_participantprogramyearsvsi_enrolmentcandidate = keyof typeof Vsi_participantprogramyearsvsi_enrolmentcandidate;
-export const Vsi_participantprogramyearsvsi_enrolmentfeecalculated = {
-  0: 'No',
-  1: 'Yes'
-} as const;
-export type Vsi_participantprogramyearsvsi_enrolmentfeecalculated = keyof typeof Vsi_participantprogramyearsvsi_enrolmentfeecalculated;
 export const Vsi_participantprogramyearsvsi_enrolmentstatus = {
   865520004: 'Initialized',
   865520005: 'EnrolmentFeesCalculated',
@@ -93,71 +53,6 @@ export const Vsi_participantprogramyearsvsi_farmingsector = {
   865520015: 'Unknown'
 } as const;
 export type Vsi_participantprogramyearsvsi_farmingsector = keyof typeof Vsi_participantprogramyearsvsi_farmingsector;
-export const Vsi_participantprogramyearsvsi_fullyprovinciallyfunded = {
-  0: 'No',
-  1: 'Yes'
-} as const;
-export type Vsi_participantprogramyearsvsi_fullyprovinciallyfunded = keyof typeof Vsi_participantprogramyearsvsi_fullyprovinciallyfunded;
-export const Vsi_participantprogramyearsvsi_generatedfromenwscenario = {
-  0: 'No',
-  1: 'Yes'
-} as const;
-export type Vsi_participantprogramyearsvsi_generatedfromenwscenario = keyof typeof Vsi_participantprogramyearsvsi_generatedfromenwscenario;
-export const Vsi_participantprogramyearsvsi_haspartners = {
-  0: 'No',
-  1: 'Yes'
-} as const;
-export type Vsi_participantprogramyearsvsi_haspartners = keyof typeof Vsi_participantprogramyearsvsi_haspartners;
-export const Vsi_participantprogramyearsvsi_incombinedfarm = {
-  0: 'No',
-  1: 'Yes'
-} as const;
-export type Vsi_participantprogramyearsvsi_incombinedfarm = keyof typeof Vsi_participantprogramyearsvsi_incombinedfarm;
-export const Vsi_participantprogramyearsvsi_lateinformationfeeassessed = {
-  0: 'No',
-  1: 'Yes'
-} as const;
-export type Vsi_participantprogramyearsvsi_lateinformationfeeassessed = keyof typeof Vsi_participantprogramyearsvsi_lateinformationfeeassessed;
-export const Vsi_participantprogramyearsvsi_latepaymentfeeassessed = {
-  0: 'No',
-  1: 'Yes'
-} as const;
-export type Vsi_participantprogramyearsvsi_latepaymentfeeassessed = keyof typeof Vsi_participantprogramyearsvsi_latepaymentfeeassessed;
-export const Vsi_participantprogramyearsvsi_manualreview = {
-  0: 'No',
-  1: 'Yes'
-} as const;
-export type Vsi_participantprogramyearsvsi_manualreview = keyof typeof Vsi_participantprogramyearsvsi_manualreview;
-export const Vsi_participantprogramyearsvsi_programyearmargin1used = {
-  0: 'No',
-  1: 'Yes'
-} as const;
-export type Vsi_participantprogramyearsvsi_programyearmargin1used = keyof typeof Vsi_participantprogramyearsvsi_programyearmargin1used;
-export const Vsi_participantprogramyearsvsi_programyearmargin2used = {
-  0: 'No',
-  1: 'Yes'
-} as const;
-export type Vsi_participantprogramyearsvsi_programyearmargin2used = keyof typeof Vsi_participantprogramyearsvsi_programyearmargin2used;
-export const Vsi_participantprogramyearsvsi_programyearmargin3used = {
-  0: 'No',
-  1: 'Yes'
-} as const;
-export type Vsi_participantprogramyearsvsi_programyearmargin3used = keyof typeof Vsi_participantprogramyearsvsi_programyearmargin3used;
-export const Vsi_participantprogramyearsvsi_programyearmargin4used = {
-  0: 'No',
-  1: 'Yes'
-} as const;
-export type Vsi_participantprogramyearsvsi_programyearmargin4used = keyof typeof Vsi_participantprogramyearsvsi_programyearmargin4used;
-export const Vsi_participantprogramyearsvsi_programyearmargin5used = {
-  0: 'No',
-  1: 'Yes'
-} as const;
-export type Vsi_participantprogramyearsvsi_programyearmargin5used = keyof typeof Vsi_participantprogramyearsvsi_programyearmargin5used;
-export const Vsi_participantprogramyearsvsi_programyearmargin6used = {
-  0: 'No',
-  1: 'Yes'
-} as const;
-export type Vsi_participantprogramyearsvsi_programyearmargin6used = keyof typeof Vsi_participantprogramyearsvsi_programyearmargin6used;
 export const Vsi_participantprogramyearsvsi_sendto = {
   865520000: 'Participant',
   865520001: 'Representative'
@@ -166,28 +61,14 @@ export type Vsi_participantprogramyearsvsi_sendto = keyof typeof Vsi_participant
 export const Vsi_participantprogramyearsvsi_taskstatus = {
   865520000: 'Manual',
   865520001: 'Supervisor',
-  865520002: 'Ready'
+  865520002: 'Ready',
+  865520003: 'Approved'
 } as const;
 export type Vsi_participantprogramyearsvsi_taskstatus = keyof typeof Vsi_participantprogramyearsvsi_taskstatus;
-export const Vsi_participantprogramyearsvsi_updatedfeesreceivedafternoticesent = {
-  0: 'No',
-  1: 'Yes'
-} as const;
-export type Vsi_participantprogramyearsvsi_updatedfeesreceivedafternoticesent = keyof typeof Vsi_participantprogramyearsvsi_updatedfeesreceivedafternoticesent;
-export const Vsi_participantprogramyearsvsi_waitingforinformation = {
-  0: 'No',
-  1: 'Yes'
-} as const;
-export type Vsi_participantprogramyearsvsi_waitingforinformation = keyof typeof Vsi_participantprogramyearsvsi_waitingforinformation;
-export const Vsi_participantprogramyearsvsi_waitingforpayment = {
-  0: 'No',
-  1: 'Yes'
-} as const;
-export type Vsi_participantprogramyearsvsi_waitingforpayment = keyof typeof Vsi_participantprogramyearsvsi_waitingforpayment;
 
 export interface Vsi_participantprogramyearsBase {
   dynamics_integrationkey?: string;
-  importsequencenumber?: string;
+  importsequencenumber?: number;
   "new_Benefit@odata.bind"?: string;
   new_combinedfarmname?: string;
   overriddencreatedon?: string;
@@ -195,28 +76,28 @@ export interface Vsi_participantprogramyearsBase {
   owneridtype: string;
   statecode: Vsi_participantprogramyearsstatecode;
   statuscode?: Vsi_participantprogramyearsstatuscode;
-  timezoneruleversionnumber?: string;
+  timezoneruleversionnumber?: number;
   "TransactionCurrencyId@odata.bind"?: string;
-  utcconversiontimezonecode?: string;
-  vsi_adjustedlateenrolmentfee?: string;
-  vsi_administrativecostsharingfee?: string;
-  vsi_amendmentnumber?: string;
-  vsi_bringforward?: Vsi_participantprogramyearsvsi_bringforward;
-  vsi_broughtforward?: Vsi_participantprogramyearsvsi_broughtforward;
-  vsi_calculatedenfee?: string;
-  vsi_calculatedlatepaymentfee?: string;
-  vsi_checkfordatafix?: Vsi_participantprogramyearsvsi_checkfordatafix;
-  vsi_cleandata?: Vsi_participantprogramyearsvsi_cleandata;
+  utcconversiontimezonecode?: number;
+  vsi_adjustedlateenrolmentfee?: number;
+  vsi_administrativecostsharingfee?: number;
+  vsi_amendmentnumber?: number;
+  vsi_bringforward?: boolean;
+  vsi_broughtforward?: boolean;
+  vsi_calculatedenfee?: number;
+  vsi_calculatedlatepaymentfee?: number;
+  vsi_checkfordatafix?: boolean;
+  vsi_cleandata?: boolean;
   vsi_combinedfarmpercents?: string;
   vsi_combinedfarmpins?: string;
-  vsi_contributionmargin?: string;
-  vsi_createtaskinbarn?: Vsi_participantprogramyearsvsi_createtaskinbarn;
-  vsi_datafixapplied?: Vsi_participantprogramyearsvsi_datafixapplied;
+  vsi_contributionmargin?: number;
+  vsi_createtaskinbarn?: boolean;
+  vsi_datafixapplied?: boolean;
   vsi_datafixtag?: string;
   vsi_enrollmentregionaloffice?: Vsi_participantprogramyearsvsi_enrollmentregionaloffice;
-  vsi_enrolmentcandidate?: Vsi_participantprogramyearsvsi_enrolmentcandidate;
-  vsi_enrolmentfee?: string;
-  vsi_enrolmentfeecalculated?: Vsi_participantprogramyearsvsi_enrolmentfeecalculated;
+  vsi_enrolmentcandidate?: boolean;
+  vsi_enrolmentfee?: number;
+  vsi_enrolmentfeecalculated?: boolean;
   vsi_enrolmentfeesfinaldeadlinedate?: string;
   "vsi_EnrolmentFeesModifiedById@odata.bind"?: string;
   vsi_enrolmentfeesnonpenaltyduedate?: string;
@@ -228,54 +109,54 @@ export interface Vsi_participantprogramyearsBase {
   vsi_farmtypedetailed?: string;
   "vsi_FeeModifiedBy@odata.bind"?: string;
   vsi_filereceiveddate?: string;
-  vsi_firstmonthlateinformationfee?: string;
+  vsi_firstmonthlateinformationfee?: number;
   vsi_fortyfivedaylettersent?: string;
-  vsi_fullyprovinciallyfunded?: Vsi_participantprogramyearsvsi_fullyprovinciallyfunded;
+  vsi_fullyprovinciallyfunded?: boolean;
   vsi_generateddate?: string;
-  vsi_generatedfromenwscenario: Vsi_participantprogramyearsvsi_generatedfromenwscenario;
+  vsi_generatedfromenwscenario: boolean;
   vsi_hardcopyreceiveddate?: string;
-  vsi_haspartners: Vsi_participantprogramyearsvsi_haspartners;
-  vsi_incombinedfarm: Vsi_participantprogramyearsvsi_incombinedfarm;
+  vsi_haspartners: boolean;
+  vsi_incombinedfarm: boolean;
   vsi_lateenrolmentfeesfinaldeadlinedate?: string;
   vsi_lateenrolmentnoticesentdate?: string;
-  vsi_lateinformationfeeassessed?: Vsi_participantprogramyearsvsi_lateinformationfeeassessed;
-  vsi_latepaymentfee?: string;
-  vsi_latepaymentfeeassessed?: Vsi_participantprogramyearsvsi_latepaymentfeeassessed;
-  vsi_manualreview?: Vsi_participantprogramyearsvsi_manualreview;
+  vsi_lateinformationfeeassessed?: boolean;
+  vsi_latepaymentfee?: number;
+  vsi_latepaymentfeeassessed?: boolean;
+  vsi_manualreview?: boolean;
   vsi_name: string;
   "vsi_ParticipantId@odata.bind": string;
   vsi_participantprogramyearid: string;
   vsi_partnershipnames?: string;
   vsi_partnershippercents?: string;
   vsi_partnershippins?: string;
-  vsi_previousyearcalculatedenfee?: string;
+  vsi_previousyearcalculatedenfee?: number;
   "vsi_PrimaryEnrolmentHistory@odata.bind"?: string;
   "vsi_ProgramYearId@odata.bind": string;
-  vsi_programyearmargin1?: string;
-  vsi_programyearmargin1used?: Vsi_participantprogramyearsvsi_programyearmargin1used;
-  vsi_programyearmargin2?: string;
-  vsi_programyearmargin2used?: Vsi_participantprogramyearsvsi_programyearmargin2used;
-  vsi_programyearmargin3?: string;
-  vsi_programyearmargin3used?: Vsi_participantprogramyearsvsi_programyearmargin3used;
-  vsi_programyearmargin4?: string;
-  vsi_programyearmargin4used?: Vsi_participantprogramyearsvsi_programyearmargin4used;
-  vsi_programyearmargin5?: string;
-  vsi_programyearmargin5used?: Vsi_participantprogramyearsvsi_programyearmargin5used;
-  vsi_programyearmargin6?: string;
-  vsi_programyearmargin6used?: Vsi_participantprogramyearsvsi_programyearmargin6used;
+  vsi_programyearmargin1?: number;
+  vsi_programyearmargin1used?: boolean;
+  vsi_programyearmargin2?: number;
+  vsi_programyearmargin2used?: boolean;
+  vsi_programyearmargin3?: number;
+  vsi_programyearmargin3used?: boolean;
+  vsi_programyearmargin4?: number;
+  vsi_programyearmargin4used?: boolean;
+  vsi_programyearmargin5?: number;
+  vsi_programyearmargin5used?: boolean;
+  vsi_programyearmargin6?: number;
+  vsi_programyearmargin6used?: boolean;
   vsi_programyearoptoutdate?: string;
   vsi_provincialsupplementalreceiveddate?: string;
   "vsi_RepresentativeId@odata.bind"?: string;
-  vsi_secondmonthlateinformationfee?: string;
+  vsi_secondmonthlateinformationfee?: number;
   vsi_sendto?: Vsi_participantprogramyearsvsi_sendto;
   vsi_sharepointdocumentfolder?: string;
   vsi_taskstatus?: Vsi_participantprogramyearsvsi_taskstatus;
-  vsi_thirdmonthlateinformationfee?: string;
-  vsi_totalfeesowed?: string;
-  vsi_totalfeespaid?: string;
-  vsi_updatedfeesreceivedafternoticesent?: Vsi_participantprogramyearsvsi_updatedfeesreceivedafternoticesent;
-  vsi_waitingforinformation?: Vsi_participantprogramyearsvsi_waitingforinformation;
-  vsi_waitingforpayment?: Vsi_participantprogramyearsvsi_waitingforpayment;
+  vsi_thirdmonthlateinformationfee?: number;
+  vsi_totalfeesowed?: number;
+  vsi_totalfeespaid?: number;
+  vsi_updatedfeesreceivedafternoticesent?: boolean;
+  vsi_waitingforinformation?: boolean;
+  vsi_waitingforpayment?: boolean;
 }
 
 export interface Vsi_participantprogramyears extends Vsi_participantprogramyearsBase {
@@ -284,7 +165,7 @@ export interface Vsi_participantprogramyears extends Vsi_participantprogramyears
   createdon?: string;
   createdonbehalfbyname?: string;
   createdonbehalfbyyominame: string;
-  exchangerate?: string;
+  exchangerate?: number;
   modifiedbyname?: string;
   modifiedbyyominame: string;
   modifiedon?: string;
@@ -297,21 +178,21 @@ export interface Vsi_participantprogramyears extends Vsi_participantprogramyears
   statecodename?: string;
   statuscodename?: string;
   transactioncurrencyidname?: string;
-  versionnumber?: string;
-  vsi_adjustedlateenrolmentfee_base?: string;
-  vsi_administrativecostsharingfee_base?: string;
+  versionnumber?: number;
+  vsi_adjustedlateenrolmentfee_base?: number;
+  vsi_administrativecostsharingfee_base?: number;
   vsi_bringforwardname?: string;
   vsi_broughtforwardname?: string;
-  vsi_calculatedenfee_base?: string;
-  vsi_calculatedlatepaymentfee_base?: string;
+  vsi_calculatedenfee_base?: number;
+  vsi_calculatedlatepaymentfee_base?: number;
   vsi_checkfordatafixname?: string;
   vsi_cleandataname?: string;
-  vsi_contributionmargin_base?: string;
+  vsi_contributionmargin_base?: number;
   vsi_createtaskinbarnname?: string;
   vsi_datafixappliedname?: string;
   vsi_enrollmentregionalofficename?: string;
   vsi_enrolmentcandidatename?: string;
-  vsi_enrolmentfee_base?: string;
+  vsi_enrolmentfee_base?: number;
   vsi_enrolmentfeecalculatedname?: string;
   vsi_enrolmentfeesmodifiedbyidname?: string;
   vsi_enrolmentfeesmodifiedbyidyominame?: string;
@@ -319,42 +200,42 @@ export interface Vsi_participantprogramyears extends Vsi_participantprogramyears
   vsi_farmingsectorname?: string;
   vsi_feemodifiedbyname?: string;
   vsi_feemodifiedbyyominame?: string;
-  vsi_firstmonthlateinformationfee_base?: string;
+  vsi_firstmonthlateinformationfee_base?: number;
   vsi_fullyprovinciallyfundedname?: string;
   vsi_generatedfromenwscenarioname?: string;
   vsi_haspartnersname?: string;
   vsi_incombinedfarmname?: string;
   vsi_lateinformationfeeassessedname?: string;
-  vsi_latepaymentfee_base?: string;
+  vsi_latepaymentfee_base?: number;
   vsi_latepaymentfeeassessedname?: string;
   vsi_manualreviewname?: string;
   vsi_participantidname?: string;
   vsi_participantidyominame?: string;
-  vsi_previousyearcalculatedenfee_base?: string;
+  vsi_previousyearcalculatedenfee_base?: number;
   vsi_primaryenrolmenthistoryname?: string;
   vsi_programyearidname?: string;
-  vsi_programyearmargin1_base?: string;
+  vsi_programyearmargin1_base?: number;
   vsi_programyearmargin1usedname?: string;
-  vsi_programyearmargin2_base?: string;
+  vsi_programyearmargin2_base?: number;
   vsi_programyearmargin2usedname?: string;
-  vsi_programyearmargin3_base?: string;
+  vsi_programyearmargin3_base?: number;
   vsi_programyearmargin3usedname?: string;
-  vsi_programyearmargin4_base?: string;
+  vsi_programyearmargin4_base?: number;
   vsi_programyearmargin4usedname?: string;
-  vsi_programyearmargin5_base?: string;
+  vsi_programyearmargin5_base?: number;
   vsi_programyearmargin5usedname?: string;
-  vsi_programyearmargin6_base?: string;
+  vsi_programyearmargin6_base?: number;
   vsi_programyearmargin6usedname?: string;
   vsi_representativeidname?: string;
   vsi_representativeidyominame?: string;
-  vsi_secondmonthlateinformationfee_base?: string;
+  vsi_secondmonthlateinformationfee_base?: number;
   vsi_sendtoname?: string;
   vsi_taskstatusname?: string;
-  vsi_thirdmonthlateinformationfee_base?: string;
-  vsi_totalfeesowed_base?: string;
-  vsi_totalfeesowedcalculated?: string;
-  vsi_totalfeesowedcalculated_base?: string;
-  vsi_totalfeespaid_base?: string;
+  vsi_thirdmonthlateinformationfee_base?: number;
+  vsi_totalfeesowed_base?: number;
+  vsi_totalfeesowedcalculated?: number;
+  vsi_totalfeesowedcalculated_base?: number;
+  vsi_totalfeespaid_base?: number;
   vsi_updatedfeesreceivedafternoticesentname?: string;
   vsi_waitingforinformationname?: string;
   vsi_waitingforpaymentname?: string;
