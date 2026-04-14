@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { ClipboardCheck, Home, Menu } from 'lucide-react';
-import './App.css';
 
 import { DashboardHomePage } from './pages/DashboardHomePage';
 import { SupervisorApprovalPage } from './pages/SupervisorApprovalPage';
 import { EnrolmentDetailsPage } from './pages/EnrolmentDetailsPage';
+import { EnrolmentCalculationPage } from './pages/EnrolmentCalculationPage';
 
 function SideNav({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
   return (
@@ -41,7 +41,8 @@ function AppShell() {
           <Route path="/dashboard-home" element={<DashboardHomePage />} />
           <Route path="/enrolment/:enrolmentId" element={<EnrolmentDetailsPage />} />
           <Route path="/supervisor-approval" element={<SupervisorApprovalPage />} />
-          <Route path="/calculation" element={<Navigate to="/supervisor-approval" replace />} />
+          <Route path="/calculation/:enrolmentId" element={<EnrolmentCalculationPage />} />
+          <Route path="/calculation" element={<Navigate to="/dashboard-home" replace />} />
           <Route path="*" element={<Navigate to="/dashboard-home" replace />} />
         </Routes>
       </main>

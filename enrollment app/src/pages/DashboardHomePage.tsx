@@ -21,7 +21,11 @@ import { EnrolmentActionsBar } from '../components/EnrolmentActionsBar';
 const PAGE_SIZE = 20;
 
 export function DashboardHomePage() {
-  const { rows, setRows, loading, error, avatarUrls } = useEnrolmentData();
+  const { rows, setRows, loading, error, avatarUrls, fetchEnrolments } = useEnrolmentData();
+  // Refresh handler for manual reload
+  const handleRefresh = useCallback(() => {
+    if (typeof fetchEnrolments === 'function') fetchEnrolments();
+  }, [fetchEnrolments]);
 
   // Column & sort state
   const [visibleColumnKeys, setVisibleColumnKeys] = useState<SortKey[]>([...DEFAULT_VISIBLE_KEYS]);
@@ -198,6 +202,11 @@ export function DashboardHomePage() {
 
   return (
     <div className="enrolment-wrapper">
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+        <button type="button" onClick={handleRefresh} disabled={loading} style={{ padding: '6px 16px', borderRadius: 4, border: '1px solid #ccc', background: '#f7f7f7', cursor: loading ? 'not-allowed' : 'pointer' }}>
+          {loading ? 'Refreshing...' : 'Refresh'}
+        </button>
+      </div>
       <ViewsMenu
         views={savedViews}
         activeViewId={activeViewId}

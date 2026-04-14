@@ -1,0 +1,383 @@
+.sa-wrapper {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.sa-page-title {
+  margin: 0 0 0.2rem;
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: #1a2332;
+}
+
+.sa-page-subtitle {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #6b7a8d;
+}
+
+.sa-filters-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sa-filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid #d0d6dd;
+  background: #fff;
+  color: #334155;
+  border-radius: 6px;
+  padding: 0.38rem 0.85rem;
+  font-size: 0.84rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.sa-filter-btn:hover {
+  background: #f7f9fc;
+}
+
+/* Card wrapping the table */
+.sa-card {
+  background: #fff;
+  border: 1px solid #e2e6ec;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.sa-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 1rem 1.25rem 0.75rem;
+  border-bottom: 1px solid #e2e6ec;
+  gap: 1rem;
+}
+
+.sa-card-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.sa-card-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1a2332;
+}
+
+.sa-card-subtitle {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #6b7a8d;
+}
+
+.sa-bulk-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.sa-btn-secondary {
+  border: 1px solid #d0d6dd;
+  background: #fff;
+  color: #334155;
+  border-radius: 6px;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.84rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.sa-btn-secondary:hover {
+  background: #f7f9fc;
+}
+
+.sa-btn-primary {
+  border: none;
+  background: #1d6ee6;
+  color: #fff;
+  border-radius: 6px;
+  padding: 0.4rem 1rem;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sa-btn-primary:hover {
+  background: #1760c7;
+}
+
+.sa-btn-primary:disabled {
+  background: #93b8ef;
+  cursor: default;
+}
+
+/* Table */
+.sa-table-container {
+  overflow-x: auto;
+}
+
+.sa-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  color: #2d3748;
+}
+
+.sa-table thead th {
+  background: #f7f8fa;
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: #5a6a7e;
+  padding: 0.55rem 0.75rem;
+  border-bottom: 2px solid #e2e6ec;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.sa-table thead th.sa-th-check {
+  width: 40px;
+  text-align: center;
+}
+
+.sa-table thead th.sa-th-actions {
+  text-align: right;
+}
+
+.sa-table tbody tr {
+  border-bottom: 1px solid #f0f2f5;
+  transition: background 0.1s;
+}
+
+.sa-table tbody tr:hover {
+  background: #f5f8ff;
+}
+
+.sa-table td {
+  padding: 0.65rem 0.75rem;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.sa-td-check {
+  text-align: center;
+  width: 40px;
+}
+
+.sa-td-actions {
+  text-align: right;
+}
+
+/* PIN cell */
+.sa-pin {
+  font-weight: 600;
+  color: #1a2332;
+}
+
+/* Status badge */
+.sa-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.sa-status-badge.pending {
+  background: #f1f4f9;
+  color: #4b5563;
+}
+
+.sa-status-badge.approved {
+  background: #e6f4ea;
+  color: #1a7a3e;
+}
+
+.sa-status-badge.review {
+  background: #fff7e6;
+  color: #9b6400;
+}
+
+.sa-status-badge.inprogress {
+  background: #e8f0fe;
+  color: #1a56db;
+}
+
+.sa-status-badge.complete {
+  background: #e6f4ea;
+  color: #1a7a3e;
+}
+
+.sa-status-badge.hold {
+  background: #fff1f0;
+  color: #c0392b;
+}
+
+/* Fee cell */
+.sa-fee-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sa-fee-amount {
+  font-weight: 600;
+  color: #1a2332;
+}
+
+.sa-fee-link {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+.sa-fee-link:hover {
+  color: #1e40af;
+}
+
+/* Row action buttons */
+.sa-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+.sa-action-btn {
+  border: 1px solid #d0d6dd;
+  background: #fff;
+  color: #334155;
+  border-radius: 6px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sa-action-link {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.sa-action-btn:hover {
+  background: #f7f9fc;
+}
+
+.sa-action-btn.sa-action-ready {
+  border-color: #1d6ee6;
+  color: #1d6ee6;
+}
+
+.sa-action-btn.sa-action-ready:hover {
+  background: #eff5ff;
+}
+
+/* Pagination */
+.sa-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid #e2e6ec;
+  font-size: 0.83rem;
+  color: #6b7a8d;
+}
+
+.sa-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.sa-page-btn {
+  border: 1px solid #d0d6dd;
+  background: #fff;
+  color: #334155;
+  border-radius: 6px;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  min-width: 32px;
+  text-align: center;
+}
+
+.sa-page-btn:hover:not(:disabled) {
+  background: #f7f9fc;
+}
+
+.sa-page-btn:disabled {
+  color: #b0b8c4;
+  cursor: default;
+}
+
+.sa-page-btn.active {
+  background: #1d6ee6;
+  border-color: #1d6ee6;
+  color: #fff;
+}
+
+/* State messages */
+.sa-state-msg {
+  padding: 2rem 1.25rem;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.sa-state-msg.error {
+  color: #c0392b;
+}
+
+.sa-state-msg.loading {
+  color: #6b7a8d;
+}
+
+.sa-state-msg.empty {
+  color: #6b7a8d;
+}
+
+/* Variance pill */
+.variance-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 54px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.variance-pill.negative {
+  color: #c81e1e;
+  background: #fdecec;
+}
+
+.variance-pill.alert {
+  color: #c81e1e;
+  background: #fdecec;
+}
+
+.variance-pill.positive {
+  color: #1f7a3e;
+  background: #e8f4ea;
+}
+
+.variance-pill.neutral {
+  color: #667085;
+  background: #eceff3;
+}

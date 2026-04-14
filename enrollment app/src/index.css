@@ -1,3 +1,5 @@
+@import "./App.css";
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
@@ -64,5 +66,66 @@ button:focus-visible {
   }
   button {
     background-color: #f9f9f9;
+  }
+}
+
+.calc-page {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.calc-state {
+  margin: 0;
+  color: #475569;
+  font-size: 0.92rem;
+}
+
+.calc-state-error {
+  color: #b42318;
+}
+
+.calc-summary-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  padding: 1rem;
+}
+
+.calc-summary-title {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  color: #0f172a;
+}
+
+.calc-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem 1.2rem;
+}
+
+.calc-label {
+  font-size: 0.78rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.calc-value {
+  margin-top: 0.15rem;
+  font-size: 0.95rem;
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.calc-links {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 720px) {
+  .calc-summary-grid {
+    grid-template-columns: 1fr;
   }
 }
