@@ -1,3 +1,5 @@
+// In-memory cache for enrolment rows (persists while app is open)
+let enrolmentRowsCache: Vsi_participantprogramyears[] | null = null;
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Vsi_participantprogramyears } from '../generated/models/Vsi_participantprogramyearsModel';
 import {
@@ -19,67 +21,78 @@ import { ADV_FIELD_OPTIONS } from '../constants/columns';
 import { getEnrolmentStatusLabel, getTaskStatusLabel, getSortValue } from '../utils/helpers';
 import { isNodeActive } from '../utils/filterTree';
 
+
 export function useEnrolmentData() {
-  const [rows, setRows] = useState<Vsi_participantprogramyears[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [rows, setRows] = useState<Vsi_participantprogramyears[]>(() => enrolmentRowsCache || []);
+  const [loading, setLoading] = useState(() => !enrolmentRowsCache);
   const [error, setError] = useState<string | null>(null);
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string>>({});
 
-  useEffect(() => {
+  // Fetch function (used for initial load and manual refresh)
+  const fetchEnrolments = async () => {
+    setLoading(true);
+    setError(null);
     let cancelled = false;
-    (async () => {
-      try {
-        const allRows: Vsi_participantprogramyears[] = [];
-        let skipToken: string | undefined;
-        const baseOptions = {
-          maxPageSize: 5000,
-          select: [
-            'vsi_name',
-            '_vsi_participantid_value',
-            '_vsi_programyearid_value',
-            'vsi_enrolmentstatus',
-            'vsi_taskstatus',
-            'vsi_calculatedenfee',
-            'vsi_previousyearcalculatedenfee',
-            'vsi_enrolmentfeecalculated',
-            'vsi_totalfeesowed',
-            'vsi_totalfeespaid',
-            'vsi_enrolmentfee',
-            'vsi_latepaymentfee',
-            'vsi_haspartners',
-            'vsi_incombinedfarm',
-            'vsi_sharepointdocumentfolder',
-            '_modifiedby_value',
-            'modifiedon',
-            'vsi_enrollmentregionaloffice',
-            'vsi_farmingsector',
-            'vsi_bringforward',
-            'vsi_broughtforward',
-            'vsi_manualreview',
-            'vsi_enrolmentnoticesentdate',
-            'vsi_filereceiveddate',
-            'vsi_enrolmentfeespaiddate',
-          ],
-          orderBy: ['vsi_taskstatus desc'],
-        };
-        do {
-          const result = await Vsi_participantprogramyearsService.getAll({
-            ...baseOptions,
-            ...(skipToken ? { skipToken } : {}),
-          });
-          if (cancelled) return;
-          allRows.push(...(result.data ?? []));
-          const raw = result as unknown as Record<string, unknown>;
-          skipToken = (raw['skipToken'] ?? raw['@odata.nextLink']) as string | undefined;
-        } while (skipToken);
-        if (!cancelled) setRows(allRows);
-      } catch (e: unknown) {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load enrolments');
-      } finally {
-        if (!cancelled) setLoading(false);
+    try {
+      const allRows: Vsi_participantprogramyears[] = [];
+      let skipToken: string | undefined;
+      const baseOptions = {
+        maxPageSize: 5000,
+        select: [
+          'vsi_name',
+          '_vsi_participantid_value',
+          '_vsi_programyearid_value',
+          'vsi_enrolmentstatus',
+          'vsi_taskstatus',
+          'vsi_calculatedenfee',
+          'vsi_previousyearcalculatedenfee',
+          'vsi_enrolmentfeecalculated',
+          'vsi_totalfeesowed',
+          'vsi_totalfeespaid',
+          'vsi_enrolmentfee',
+          'vsi_latepaymentfee',
+          'vsi_haspartners',
+          'vsi_incombinedfarm',
+          'vsi_sharepointdocumentfolder',
+          '_modifiedby_value',
+          'modifiedon',
+          'vsi_enrollmentregionaloffice',
+          'vsi_farmingsector',
+          'vsi_bringforward',
+          'vsi_broughtforward',
+          'vsi_manualreview',
+          'vsi_enrolmentnoticesentdate',
+          'vsi_filereceiveddate',
+          'vsi_enrolmentfeespaiddate',
+        ],
+        orderBy: ['vsi_taskstatus desc'],
+      };
+      do {
+        const result = await Vsi_participantprogramyearsService.getAll({
+          ...baseOptions,
+          ...(skipToken ? { skipToken } : {}),
+        });
+        if (cancelled) return;
+        allRows.push(...(result.data ?? []));
+        const raw = result as unknown as Record<string, unknown>;
+        skipToken = (raw['skipToken'] ?? raw['@odata.nextLink']) as string | undefined;
+      } while (skipToken);
+      if (!cancelled) {
+        setRows(allRows);
+        enrolmentRowsCache = allRows;
       }
-    })();
+    } catch (e: unknown) {
+      if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load enrolments');
+    } finally {
+      if (!cancelled) setLoading(false);
+    }
     return () => { cancelled = true; };
+  };
+
+  useEffect(() => {
+    if (enrolmentRowsCache) return;
+    fetchEnrolments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Fetch avatar photos
@@ -107,7 +120,7 @@ export function useEnrolmentData() {
     return () => { cancelled = true; };
   }, [rows]);
 
-  return { rows, setRows, loading, error, avatarUrls };
+  return { rows, setRows, loading, error, avatarUrls, fetchEnrolments };
 }
 
 export function useSortedAndFilteredRows(

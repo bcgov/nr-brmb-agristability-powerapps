@@ -60,6 +60,28 @@ export function formatCurrency(value: unknown): string {
   return isNaN(n) ? String(value) : '$' + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+export function formatCurrencyOr(value: unknown, fallback = ''): string {
+  return formatCurrency(value) || fallback;
+}
+
+export function calculateVariance(currentFee: unknown, previousFee: unknown): number | null {
+  const current = Number(currentFee);
+  const previous = Number(previousFee);
+  if (!Number.isFinite(current) || !Number.isFinite(previous) || previous === 0) return null;
+  return ((current - previous) / previous) * 100;
+}
+
+export function getVarianceClass(variance: number | null): 'neutral' | 'alert' | 'positive' {
+  if (variance == null) return 'neutral';
+  if (Math.abs(variance) >= 25) return 'alert';
+  return variance > 0 ? 'positive' : 'neutral';
+}
+
+export function formatVariancePercent(variance: number | null): string {
+  if (variance == null) return '';
+  return `${variance > 0 ? '+' : ''}${Math.round(variance)}%`;
+}
+
 export function getInitials(name: string): string {
   if (!name) return '?';
   const parts = name.trim().split(/\s+/);

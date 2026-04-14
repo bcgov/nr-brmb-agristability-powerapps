@@ -3,6 +3,7 @@ import type { Vsi_participantprogramyears } from '../generated/models/Vsi_partic
 import { QueueitemsService } from '../generated/services/QueueitemsService';
 import { Vsi_participantprogramyearsService } from '../generated/services/Vsi_participantprogramyearsService';
 import { QueuesService } from '../generated/services/QueuesService';
+
 const SUPERVISOR_QUEUE_NAME = 'Supervisor Approval Queue';
 
 export function ReferToSupervisorModal({
@@ -58,7 +59,7 @@ export function ReferToSupervisorModal({
         });
 
         // 2. Check for existing queueitem for this enrolment
-        let existingQueueItem: any = null;
+        let existingQueueItem: { queueitemid: string } | null = null;
         try {
           const queueitemResult = await QueueitemsService.getAll({
             filter: `objectid_vsi_participantprogramyear/vsi_participantprogramyearid eq '${enrolmentId}' and statecode eq 0`,
@@ -66,9 +67,9 @@ export function ReferToSupervisorModal({
             maxPageSize: 1,
           });
           if (queueitemResult.data && queueitemResult.data.length > 0) {
-            existingQueueItem = queueitemResult.data[0];
+            existingQueueItem = { queueitemid: queueitemResult.data[0].queueitemid };
           }
-        } catch (err) {
+        } catch {
           // If lookup fails, continue to try to create
           existingQueueItem = null;
         }
@@ -79,7 +80,6 @@ export function ReferToSupervisorModal({
             await QueueitemsService.update(existingQueueItem.queueitemid, {
               'QueueId@odata.bind': `/queues(${queue.queueid})`,
             });
-            console.log('QueueItem updated to Supervisor Approval Queue for', enrolmentId);
           } catch (err) {
             setError('Failed to update existing queue item: ' + (err instanceof Error ? err.message : String(err)));
             setSubmitting(false);
@@ -93,7 +93,6 @@ export function ReferToSupervisorModal({
               'queueid@odata.bind': `/queues(${queue.queueid})`,
               'objectid_vsi_participantprogramyear@odata.bind': `/vsi_participantprogramyears(${enrolmentId})`,
             } as unknown as Parameters<typeof QueueitemsService.create>[0]);
-            console.log('QueueItem create result for', enrolmentId, JSON.stringify(createResult));
             if (!createResult.success) {
               throw new Error(createResult.error?.message || 'Queue item creation failed');
             }

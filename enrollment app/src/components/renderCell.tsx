@@ -8,6 +8,7 @@ import type { SortKey } from '../types/enrollment';
 import {
   getEnrolmentStatusLabel, getTaskStatusLabel, taskStatusIcon,
   enrolmentStatusClass, formatCurrency, getInitials,
+  calculateVariance, getVarianceClass, formatVariancePercent,
 } from '../utils/helpers';
 
 export function renderCell(
@@ -20,15 +21,6 @@ export function renderCell(
   const enumLabel = (map: Record<number, string>, v: unknown) =>
     v != null ? map[Number(v)] ?? String(v) : '';
   const fmtDate = (v: unknown) => { if (!v) return ''; try { return new Date(v as string).toLocaleDateString(); } catch { return String(v); } };
-  const toNumber = (v: unknown) => {
-    if (typeof v === 'number' && Number.isFinite(v)) return v;
-    if (typeof v !== 'string') return null;
-    const normalized = v.replace(/[^0-9.-]/g, '');
-    if (!normalized) return null;
-    const parsed = Number(normalized);
-    return Number.isNaN(parsed) ? null : parsed;
-  };
-
   switch (key) {
     case 'pin':
       return (
@@ -55,24 +47,16 @@ export function renderCell(
       return <td key={key}><span className={`enrol-badge ${enrolmentStatusClass(l)}`}>{l}</span></td>;
     }
     case 'fee': {
-      const currentFee = toNumber(row.vsi_calculatedenfee);
-      const previousFee = toNumber(row.vsi_previousyearcalculatedenfee);
-      const variance = currentFee != null && previousFee != null && previousFee !== 0
-        ? ((currentFee - previousFee) / previousFee) * 100
-        : null;
-      const varianceClass = variance == null
-        ? 'neutral'
-        : Math.abs(variance) >= 25
-          ? 'alert'
-          : variance > 0
-            ? 'positive'
-            : 'neutral';
-      const varianceText = variance == null ? '' : `${variance > 0 ? '+' : ''}${Math.round(variance)}%`;
+      const variance = calculateVariance(row.vsi_calculatedenfee, row.vsi_previousyearcalculatedenfee);
+      const varianceClass = getVarianceClass(variance);
+      const varianceText = formatVariancePercent(variance);
 
       return (
         <td key={key} className="cell-fee">
           <div className="calculated-fee-cell">
-            <span className="calculated-fee-value">{formatCurrency(row.vsi_calculatedenfee)}</span>
+            {row.vsi_participantprogramyearid
+              ? <Link className="calculated-fee-value" to={`/calculation/${row.vsi_participantprogramyearid}`}>{formatCurrency(row.vsi_calculatedenfee)}</Link>
+              : <span className="calculated-fee-value">{formatCurrency(row.vsi_calculatedenfee)}</span>}
             {variance != null ? <span className={`variance-pill ${varianceClass}`}>{varianceText}</span> : null}
           </div>
         </td>
