@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import type { Vsi_participantprogramyears } from '../generated/models/Vsi_participantprogramyearsModel';
 import {
   Vsi_participantprogramyearsvsi_enrollmentregionaloffice,
@@ -29,7 +30,14 @@ export function renderCell(
   };
 
   switch (key) {
-    case 'pin': return <td key={key} className="cell-pin">{row.vsi_name ?? ''}</td>;
+    case 'pin':
+      return (
+        <td key={key} className="cell-pin">
+          {row.vsi_participantprogramyearid
+            ? <Link className="cell-pin-link" to={`/enrolment/${row.vsi_participantprogramyearid}`}>{row.vsi_name ?? ''}</Link>
+            : row.vsi_name ?? ''}
+        </td>
+      );
     case 'producer': {
       const v = row.vsi_participantidname ?? raw['_vsi_participantid_value@OData.Community.Display.V1.FormattedValue'] ?? '';
       return <td key={key}>{v as string}</td>;
@@ -52,7 +60,13 @@ export function renderCell(
       const variance = currentFee != null && previousFee != null && previousFee !== 0
         ? ((currentFee - previousFee) / previousFee) * 100
         : null;
-      const varianceClass = variance == null ? 'neutral' : variance < 0 ? 'negative' : variance > 0 ? 'positive' : 'neutral';
+      const varianceClass = variance == null
+        ? 'neutral'
+        : Math.abs(variance) >= 25
+          ? 'alert'
+          : variance > 0
+            ? 'positive'
+            : 'neutral';
       const varianceText = variance == null ? '' : `${variance > 0 ? '+' : ''}${Math.round(variance)}%`;
 
       return (

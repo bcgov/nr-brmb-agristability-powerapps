@@ -5,7 +5,7 @@
 }
 
 .side-nav {
-  width: 300px;
+  width: 250px;
   border-right: 1px solid #d7dbe1;
   background: #f1f2f4;
   transition: width 0.2s ease;

@@ -5,6 +5,7 @@ import './App.css';
 
 import { DashboardHomePage } from './pages/DashboardHomePage';
 import { SupervisorApprovalPage } from './pages/SupervisorApprovalPage';
+import { EnrolmentDetailsPage } from './pages/EnrolmentDetailsPage';
 
 function SideNav({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
   return (
@@ -38,6 +39,7 @@ function AppShell() {
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard-home" replace />} />
           <Route path="/dashboard-home" element={<DashboardHomePage />} />
+          <Route path="/enrolment/:enrolmentId" element={<EnrolmentDetailsPage />} />
           <Route path="/supervisor-approval" element={<SupervisorApprovalPage />} />
           <Route path="/calculation" element={<Navigate to="/supervisor-approval" replace />} />
           <Route path="*" element={<Navigate to="/dashboard-home" replace />} />

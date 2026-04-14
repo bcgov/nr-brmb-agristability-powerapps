@@ -1,0 +1,437 @@
+import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import {
+  Vsi_participantprogramyearsvsi_enrolmentstatus,
+  type Vsi_participantprogramyears,
+  type Vsi_participantprogramyearsBase,
+  type Vsi_participantprogramyearsvsi_enrolmentstatus as EnrolmentStatusValue,
+} from '../generated/models/Vsi_participantprogramyearsModel';
+import { Vsi_participantprogramyearsService } from '../generated/services/Vsi_participantprogramyearsService';
+
+type DateField =
+  | 'vsi_enrolmentnoticesentdate'
+  | 'vsi_programyearoptoutdate'
+  | 'vsi_lateenrolmentnoticesentdate'
+  | 'vsi_enrolmentfeespaiddate'
+  | 'vsi_enrolmentfeesnonpenaltyduedate'
+  | 'vsi_enrolmentfeesfinaldeadlinedate';
+
+type DetailFormState = {
+  enrolmentStatus: EnrolmentStatusValue;
+  vsi_enrolmentnoticesentdate: string;
+  vsi_programyearoptoutdate: string;
+  vsi_lateenrolmentnoticesentdate: string;
+  vsi_enrolmentfeespaiddate: string;
+  vsi_enrolmentfeesnonpenaltyduedate: string;
+  vsi_enrolmentfeesfinaldeadlinedate: string;
+};
+
+const DATE_FIELDS: DateField[] = [
+  'vsi_enrolmentnoticesentdate',
+  'vsi_programyearoptoutdate',
+  'vsi_lateenrolmentnoticesentdate',
+  'vsi_enrolmentfeespaiddate',
+  'vsi_enrolmentfeesnonpenaltyduedate',
+  'vsi_enrolmentfeesfinaldeadlinedate',
+];
+
+const DETAIL_SELECT = [
+  'vsi_name',
+  '_vsi_participantid_value',
+  '_vsi_programyearid_value',
+  'vsi_sharepointdocumentfolder',
+  'vsi_enrolmentstatus',
+  'vsi_totalfeesowed',
+  'vsi_totalfeespaid',
+  'vsi_enrolmentnoticesentdate',
+  'vsi_programyearoptoutdate',
+  'vsi_lateenrolmentnoticesentdate',
+  'vsi_manualreview',
+  'vsi_enrolmentfee',
+  'vsi_enrolmentfeespaiddate',
+  'vsi_enrolmentfeesnonpenaltyduedate',
+  'vsi_enrolmentfeesfinaldeadlinedate',
+  'vsi_administrativecostsharingfee',
+  'vsi_latepaymentfee',
+  'vsi_adjustedlateenrolmentfee',
+  '_vsi_feemodifiedby_value',
+] as const;
+
+const formatCad = (value: number | undefined): string => {
+  if (value == null || Number.isNaN(Number(value))) return '---';
+  return `CA$${Number(value).toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
+const yesNoText = (value: unknown): string => {
+  if (value === true || value === 1 || value === '1') return 'Yes';
+  if (value === false || value === 0 || value === '0') return 'No';
+  return '---';
+};
+
+const toDateInputValue = (value: string | undefined): string => {
+  if (!value) return '';
+  const directMatch = value.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (directMatch) return directMatch[1];
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '';
+  const yyyy = parsed.getFullYear();
+  const mm = String(parsed.getMonth() + 1).padStart(2, '0');
+  const dd = String(parsed.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+const initialFormFromRecord = (record: Vsi_participantprogramyears): DetailFormState => ({
+  enrolmentStatus: record.vsi_enrolmentstatus,
+  vsi_enrolmentnoticesentdate: toDateInputValue(record.vsi_enrolmentnoticesentdate),
+  vsi_programyearoptoutdate: toDateInputValue(record.vsi_programyearoptoutdate),
+  vsi_lateenrolmentnoticesentdate: toDateInputValue(record.vsi_lateenrolmentnoticesentdate),
+  vsi_enrolmentfeespaiddate: toDateInputValue(record.vsi_enrolmentfeespaiddate),
+  vsi_enrolmentfeesnonpenaltyduedate: toDateInputValue(record.vsi_enrolmentfeesnonpenaltyduedate),
+  vsi_enrolmentfeesfinaldeadlinedate: toDateInputValue(record.vsi_enrolmentfeesfinaldeadlinedate),
+});
+
+const getFormattedLookup = (record: Vsi_participantprogramyears, key: string): string => {
+  const raw = record as unknown as Record<string, unknown>;
+  const value = raw[key];
+  if (typeof value === 'string' && value.trim().length > 0) return value;
+  return '';
+};
+
+export function EnrolmentDetailsPage() {
+  const { enrolmentId } = useParams<{ enrolmentId: string }>();
+  const navigate = useNavigate();
+
+  const [record, setRecord] = useState<Vsi_participantprogramyears | null>(null);
+  const [formState, setFormState] = useState<DetailFormState | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saveNotice, setSaveNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!enrolmentId) {
+      setError('Missing enrolment id.');
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        let result = await Vsi_participantprogramyearsService.get(enrolmentId, {
+          select: [...DETAIL_SELECT],
+        });
+
+        // Some environments are strict about select fields; retry without select to avoid hard-fail.
+        if (!result?.data) {
+          result = await Vsi_participantprogramyearsService.get(enrolmentId);
+        }
+        if (cancelled) return;
+        const loaded = result.data;
+        if (!loaded) {
+          setError('Unable to load enrolment details.');
+          return;
+        }
+        setRecord(loaded);
+        setFormState(initialFormFromRecord(loaded));
+      } catch (e: unknown) {
+        if (!cancelled) {
+          const message = e instanceof Error ? e.message : 'Unable to load enrolment details.';
+          setError(`Unable to load enrolment details. ${message}`);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [enrolmentId]);
+
+  const statusOptions = useMemo(
+    () => Object.entries(Vsi_participantprogramyearsvsi_enrolmentstatus).map(([value, label]) => ({
+      value: Number(value) as EnrolmentStatusValue,
+      label,
+    })),
+    [],
+  );
+
+  const baseline = useMemo(() => (record ? initialFormFromRecord(record) : null), [record]);
+
+  const hasChanges = useMemo(() => {
+    if (!baseline || !formState) return false;
+    return (
+      baseline.enrolmentStatus !== formState.enrolmentStatus
+      || DATE_FIELDS.some(field => baseline[field] !== formState[field])
+    );
+  }, [baseline, formState]);
+
+  const participantName = useMemo(() => {
+    if (!record) return '---';
+    const label = record.vsi_participantidname
+      ?? getFormattedLookup(record, '_vsi_participantid_value@OData.Community.Display.V1.FormattedValue');
+    return label || '---';
+  }, [record]);
+
+  const programYear = useMemo(() => {
+    if (!record) return '---';
+    const label = record.vsi_programyearidname
+      ?? getFormattedLookup(record, '_vsi_programyearid_value@OData.Community.Display.V1.FormattedValue');
+    return label || '---';
+  }, [record]);
+
+  const feeModifiedBy = useMemo(() => {
+    if (!record) return '---';
+    const label = record.vsi_feemodifiedbyname
+      ?? getFormattedLookup(record, '_vsi_feemodifiedby_value@OData.Community.Display.V1.FormattedValue');
+    return label || '---';
+  }, [record]);
+
+  const updateDateField = (field: DateField) => (event: ChangeEvent<HTMLInputElement>) => {
+    const { value } = event.target;
+    setSaveNotice(null);
+    setFormState(prev => (prev ? { ...prev, [field]: value } : prev));
+  };
+
+  const onStatusChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const nextValue = Number(event.target.value) as EnrolmentStatusValue;
+    setSaveNotice(null);
+    setFormState(prev => (prev ? { ...prev, enrolmentStatus: nextValue } : prev));
+  };
+
+  const handleSave = async () => {
+    if (!record || !formState) return;
+
+    const changedFields: Partial<Omit<Vsi_participantprogramyearsBase, 'vsi_participantprogramyearid'>> = {};
+
+    if (formState.enrolmentStatus !== record.vsi_enrolmentstatus) {
+      changedFields.vsi_enrolmentstatus = formState.enrolmentStatus;
+    }
+
+    for (const field of DATE_FIELDS) {
+      const existingValue = toDateInputValue(record[field]);
+      const nextValue = formState[field];
+      if (existingValue !== nextValue && nextValue) {
+        changedFields[field] = nextValue;
+      }
+    }
+
+    if (Object.keys(changedFields).length === 0) {
+      setSaveNotice('No changes to save.');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError(null);
+      setSaveNotice(null);
+      await Vsi_participantprogramyearsService.update(record.vsi_participantprogramyearid, changedFields);
+      let refreshed = await Vsi_participantprogramyearsService.get(record.vsi_participantprogramyearid, {
+        select: [...DETAIL_SELECT],
+      });
+      if (!refreshed?.data) {
+        refreshed = await Vsi_participantprogramyearsService.get(record.vsi_participantprogramyearid);
+      }
+      const updated = refreshed.data ?? record;
+      setRecord(updated);
+      setFormState(initialFormFromRecord(updated));
+      setSaveNotice('Changes saved.');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Unable to save changes.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return <section className="details-wrapper"><p className="enrolment-loading">Loading details...</p></section>;
+  }
+
+  if (error || !record || !formState) {
+    return (
+      <section className="details-wrapper">
+        <p className="enrolment-error">{error ?? 'Enrolment record not found.'}</p>
+        <button type="button" className="details-back-btn" onClick={() => navigate('/dashboard-home')}>Back to dashboard</button>
+      </section>
+    );
+  }
+
+  return (
+    <section className="details-wrapper">
+      <div className="details-title-row">
+        <button type="button" className="details-back-btn" onClick={() => navigate('/dashboard-home')}>Back</button>
+        <h1 className="details-page-title">Enrolment App / Deadlines &amp; Fees</h1>
+      </div>
+
+      <div className="details-composite">
+        <div className="details-header-band">
+          <div className="details-header-grid">
+            <div className="details-field">
+              <span className="details-label">Participant:</span>
+              <strong className="details-value-strong">{participantName}</strong>
+            </div>
+            <div className="details-field">
+              <span className="details-label">Program Year <span className="required-mark">*</span></span>
+              <strong className="details-value-strong">{programYear}</strong>
+            </div>
+            <div className="details-field details-link-field">
+              {record.vsi_sharepointdocumentfolder
+                ? <a className="details-link" href={record.vsi_sharepointdocumentfolder} target="_blank" rel="noopener noreferrer">SharePoint Document Folder</a>
+                : <span className="details-value-muted">---</span>}
+            </div>
+          </div>
+        </div>
+
+        <div className="details-content-section details-content-main">
+          <div className="details-main-grid">
+            <div className="details-field">
+              <label htmlFor="enrolment-status" className="details-label">Enrolment Status <span className="required-mark">*</span></label>
+              <select
+                id="enrolment-status"
+                value={formState.enrolmentStatus}
+                onChange={onStatusChange}
+                className="details-select"
+                disabled={saving}
+              >
+                {statusOptions.map(option => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="details-field">
+              <span className="details-label">Total Fees Owed</span>
+              <strong className="details-money">{formatCad(record.vsi_totalfeesowed)}</strong>
+            </div>
+
+            <div className="details-field">
+              <span className="details-label">Total Fees Paid</span>
+              <strong className="details-money">{formatCad(record.vsi_totalfeespaid)}</strong>
+            </div>
+
+            <div className="details-field">
+              <label htmlFor="enrol-notice-date" className="details-label">Enrolment Notice Sent Date</label>
+              <input
+                id="enrol-notice-date"
+                type="date"
+                className="details-date"
+                value={formState.vsi_enrolmentnoticesentdate}
+                onChange={updateDateField('vsi_enrolmentnoticesentdate')}
+                disabled={saving}
+              />
+            </div>
+
+            <div className="details-field">
+              <label htmlFor="opt-out-date" className="details-label">Program Year Opt-Out Date</label>
+              <input
+                id="opt-out-date"
+                type="date"
+                className="details-date"
+                value={formState.vsi_programyearoptoutdate}
+                onChange={updateDateField('vsi_programyearoptoutdate')}
+                disabled={saving}
+              />
+            </div>
+
+            <div className="details-field">
+              <label htmlFor="late-notice-date" className="details-label">Late Enrolment Notice Sent Date</label>
+              <input
+                id="late-notice-date"
+                type="date"
+                className="details-date"
+                value={formState.vsi_lateenrolmentnoticesentdate}
+                onChange={updateDateField('vsi_lateenrolmentnoticesentdate')}
+                disabled={saving}
+              />
+            </div>
+
+            <div className="details-field">
+              <span className="details-label">Manual Review</span>
+              <strong className="details-value-strong">{yesNoText(record.vsi_manualreview)}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div className="details-section-break" />
+
+        <div className="details-content-section details-content-fees">
+          <h2 className="details-section-title">Enrolment Deadlines and Fees</h2>
+
+          <div className="details-fees-grid">
+            <div className="details-field">
+              <span className="details-label">Enrolment Fee</span>
+              <strong className="details-money">{formatCad(record.vsi_enrolmentfee)}</strong>
+            </div>
+
+            <div className="details-field">
+              <label htmlFor="enrol-fees-paid-date" className="details-label">Enrolment Fees Paid Date</label>
+              <input
+                id="enrol-fees-paid-date"
+                type="date"
+                className="details-date"
+                value={formState.vsi_enrolmentfeespaiddate}
+                onChange={updateDateField('vsi_enrolmentfeespaiddate')}
+                disabled={saving}
+              />
+            </div>
+
+            <div className="details-field">
+              <label htmlFor="non-penalty-date" className="details-label">Enrolment-fees non-penalty due date</label>
+              <input
+                id="non-penalty-date"
+                type="date"
+                className="details-date"
+                value={formState.vsi_enrolmentfeesnonpenaltyduedate}
+                onChange={updateDateField('vsi_enrolmentfeesnonpenaltyduedate')}
+                disabled={saving}
+              />
+            </div>
+
+            <div className="details-field">
+              <label htmlFor="final-deadline-date" className="details-label">Enrolment fees final deadline date</label>
+              <input
+                id="final-deadline-date"
+                type="date"
+                className="details-date"
+                value={formState.vsi_enrolmentfeesfinaldeadlinedate}
+                onChange={updateDateField('vsi_enrolmentfeesfinaldeadlinedate')}
+                disabled={saving}
+              />
+            </div>
+
+            <div className="details-field">
+              <span className="details-label">Administrative cost Sharing fee</span>
+              <strong className="details-money details-money-alert">{formatCad(record.vsi_administrativecostsharingfee)}</strong>
+            </div>
+
+            <div className="details-field">
+              <span className="details-label">Late payment fee</span>
+              <strong className="details-money">{formatCad(record.vsi_latepaymentfee)}</strong>
+            </div>
+
+            <div className="details-field">
+              <span className="details-label">Adjusted late enrolment fee</span>
+              <strong className="details-money">{formatCad(record.vsi_adjustedlateenrolmentfee)}</strong>
+            </div>
+          </div>
+
+          <div className="details-field details-fee-modified">
+            <span className="details-label">Fee modified by:</span>
+            <strong className="details-value-strong">{feeModifiedBy}</strong>
+          </div>
+        </div>
+      </div>
+
+      <div className="details-actions">
+        {saveNotice ? <span className="details-save-notice">{saveNotice}</span> : null}
+        <button type="button" className="details-save-btn" onClick={handleSave} disabled={saving || !hasChanges}>
+          {saving ? 'Saving...' : 'Save Changes'}
+        </button>
+      </div>
+    </section>
+  );
+}
