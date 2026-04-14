@@ -1,8 +1,6 @@
 /* Enrolment table */
 .enrolment-wrapper {
-  max-width: 1720px;
-  margin: 1rem auto;
-  padding: 0;
+  padding: 1rem;
   text-align: left;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
@@ -96,6 +94,11 @@
   background: #fdecec;
 }
 
+.variance-pill.alert {
+  color: #c81e1e;
+  background: #fdecec;
+}
+
 .variance-pill.positive {
   color: #1f7a3e;
   background: #e8f4ea;
@@ -109,12 +112,16 @@
 
 /* PIN column – blue link style */
 .cell-pin {
+  font-weight: 500;
+}
+
+.cell-pin-link {
   color: #2b6cb0;
   text-decoration: underline;
   font-weight: 500;
-  cursor: pointer;
 }
-.cell-pin:hover {
+
+.cell-pin-link:hover {
   color: #1a4f8b;
 }
 

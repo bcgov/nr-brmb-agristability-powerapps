@@ -1,6 +1,7 @@
 @import "./styles/base.css";
 @import "./styles/shell.css";
 @import "./styles/dashboard.css";
+@import "./styles/enrolment-details.css";
 @import "./styles/column-header-menu.css";
 @import "./styles/edit-filters.css";
 @import "./styles/edit-columns.css";
