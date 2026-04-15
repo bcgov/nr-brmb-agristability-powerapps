@@ -40,6 +40,20 @@ export const dataSourcesInfo = {
     "dataSourceType": "Dataverse",
     "apis": {}
   },
+  "systemusers": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "systemuserid",
+    "dataSourceType": "Dataverse",
+    "apis": {}
+  },
+  "queuememberships": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "queuemembershipid",
+    "dataSourceType": "Dataverse",
+    "apis": {}
+  },
   "savedqueries": {
     "tableId": "",
     "version": "",
