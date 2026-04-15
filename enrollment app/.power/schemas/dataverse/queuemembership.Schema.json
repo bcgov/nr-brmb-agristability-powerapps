@@ -1,0 +1,57 @@
+{
+  "name": "queuemembership",
+  "title": "queuemembership",
+  "schema": {
+    "type": "array",
+    "items": {
+      "type": "object",
+      "x-ms-dataverse-entity": true,
+      "x-ms-dataverse-entityset": "queuememberships",
+      "x-ms-dataverse-primary-id": "queuemembershipid",
+      "x-ms-dataverse-primary-name": null,
+      "properties": {
+        "queueid": {
+          "type": "string",
+          "title": "queueid",
+          "x-ms-dataverse-attribute": "queueid",
+          "x-ms-dataverse-type": "UniqueidentifierType",
+          "x-ms-schema-name": "QueueId",
+          "x-ms-read-only": true,
+          "required": true
+        },
+        "queuemembershipid": {
+          "type": "string",
+          "title": "queuemembershipid",
+          "x-ms-dataverse-attribute": "queuemembershipid",
+          "x-ms-dataverse-type": "UniqueidentifierType",
+          "x-ms-schema-name": "QueueMembershipId",
+          "x-ms-dataverse-primary-id": true,
+          "required": true,
+          "x-ms-keyType": "primary"
+        },
+        "systemuserid": {
+          "type": "string",
+          "title": "systemuserid",
+          "x-ms-dataverse-attribute": "systemuserid",
+          "x-ms-dataverse-type": "UniqueidentifierType",
+          "x-ms-schema-name": "SystemUserId",
+          "x-ms-read-only": true,
+          "required": true
+        },
+        "versionnumber": {
+          "type": "string",
+          "title": "versionnumber",
+          "x-ms-dataverse-attribute": "versionnumber",
+          "x-ms-dataverse-type": "BigIntType",
+          "x-ms-schema-name": "VersionNumber",
+          "x-ms-read-only": true
+        }
+      },
+      "required": [
+        "queueid",
+        "queuemembershipid",
+        "systemuserid"
+      ]
+    }
+  }
+}
