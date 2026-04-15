@@ -24,6 +24,12 @@ function buildUserIdOrFilter(ids: string[]): string {
   return `(${ids.map(id => `systemuserid eq '${id}'`).join(' or ')})`;
 }
 
+function isMissingQueueMembershipDataSource(message?: string): boolean {
+  if (!message) return false;
+  const normalized = message.toLowerCase();
+  return normalized.includes('data source not found') && normalized.includes('queuememberships');
+}
+
 export function AssignWorkerModal({
   enrolmentName,
   queueitemId,
@@ -42,8 +48,9 @@ export function AssignWorkerModal({
   const [searchTerm, setSearchTerm] = useState('');
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<AssignableUser[]>([]);
-  // queueMemberIds: set of systemuserids that belong to the queue (null = not yet loaded)
+  // queueMemberIds: set of systemuserids that belong to the queue when queue scoping is enabled.
   const [queueMemberIds, setQueueMemberIds] = useState<Set<string> | null>(null);
+  const [restrictToQueueMembers, setRestrictToQueueMembers] = useState(true);
   const [selected, setSelected] = useState<AssignableUser | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -82,7 +89,58 @@ export function AssignWorkerModal({
       .sort((a, b) => a.displayName.localeCompare(b.displayName));
   };
 
-  // Fetch queuemembership records for the queue to get the allowed user IDs, then load those users.
+  const searchActiveUsers = async (term: string, memberIds?: Set<string> | null): Promise<AssignableUser[]> => {
+    const escaped = term.replace(/'/g, "''");
+    const memberConstraint = memberIds && memberIds.size > 0
+      ? ` and ${buildUserIdOrFilter([...memberIds])}`
+      : '';
+
+    const filters = term
+      ? [
+          `contains(fullname,'${escaped}') and isdisabled eq false${memberConstraint}`,
+          `startswith(fullname,'${escaped}') and isdisabled eq false${memberConstraint}`,
+          `contains(internalemailaddress,'${escaped}') and isdisabled eq false${memberConstraint}`,
+          `contains(domainname,'${escaped}') and isdisabled eq false${memberConstraint}`,
+        ]
+      : [`isdisabled eq false${memberConstraint}`];
+
+    const collected = new Map<string, AssignableUser>();
+    const errors: string[] = [];
+
+    for (const filter of filters) {
+      if (collected.size >= 20) break;
+      const result = await SystemusersService.getAll({
+        select: ['systemuserid', 'fullname', 'jobtitle', 'internalemailaddress', 'domainname', 'isdisabled'],
+        filter,
+        orderBy: ['fullname asc'],
+        maxPageSize: 20,
+      });
+
+      if (!result.success) {
+        errors.push(result.error?.message ?? 'Unknown query error');
+        continue;
+      }
+
+      for (const u of result.data ?? []) {
+        if (!u.systemuserid || u.isdisabled || collected.has(u.systemuserid)) continue;
+        collected.set(u.systemuserid, {
+          systemUserId: u.systemuserid,
+          displayName: u.fullname ?? u.internalemailaddress ?? u.domainname ?? u.systemuserid,
+          jobTitle: u.jobtitle ?? undefined,
+          mail: u.internalemailaddress ?? undefined,
+        });
+        if (collected.size >= 20) break;
+      }
+    }
+
+    if (collected.size === 0 && errors.length > 0) {
+      throw new Error(errors[0]);
+    }
+
+    return Array.from(collected.values());
+  };
+
+  // Fetch queuemembership records for queue-scoped assignment; fallback to active users if the table isn't available.
   useEffect(() => {
     if (!queueitemId || !queueId) return;
     let cancelled = false;
@@ -97,23 +155,55 @@ export function AssignWorkerModal({
           maxPageSize: 500,
         });
         if (cancelled) return;
+
         if (!memberships.success) {
-          setError(memberships.error?.message ?? 'Failed to load queue members');
+          const message = memberships.error?.message ?? 'Failed to load queue members';
+          if (!isMissingQueueMembershipDataSource(message)) {
+            setError(message);
+            return;
+          }
+
+          setRestrictToQueueMembers(false);
+          setQueueMemberIds(null);
+          const fallbackUsers = await searchActiveUsers('', null);
+          if (cancelled) return;
+          setResults(fallbackUsers);
+          setError(null);
           return;
         }
+
         const ids = new Set(
           (memberships.data ?? []).map(m => m.systemuserid).filter((id): id is string => !!id)
         );
+        setRestrictToQueueMembers(true);
         setQueueMemberIds(ids);
+
         if (ids.size === 0) {
           setResults([]);
           return;
         }
+
         const users = await loadUsersByIds([...ids]);
         if (cancelled) return;
         setResults(users);
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load queue members');
+        if (cancelled) return;
+        const message = err instanceof Error ? err.message : String(err ?? 'Failed to load queue members');
+        if (isMissingQueueMembershipDataSource(message)) {
+          setRestrictToQueueMembers(false);
+          setQueueMemberIds(null);
+          try {
+            const fallbackUsers = await searchActiveUsers('', null);
+            if (!cancelled) {
+              setResults(fallbackUsers);
+              setError(null);
+            }
+          } catch (fallbackErr) {
+            if (!cancelled) setError(fallbackErr instanceof Error ? fallbackErr.message : 'Failed to load users');
+          }
+        } else {
+          setError(message);
+        }
       } finally {
         if (!cancelled) setSearching(false);
       }
@@ -134,65 +224,26 @@ export function AssignWorkerModal({
     setSelected(null);
     setHasSearched(true);
     try {
-      if (!queueMemberIds || queueMemberIds.size === 0) {
+      if (restrictToQueueMembers && (!queueMemberIds || queueMemberIds.size === 0)) {
         setResults([]);
         return;
       }
 
       if (!term) {
-        // Clear filter — re-load all queue members.
-        const users = await loadUsersByIds([...queueMemberIds]);
+        if (restrictToQueueMembers && queueMemberIds) {
+          // Clear filter — re-load all queue members.
+          const users = await loadUsersByIds([...queueMemberIds]);
+          setResults(users);
+          return;
+        }
+
+        const users = await searchActiveUsers('', null);
         setResults(users);
         return;
       }
 
-      const escaped = term.replace(/'/g, "''");
-      // If we have the queue member IDs, narrow all searches to that set.
-      const memberConstraint = ` and ${buildUserIdOrFilter([...queueMemberIds])}`;
-
-      const filters = [
-        `contains(fullname,'${escaped}') and isdisabled eq false${memberConstraint}`,
-        `startswith(fullname,'${escaped}') and isdisabled eq false${memberConstraint}`,
-        `contains(internalemailaddress,'${escaped}') and isdisabled eq false${memberConstraint}`,
-        `contains(domainname,'${escaped}') and isdisabled eq false${memberConstraint}`,
-      ];
-
-      const collected = new Map<string, AssignableUser>();
-      const errors: string[] = [];
-
-      for (const filter of filters) {
-        if (collected.size >= 20) break;
-        const result = await SystemusersService.getAll({
-          select: ['systemuserid', 'fullname', 'jobtitle', 'internalemailaddress', 'domainname', 'isdisabled'],
-          filter,
-          orderBy: ['fullname asc'],
-          maxPageSize: 20,
-        });
-
-        if (!result.success) {
-          errors.push(result.error?.message ?? 'Unknown query error');
-          continue;
-        }
-
-        for (const u of result.data ?? []) {
-          if (!u.systemuserid || u.isdisabled) continue;
-          if (!collected.has(u.systemuserid)) {
-            collected.set(u.systemuserid, {
-              systemUserId: u.systemuserid,
-              displayName: u.fullname ?? u.internalemailaddress ?? u.domainname ?? u.systemuserid,
-              jobTitle: u.jobtitle ?? undefined,
-              mail: u.internalemailaddress ?? undefined,
-            });
-          }
-          if (collected.size >= 20) break;
-        }
-      }
-
-      const finalResults = Array.from(collected.values());
-      if (finalResults.length === 0 && errors.length > 0) {
-        setError(errors[0]);
-      }
-      setResults(finalResults);
+      const users = await searchActiveUsers(term, restrictToQueueMembers ? queueMemberIds : null);
+      setResults(users);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Search failed');
     } finally {
@@ -246,7 +297,8 @@ export function AssignWorkerModal({
 
           <p className="assign-queue-context">
             Queue scope: <strong>{queueName || 'Unknown queue'}</strong>
-            {queueMemberIds ? ` | Members loaded: ${queueMemberIds.size}` : ''}
+            {restrictToQueueMembers && queueMemberIds ? ` | Members loaded: ${queueMemberIds.size}` : ''}
+            {!restrictToQueueMembers ? ' | Using active users (queue membership source unavailable)' : ''}
           </p>
 
           {!queueitemId && (
@@ -261,7 +313,7 @@ export function AssignWorkerModal({
                 <input
                   className="assign-search-input"
                   type="text"
-                  placeholder={queueId ? 'Filter queue members by name…' : 'Search users by name…'}
+                  placeholder={queueId ? (restrictToQueueMembers ? 'Filter queue members by name…' : 'Search active users by name…') : 'Search users by name…'}
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') void handleSearch(); }}
