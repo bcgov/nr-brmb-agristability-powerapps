@@ -18,8 +18,10 @@ import type {
   QuickFilterState,
 } from '../types/enrollment';
 import { ADV_FIELD_OPTIONS } from '../constants/columns';
-import { getEnrolmentStatusLabel, getTaskStatusLabel, getSortValue } from '../utils/helpers';
+import { calculateVariance, getEnrolmentStatusLabel, getTaskStatusLabel, getSortValue } from '../utils/helpers';
 import { isNodeActive } from '../utils/filterTree';
+
+const FLAGGED_VARIANCE_THRESHOLD = 25;
 
 
 export function useEnrolmentData() {
@@ -54,7 +56,8 @@ export function useEnrolmentData() {
           'vsi_haspartners',
           'vsi_incombinedfarm',
           'vsi_sharepointdocumentfolder',
-          '_modifiedby_value',
+          '_vsi_taskstatusapprover_value',
+          'vsi_taskstatusapproveddate',
           'modifiedon',
           'vsi_enrollmentregionaloffice',
           'vsi_farmingsector',
@@ -101,7 +104,7 @@ export function useEnrolmentData() {
     const ids = new Set<string>();
     for (const row of rows) {
       const raw = row as unknown as Record<string, unknown>;
-      const uid = raw['_modifiedby_value'] as string | undefined;
+      const uid = raw['_vsi_taskstatusapprover_value'] as string | undefined;
       if (uid) ids.add(uid);
     }
     let cancelled = false;
@@ -224,6 +227,12 @@ export function useSortedAndFilteredRows(
     return false;
   }, []);
 
+  const isFlaggedByVariance = useCallback((row: Vsi_participantprogramyears): boolean => {
+    const variance = calculateVariance(row.vsi_calculatedenfee, row.vsi_previousyearcalculatedenfee);
+    if (variance == null) return false;
+    return Math.abs(variance) > FLAGGED_VARIANCE_THRESHOLD;
+  }, []);
+
   const filteredRows = useMemo(() => {
     let result = sortedRows;
 
@@ -231,11 +240,16 @@ export function useSortedAndFilteredRows(
       result = result.filter(row => {
         const isEnCalc = isYesValue(row.vsi_enrolmentfeecalculated);
         const isReady = isReadyTaskStatus(row.vsi_taskstatus);
-        if (filters.verifiedCalc && isReady && isEnCalc) return true;
-        if (filters.unverifiedCalc && !isReady && isEnCalc) return true;
-        if (filters.flagged && !!row.vsi_sharepointdocumentfolder) return true;
-        if (filters.partnerships && (isYesValue(row.vsi_haspartners) || isYesValue(row.vsi_incombinedfarm))) return true;
-        return false;
+        const matchesVerifiedCalc = isReady && isEnCalc;
+        const matchesUnverifiedCalc = !isReady && isEnCalc;
+        const matchesFlagged = isFlaggedByVariance(row);
+        const matchesPartnerships = isYesValue(row.vsi_haspartners) || isYesValue(row.vsi_incombinedfarm);
+
+        if (filters.verifiedCalc && !matchesVerifiedCalc) return false;
+        if (filters.unverifiedCalc && !matchesUnverifiedCalc) return false;
+        if (filters.flagged && !matchesFlagged) return false;
+        if (filters.partnerships && !matchesPartnerships) return false;
+        return true;
       });
     }
 
@@ -261,7 +275,7 @@ export function useSortedAndFilteredRows(
     }
 
     return result;
-  }, [sortedRows, filters, anyFilter, taskStatusFilter, enrolStatusFilter, taskFilterOp, enrolFilterOp, advFilterNodes, advLogicOp, matchAdvNode, isYesValue, isReadyTaskStatus]);
+  }, [sortedRows, filters, anyFilter, taskStatusFilter, enrolStatusFilter, taskFilterOp, enrolFilterOp, advFilterNodes, advLogicOp, matchAdvNode, isYesValue, isReadyTaskStatus, isFlaggedByVariance]);
 
   return { filteredRows, taskStatusOptions, enrolStatusOptions };
 }

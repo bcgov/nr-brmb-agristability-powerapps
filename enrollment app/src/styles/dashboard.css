@@ -4,6 +4,14 @@
   text-align: left;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
+
+.dashboard-welcome {
+  margin-bottom: 0.75rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1f2d3d;
+}
+
 .enrolment-wrapper h2 {
   margin-bottom: 1rem;
   font-size: 1.35rem;

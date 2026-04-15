@@ -8,7 +8,7 @@ export type SortKey =
   | 'enrolmentFee' | 'latePay' | 'regionalOffice' | 'farmingSector'
   | 'bringForward' | 'broughtForward' | 'hasPartners' | 'inCombinedFarm'
   | 'manualReview' | 'enrolNoticeDate' | 'fileReceivedDate' | 'feesPaidDate'
-  | 'modifiedOn';
+  | 'modifiedOn' | 'taskApprovedDate';
 
 export type ColumnIcon = 'text' | 'number' | 'list' | 'link' | 'user' | 'check' | 'date';
 

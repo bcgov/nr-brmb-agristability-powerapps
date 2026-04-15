@@ -3,6 +3,14 @@ import { useState } from 'react';
 import type { Vsi_participantprogramyears } from '../generated/models/Vsi_participantprogramyearsModel';
 import { QueueitemsService } from '../generated/services/QueueitemsService';
 import { Vsi_participantprogramyearsService } from '../generated/services/Vsi_participantprogramyearsService';
+import { resolveCurrentSystemUser } from '../utils/currentUser';
+
+type ApprovedEnrolmentUpdate = {
+  id: string;
+  approverId: string;
+  approverName: string;
+  approvedDate: string;
+};
 
 export function ApproveCalculatedFeesModal({
   selectedIds,
@@ -13,7 +21,7 @@ export function ApproveCalculatedFeesModal({
   selectedIds: Set<string>;
   rows: Vsi_participantprogramyears[];
   onClose: () => void;
-  onComplete: (updatedIds: string[]) => void;
+  onComplete: (updates: ApprovedEnrolmentUpdate[]) => void;
 }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,6 +36,10 @@ export function ApproveCalculatedFeesModal({
     setSubmitting(true);
     setError(null);
     try {
+      const currentUser = await resolveCurrentSystemUser();
+      const approvedDate = new Date().toISOString();
+      const updates: ApprovedEnrolmentUpdate[] = [];
+
       for (const row of selectedRows) {
         const enrolmentId = row.vsi_participantprogramyearid;
         // Remove all queueitems for this enrolment
@@ -45,11 +57,23 @@ export function ApproveCalculatedFeesModal({
           // Ignore if not found, continue
         }
         // Set task status to Approved
-        await Vsi_participantprogramyearsService.update(enrolmentId, {
+        const updateResult = await Vsi_participantprogramyearsService.update(enrolmentId, {
           vsi_taskstatus: 865520003, // Vsi_participantprogramyearsvsi_taskstatus.Approved
+          vsi_taskstatusapproveddate: approvedDate,
+          'vsi_TaskStatusApprover@odata.bind': `/systemusers(${currentUser.systemUserId})`,
+        });
+        if (!updateResult.success) {
+          throw new Error(updateResult.error?.message ?? `Failed to approve ${row.vsi_name ?? enrolmentId}.`);
+        }
+
+        updates.push({
+          id: enrolmentId,
+          approverId: currentUser.systemUserId,
+          approverName: currentUser.displayName,
+          approvedDate,
         });
       }
-      onComplete(selectedRows.map(r => r.vsi_participantprogramyearid));
+      onComplete(updates);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to approve calculated fees');
