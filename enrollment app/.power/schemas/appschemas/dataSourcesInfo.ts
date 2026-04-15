@@ -26,6 +26,13 @@ export const dataSourcesInfo = {
     "dataSourceType": "Dataverse",
     "apis": {}
   },
+  "queuememberships": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "queuemembershipid",
+    "dataSourceType": "Dataverse",
+    "apis": {}
+  },
   "queues": {
     "tableId": "",
     "version": "",
@@ -37,6 +44,13 @@ export const dataSourcesInfo = {
     "tableId": "",
     "version": "",
     "primaryKey": "userqueryid",
+    "dataSourceType": "Dataverse",
+    "apis": {}
+  },
+  "systemusers": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "systemuserid",
     "dataSourceType": "Dataverse",
     "apis": {}
   },

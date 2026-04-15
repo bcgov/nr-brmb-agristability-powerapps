@@ -49,6 +49,14 @@
         "queueitems": {
           "entitySetName": "queueitems",
           "logicalName": "queueitem"
+        },
+        "users": {
+          "entitySetName": "systemusers",
+          "logicalName": "systemuser"
+        },
+        "queuemembership": {
+          "entitySetName": "queuememberships",
+          "logicalName": "queuemembership"
         }
       },
       "version": "v9.0",

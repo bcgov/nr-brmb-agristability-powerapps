@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import type { SortKey, SortDir, FilterOperator } from '../types/enrollment';
+import type { SortDir, FilterOperator } from '../types/enrollment';
 
 type MenuView = 'main' | 'filter' | 'width';
 
@@ -19,18 +19,18 @@ export type ColumnHeaderFilterProps = {
   onFilterOperatorChange?: (op: FilterOperator) => void;
 };
 
-export type ColumnHeaderMenuProps = {
+export type ColumnHeaderMenuProps<K extends string = string> = {
   label: string;
-  sortKey: SortKey;
-  currentSortKey: SortKey | null;
+  sortKey: K;
+  currentSortKey: K | null;
   currentSortDir: SortDir;
-  onSort: (key: SortKey, dir: SortDir) => void;
+  onSort: (key: K, dir: SortDir) => void;
   columnWidth: number | undefined;
   onColumnWidthChange: (w: number | undefined) => void;
   dragProps?: ColumnHeaderDragProps;
 } & ColumnHeaderFilterProps;
 
-export function ColumnHeaderMenu({
+export function ColumnHeaderMenu<K extends string = string>({
   label,
   sortKey,
   currentSortKey,
@@ -44,7 +44,7 @@ export function ColumnHeaderMenu({
   columnWidth,
   onColumnWidthChange,
   dragProps,
-}: ColumnHeaderMenuProps) {
+}: ColumnHeaderMenuProps<K>) {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<MenuView>('main');
   const [operatorOpen, setOperatorOpen] = useState(false);
