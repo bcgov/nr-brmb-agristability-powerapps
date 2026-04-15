@@ -1,6 +1,3 @@
-import { getClient } from '@microsoft/power-apps/data';
-import { dataSourcesInfo } from '../../.power/schemas/appschemas/dataSourcesInfo';
-import { Office365UsersService } from '../generated/services/Office365UsersService';
 import { SystemusersService } from '../generated/services/SystemusersService';
 
 export type ResolvedCurrentUser = {
@@ -66,19 +63,6 @@ function emailFromClaims(claims?: Record<string, unknown> | null): string | unde
   return undefined;
 }
 
-function aadObjectIdFromClaims(claims?: Record<string, unknown> | null): string | undefined {
-  if (!claims) return undefined;
-  const candidates = [
-    claims.oid,
-    claims.objectid,
-    claims['http://schemas.microsoft.com/identity/claims/objectidentifier'],
-  ];
-  for (const candidate of candidates) {
-    if (typeof candidate === 'string' && isGuid(candidate)) return candidate.trim();
-  }
-  return undefined;
-}
-
 function findEmailInStorage(storage: Storage): string | undefined {
   for (let index = 0; index < storage.length; index += 1) {
     const key = storage.key(index);
@@ -104,59 +88,6 @@ function findEmailInStorage(storage: Storage): string | undefined {
     } catch {
       continue;
     }
-  }
-
-  return undefined;
-}
-
-function findAadObjectIdInStorage(storage: Storage): string | undefined {
-  for (let index = 0; index < storage.length; index += 1) {
-    const key = storage.key(index);
-    if (!key) continue;
-
-    const raw = storage.getItem(key);
-    if (!raw) continue;
-
-    const direct = aadObjectIdFromClaims(decodeJwtPayload(raw));
-    if (direct) return direct;
-
-    try {
-      const parsed = JSON.parse(raw) as Record<string, unknown>;
-      const claimBased = aadObjectIdFromClaims(parsed);
-      if (claimBased) return claimBased;
-
-      const tokenCandidates = [parsed.secret, parsed.idToken, parsed.id_token, parsed.accessToken, parsed.access_token];
-      for (const tokenValue of tokenCandidates) {
-        if (typeof tokenValue !== 'string') continue;
-        const tokenOid = aadObjectIdFromClaims(decodeJwtPayload(tokenValue));
-        if (tokenOid) return tokenOid;
-      }
-    } catch {
-      continue;
-    }
-  }
-
-  return undefined;
-}
-
-function getXrmWebApiOnlineExecute(): ((request: unknown) => Promise<{ ok: boolean; json: () => Promise<Record<string, unknown>> }>) | undefined {
-  try {
-    const candidates = [window, window.parent, window.top];
-    for (const candidate of candidates) {
-      if (!candidate) continue;
-      const execute = (candidate as unknown as {
-        Xrm?: {
-          WebApi?: {
-            online?: {
-              execute?: (request: unknown) => Promise<{ ok: boolean; json: () => Promise<Record<string, unknown>> }>;
-            };
-          };
-        };
-      }).Xrm?.WebApi?.online?.execute;
-      if (execute) return execute;
-    }
-  } catch {
-    return undefined;
   }
 
   return undefined;
@@ -223,52 +154,6 @@ function getEmailFromGlobalContextProbe(): string | undefined {
       const email = findEmailInUnknown(root, 3, seen);
       if (email) return email;
     }
-  } catch {
-    return undefined;
-  }
-
-  return undefined;
-}
-
-function getAuthenticatedUserEmail(): string | undefined {
-  const xrmSettings = getXrmUserSettings();
-  const upn = xrmSettings?.userPrincipalName;
-  if (upn && isEmail(upn)) return upn.trim();
-  const userName = xrmSettings?.userName;
-  if (userName && isEmail(userName)) return userName.trim();
-
-  try {
-    const localEmail = findEmailInStorage(window.localStorage);
-    if (localEmail) return localEmail;
-  } catch {
-    return undefined;
-  }
-
-  try {
-    const sessionEmail = findEmailInStorage(window.sessionStorage);
-    if (sessionEmail) return sessionEmail;
-  } catch {
-    return undefined;
-  }
-
-  return undefined;
-}
-
-function getAuthenticatedAadObjectId(): string | undefined {
-  const xrmSettings = getXrmUserSettings() as XrmUserSettings & { aadObjectId?: string; aadobjectid?: string } | undefined;
-  const fromXrm = xrmSettings?.aadObjectId ?? xrmSettings?.aadobjectid;
-  if (fromXrm && isGuid(fromXrm)) return fromXrm.trim();
-
-  try {
-    const localOid = findAadObjectIdInStorage(window.localStorage);
-    if (localOid) return localOid;
-  } catch {
-    return undefined;
-  }
-
-  try {
-    const sessionOid = findAadObjectIdInStorage(window.sessionStorage);
-    if (sessionOid) return sessionOid;
   } catch {
     return undefined;
   }
