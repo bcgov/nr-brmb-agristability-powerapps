@@ -5,17 +5,17 @@ import type { Vsi_participantprogramyears } from '../generated/models/Vsi_partic
 import { Vsi_participantprogramyearsvsi_enrolmentstatus } from '../generated/models/Vsi_participantprogramyearsModel';
 import { Vsi_participantprogramyearsService } from '../generated/services/Vsi_participantprogramyearsService';
 import { QueueitemsService } from '../generated/services/QueueitemsService';
+import { QueuesService } from '../generated/services/QueuesService';
 import { Office365UsersService } from '../generated/services/Office365UsersService';
-import { SystemusersService } from '../generated/services/SystemusersService';
 import { ColumnHeaderMenu } from '../components/ColumnHeaderMenu';
 import { calculateVariance, enrolmentStatusClass, formatCurrencyOr, formatVariancePercent, getEnrolmentStatusLabel, getInitials, getTaskStatusLabel, getVarianceClass } from '../utils/helpers';
 import { AssignWorkerModal } from '../components/AssignWorkerModal';
 import type { FilterOperator, SortDir } from '../types/enrollment';
-import { getClient } from '@microsoft/power-apps/data';
-import { dataSourcesInfo } from '../../.power/schemas/appschemas/dataSourcesInfo';
+import { resolveCurrentSystemUser } from '../utils/currentUser';
 import '../styles/supervisor-approval.css';
 
 const PAGE_SIZE = 20;
+const SUPERVISOR_QUEUE_NAME = 'Supervisor Approval Queue';
 const ENROLMENT_STATUS_FILTER_OPTIONS = Object.values(Vsi_participantprogramyearsvsi_enrolmentstatus)
   .filter((label): label is (typeof Vsi_participantprogramyearsvsi_enrolmentstatus)[keyof typeof Vsi_participantprogramyearsvsi_enrolmentstatus] => typeof label === 'string' && label.length > 0)
   .sort((a, b) => a.localeCompare(b));
@@ -116,412 +116,20 @@ function formatWorkedOn(value?: string): string {
   return d.toLocaleDateString();
 }
 
-type XrmUserSettings = { userId?: string; userName?: string; userPrincipalName?: string };
-type WinWithXrm = { Xrm?: { Utility?: { getGlobalContext?: () => { userSettings?: XrmUserSettings } } } };
-
-function isEmail(value?: string): boolean {
-  if (!value) return false;
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(value.trim());
+function normalizeGuid(value?: string | null): string {
+  return (value ?? '').replace(/[{}]/g, '').trim().toLowerCase();
 }
 
-function isGuid(value?: string): boolean {
-  if (!value) return false;
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.trim());
-}
-
-function decodeJwtPayload(token: string): Record<string, unknown> | null {
-  const parts = token.split('.');
-  if (parts.length < 2) return null;
-  try {
-    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
-    const json = atob(padded);
-    return JSON.parse(json) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-}
-
-function emailFromClaims(claims?: Record<string, unknown> | null): string | undefined {
-  if (!claims) return undefined;
-  const candidates = [
-    claims.preferred_username,
-    claims.upn,
-    claims.email,
-    claims.unique_name,
-  ];
-  for (const c of candidates) {
-    if (typeof c === 'string' && isEmail(c)) return c.trim();
-  }
-  return undefined;
-}
-
-function aadObjectIdFromClaims(claims?: Record<string, unknown> | null): string | undefined {
-  if (!claims) return undefined;
-  const candidates = [
-    claims.oid,
-    claims.objectid,
-    claims['http://schemas.microsoft.com/identity/claims/objectidentifier'],
-  ];
-  for (const c of candidates) {
-    if (typeof c === 'string' && isGuid(c)) return c.trim();
-  }
-  return undefined;
-}
-
-function findEmailInStorage(storage: Storage): string | undefined {
-  for (let i = 0; i < storage.length; i += 1) {
-    const key = storage.key(i);
-    if (!key) continue;
-    const raw = storage.getItem(key);
-    if (!raw) continue;
-
-    const direct = emailFromClaims(decodeJwtPayload(raw));
-    if (direct) return direct;
-
-    try {
-      const parsed = JSON.parse(raw) as Record<string, unknown>;
-      const claimBased = emailFromClaims(parsed);
-      if (claimBased) return claimBased;
-
-      const tokenCandidates = [
-        parsed.secret,
-        parsed.idToken,
-        parsed.id_token,
-        parsed.accessToken,
-        parsed.access_token,
-      ];
-      for (const tokenValue of tokenCandidates) {
-        if (typeof tokenValue !== 'string') continue;
-        const tokenEmail = emailFromClaims(decodeJwtPayload(tokenValue));
-        if (tokenEmail) return tokenEmail;
-      }
-    } catch {
-      // ignore non-JSON values
-    }
-  }
-  return undefined;
-}
-
-function findAadObjectIdInStorage(storage: Storage): string | undefined {
-  for (let i = 0; i < storage.length; i += 1) {
-    const key = storage.key(i);
-    if (!key) continue;
-    const raw = storage.getItem(key);
-    if (!raw) continue;
-
-    const direct = aadObjectIdFromClaims(decodeJwtPayload(raw));
-    if (direct) return direct;
-
-    try {
-      const parsed = JSON.parse(raw) as Record<string, unknown>;
-      const claimBased = aadObjectIdFromClaims(parsed);
-      if (claimBased) return claimBased;
-
-      const tokenCandidates = [
-        parsed.secret,
-        parsed.idToken,
-        parsed.id_token,
-        parsed.accessToken,
-        parsed.access_token,
-      ];
-      for (const tokenValue of tokenCandidates) {
-        if (typeof tokenValue !== 'string') continue;
-        const tokenOid = aadObjectIdFromClaims(decodeJwtPayload(tokenValue));
-        if (tokenOid) return tokenOid;
-      }
-    } catch {
-      // ignore non-JSON values
-    }
-  }
-  return undefined;
-}
-
-function getXrmUserSettings(): XrmUserSettings | undefined {
-  try {
-    const candidates = [window, window.parent, window.top];
-    for (const w of candidates) {
-      if (!w) continue;
-      const settings = (w as unknown as WinWithXrm).Xrm?.Utility?.getGlobalContext?.()?.userSettings;
-      if (settings?.userId || settings?.userName || settings?.userPrincipalName) return settings;
-    }
-  } catch {
-    // cross-origin frame access may throw
-  }
-  return undefined;
-}
-
-function getXrmWebApiOnlineExecute(): ((request: unknown) => Promise<{ ok: boolean; json: () => Promise<Record<string, unknown>> }>) | undefined {
-  try {
-    const candidates = [window, window.parent, window.top];
-    for (const w of candidates) {
-      if (!w) continue;
-      const execute = (w as unknown as {
-        Xrm?: {
-          WebApi?: {
-            online?: {
-              execute?: (request: unknown) => Promise<{ ok: boolean; json: () => Promise<Record<string, unknown>> }>;
-            };
-          };
-        };
-      }).Xrm?.WebApi?.online?.execute;
-      if (execute) return execute;
-    }
-  } catch {
-    // ignore cross-frame access issues
-  }
-  return undefined;
-}
-
-function getEmailFromUrlContext(): string | undefined {
-  try {
-    const url = new URL(window.location.href);
-    const queryCandidates = ['login_hint', 'upn', 'email', 'userPrincipalName', 'username'];
-    for (const key of queryCandidates) {
-      const value = url.searchParams.get(key);
-      if (value && isEmail(value)) return value.trim();
-    }
-
-    const hash = new URLSearchParams(url.hash.replace(/^#/, ''));
-    for (const key of queryCandidates) {
-      const value = hash.get(key);
-      if (value && isEmail(value)) return value.trim();
-    }
-  } catch {
-    // ignore malformed URL parsing
-  }
-  return undefined;
-}
-
-function findEmailInUnknown(value: unknown, depth: number, seen: WeakSet<object>): string | undefined {
-  if (depth <= 0 || value == null) return undefined;
-  if (typeof value === 'string') {
-    return isEmail(value) ? value.trim() : undefined;
-  }
-  if (typeof value !== 'object') return undefined;
-
-  const obj = value as Record<string, unknown>;
-  if (seen.has(obj)) return undefined;
-  seen.add(obj);
-
-  for (const [k, v] of Object.entries(obj)) {
-    const key = k.toLowerCase();
-    if (
-      key.includes('email') ||
-      key.includes('upn') ||
-      key.includes('username') ||
-      key.includes('login') ||
-      key.includes('userprincipalname')
-    ) {
-      const byKey = findEmailInUnknown(v, depth - 1, seen);
-      if (byKey) return byKey;
-    }
-  }
-
-  for (const v of Object.values(obj)) {
-    const nested = findEmailInUnknown(v, depth - 1, seen);
-    if (nested) return nested;
-  }
-
-  return undefined;
-}
-
-function getEmailFromGlobalContextProbe(): string | undefined {
-  try {
-    const roots: unknown[] = [
-      window,
-      (window as unknown as Record<string, unknown>).PowerApps,
-      (window as unknown as Record<string, unknown>).__POWERAPPS__,
-      (window as unknown as Record<string, unknown>).__INITIAL_STATE__,
-      (window as unknown as Record<string, unknown>).App,
-      (window as unknown as Record<string, unknown>).app,
-      (window as unknown as Record<string, unknown>).context,
-      (window as unknown as Record<string, unknown>).bootstrap,
-    ];
-
-    const seen = new WeakSet<object>();
-    for (const root of roots) {
-      const email = findEmailInUnknown(root, 3, seen);
-      if (email) return email;
-    }
-  } catch {
-    // ignore probing issues
-  }
-  return undefined;
-}
-
-function getAuthenticatedUserEmail(): string | undefined {
-  const xrmSettings = getXrmUserSettings();
-  const upn = xrmSettings?.userPrincipalName;
-  if (upn && isEmail(upn)) return upn.trim();
-  const userName = xrmSettings?.userName;
-  if (userName && isEmail(userName)) return userName.trim();
-
-  try {
-    const localEmail = findEmailInStorage(window.localStorage);
-    if (localEmail) return localEmail;
-  } catch {
-    // ignore storage access issues
-  }
-  try {
-    const sessionEmail = findEmailInStorage(window.sessionStorage);
-    if (sessionEmail) return sessionEmail;
-  } catch {
-    // ignore storage access issues
-  }
-  return undefined;
-}
-
-function getAuthenticatedAadObjectId(): string | undefined {
-  const xrmSettings = getXrmUserSettings() as XrmUserSettings & { aadObjectId?: string; aadobjectid?: string } | undefined;
-  const fromXrm = xrmSettings?.aadObjectId ?? xrmSettings?.aadobjectid;
-  if (fromXrm && isGuid(fromXrm)) return fromXrm.trim();
-
-  try {
-    const localOid = findAadObjectIdInStorage(window.localStorage);
-    if (localOid) return localOid;
-  } catch {
-    // ignore storage access issues
-  }
-  try {
-    const sessionOid = findAadObjectIdInStorage(window.sessionStorage);
-    if (sessionOid) return sessionOid;
-  } catch {
-    // ignore storage access issues
-  }
-  return undefined;
-}
-
-async function resolveAuthenticatedEmail(): Promise<string | undefined> {
-  const directEmail = getAuthenticatedUserEmail();
-  if (directEmail) return directEmail;
-
-  const urlEmail = getEmailFromUrlContext();
-  if (urlEmail) return urlEmail;
-
-  const globalProbeEmail = getEmailFromGlobalContextProbe();
-  if (globalProbeEmail) return globalProbeEmail;
-
-  const aadObjectId = getAuthenticatedAadObjectId();
-  if (aadObjectId) {
-    const byAadObjectId = await SystemusersService.getAll({
-      select: ['internalemailaddress'],
-      filter: `azureactivedirectoryobjectid eq '${aadObjectId}' and isdisabled eq false`,
-      maxPageSize: 1,
-    });
-    if (byAadObjectId.success && byAadObjectId.data?.[0]?.internalemailaddress && isEmail(byAadObjectId.data[0].internalemailaddress)) {
-      return byAadObjectId.data[0].internalemailaddress.trim();
-    }
-  }
-
-  const xrmSettings = getXrmUserSettings();
-  const xrmUserName = xrmSettings?.userName?.trim();
-  if (xrmUserName && !isEmail(xrmUserName)) {
-    const escapedUserName = xrmUserName.replace(/'/g, "''");
-
-    const byFullName = await SystemusersService.getAll({
-      select: ['internalemailaddress', 'fullname'],
-      filter: `fullname eq '${escapedUserName}' and isdisabled eq false`,
-      maxPageSize: 1,
-    });
-    if (byFullName.success && byFullName.data?.[0]?.internalemailaddress && isEmail(byFullName.data[0].internalemailaddress)) {
-      return byFullName.data[0].internalemailaddress.trim();
-    }
-
-    const byDomain = await SystemusersService.getAll({
-      select: ['internalemailaddress'],
-      filter: `domainname eq '${escapedUserName}' and isdisabled eq false`,
-      maxPageSize: 1,
-    });
-    if (byDomain.success && byDomain.data?.[0]?.internalemailaddress && isEmail(byDomain.data[0].internalemailaddress)) {
-      return byDomain.data[0].internalemailaddress.trim();
-    }
-  }
-
-  const userId = xrmSettings?.userId?.replace(/[{}]/g, '').trim();
-  if (userId) {
-    const byId = await SystemusersService.get(userId, {
-      select: ['internalemailaddress'],
-    });
-    if (byId.success && byId.data?.internalemailaddress && isEmail(byId.data.internalemailaddress)) {
-      return byId.data.internalemailaddress.trim();
-    }
-  }
-
-  // Xrm WebApi fallback for embedded contexts where userSettings is unavailable.
-  try {
-    const execute = getXrmWebApiOnlineExecute();
-    if (execute) {
-      const whoAmIRequest = {
-        getMetadata: () => ({
-          boundParameter: null,
-          parameterTypes: {},
-          operationType: 1,
-          operationName: 'WhoAmI',
-        }),
-      };
-      const response = await execute(whoAmIRequest);
-      if (response.ok) {
-        const who = await response.json();
-        const whoAmIUserId = (typeof who.UserId === 'string' ? who.UserId : undefined)?.replace(/[{}]/g, '').trim();
-        if (whoAmIUserId) {
-          const byWhoAmI = await SystemusersService.get(whoAmIUserId, {
-            select: ['internalemailaddress'],
-          });
-          if (byWhoAmI.success && byWhoAmI.data?.internalemailaddress && isEmail(byWhoAmI.data.internalemailaddress)) {
-            return byWhoAmI.data.internalemailaddress.trim();
-          }
-        }
-      }
-    }
-  } catch {
-    // ignore Xrm WebApi execution issues
-  }
-
-  // Dataverse WhoAmI via Power data client -> systemusers.internalemailaddress
-  try {
-    const client = getClient(dataSourcesInfo);
-    const whoAmIRequest = {
-      dataverseRequest: {
-        action: 'WhoAmI',
-        parameters: {},
-      },
-    } as unknown as Parameters<typeof client.executeAsync>[0];
-    const whoAmIResult = await client.executeAsync(whoAmIRequest) as {
-      success?: boolean;
-      data?: { UserId?: string };
-    };
-    const whoAmIUserId = whoAmIResult.data?.UserId?.replace(/[{}]/g, '').trim();
-    if (whoAmIResult.success !== false && whoAmIUserId) {
-      const byWhoAmI = await SystemusersService.get(whoAmIUserId, {
-        select: ['internalemailaddress'],
-      });
-      if (byWhoAmI.success && byWhoAmI.data?.internalemailaddress && isEmail(byWhoAmI.data.internalemailaddress)) {
-        return byWhoAmI.data.internalemailaddress.trim();
-      }
-    }
-  } catch {
-    // ignore WhoAmI context errors
-  }
-
-  // Optional source: Office profile if connector is configured.
-  try {
-    const profile = await Office365UsersService.MyProfile_V2();
-    if (profile.success && profile.data) {
-      const p = profile.data as unknown as { mail?: string; userPrincipalName?: string };
-      if (p.mail && isEmail(p.mail)) return p.mail.trim();
-      if (p.userPrincipalName && isEmail(p.userPrincipalName)) return p.userPrincipalName.trim();
-    }
-  } catch {
-    // connector may be unavailable in this environment
-  }
-
-  return undefined;
+function isSupervisorApprovalQueueName(name?: string): boolean {
+  if (!name) return false;
+  const n = name.toLowerCase();
+  return n.includes('supervisor') && n.includes('approval');
 }
 
 export function SupervisorApprovalPage() {
   const [items, setItems] = useState<Vsi_participantprogramyears[]>([]);
   const [queueWorkByEnrolmentId, setQueueWorkByEnrolmentId] = useState<Record<string, QueueWorkMeta>>({});
+  const [supervisorQueueIds, setSupervisorQueueIds] = useState<Set<string>>(new Set());
   const [workerAvatarUrls, setWorkerAvatarUrls] = useState<Record<string, string>>({});
   const fetchedQueueIds = useRef<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -531,7 +139,10 @@ export function SupervisorApprovalPage() {
   const [assignTarget, setAssignTarget] = useState<AssignTarget | null>(null);
   const [currentUser, setCurrentUser] = useState<{ systemUserId: string; displayName: string } | null>(null);
   const [pickingRowId, setPickingRowId] = useState<string | null>(null);
-  const [pickError, setPickError] = useState<string | null>(null);
+  const [releasingRowId, setReleasingRowId] = useState<string | null>(null);
+  const [approvingRowId, setApprovingRowId] = useState<string | null>(null);
+  const [approvingBulk, setApprovingBulk] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [columnOrder, setColumnOrder] = useState<SupervisorColumnKey[]>(DEFAULT_COLUMN_ORDER);
   const [colDragIdx, setColDragIdx] = useState<number | null>(null);
   const [sortKey, setSortKey] = useState<SupervisorColumnKey | null>(null);
@@ -539,30 +150,19 @@ export function SupervisorApprovalPage() {
   const [columnWidths, setColumnWidths] = useState<Partial<Record<SupervisorColumnKey, number>>>({});
   const [columnFilters, setColumnFilters] = useState<Record<SupervisorColumnKey, Set<string>>>(() => createEmptyFilters());
   const [columnFilterOps, setColumnFilterOps] = useState<Record<SupervisorColumnKey, FilterOperator>>(DEFAULT_FILTER_OPS);
-
-  const lookupSystemUserByEmail = async (email: string) => {
-    const escaped = email.replace(/'/g, "''");
-    const result = await SystemusersService.getAll({
-      select: ['systemuserid', 'fullname', 'internalemailaddress', 'domainname'],
-      filter: `internalemailaddress eq '${escaped}' and isdisabled eq false`,
-      maxPageSize: 1,
-    });
-    if (!result.success || !result.data?.[0]?.systemuserid) return null;
-    return result.data[0];
-  };
+  const [refreshCounter, setRefreshCounter] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         if (currentUser) return;
-        const autoEmail = await resolveAuthenticatedEmail();
-        if (autoEmail) {
-          const u = await lookupSystemUserByEmail(autoEmail);
-          if (!cancelled && u?.systemuserid) {
-            setCurrentUser({ systemUserId: u.systemuserid, displayName: u.fullname ?? 'Me' });
-            return;
-          }
+        const resolved = await resolveCurrentSystemUser();
+        if (!cancelled) {
+          setCurrentUser({
+            systemUserId: resolved.systemUserId,
+            displayName: resolved.displayName,
+          });
         }
       } catch {
         // silently fail
@@ -576,6 +176,7 @@ export function SupervisorApprovalPage() {
 
     (async () => {
       try {
+        fetchedQueueIds.current.clear();
         setLoading(true);
         setError(null);
         const result = await Vsi_participantprogramyearsService.getAll({
@@ -593,30 +194,80 @@ export function SupervisorApprovalPage() {
           maxPageSize: 5000,
         });
 
-        const queueitemsResult = await QueueitemsService.getAll({
-          select: [
-            'queueitemid',
-            '_objectid_value',
-            '_workerid_value',
-            '_queueid_value',
-            'enteredon',
-            'workeridmodifiedon',
-            'statecode',
-          ],
-          maxPageSize: 5000,
+        const queuesResult = await QueuesService.getAll({
+          select: ['queueid', 'name'],
+          filter: `name eq '${SUPERVISOR_QUEUE_NAME}' and statecode eq 0`,
+          maxPageSize: 1,
         });
 
+        const queueFallbackResult = (!queuesResult.success || (queuesResult.data?.length ?? 0) === 0)
+          ? await QueuesService.getAll({
+              select: ['queueid', 'name'],
+              filter: "contains(name,'Supervisor') and contains(name,'Approval') and statecode eq 0",
+              maxPageSize: 20,
+            })
+          : null;
+
+        const supervisorQueues = (queuesResult.success && (queuesResult.data?.length ?? 0) > 0)
+          ? (queuesResult.data ?? [])
+          : (queueFallbackResult?.success ? (queueFallbackResult.data ?? []) : []);
+
+        const supervisorQueueIdSet = new Set(
+          supervisorQueues
+            .map(q => normalizeGuid(q.queueid))
+            .filter((id): id is string => !!id)
+        );
+
+        const queueitems: Array<NonNullable<Awaited<ReturnType<typeof QueueitemsService.getAll>>['data']>[number]> = [];
+        let queueitemsSuccess = true;
+        let queueitemsErrorMessage: string | undefined;
+        let queueSkipToken: string | undefined;
+
+        do {
+          const queueitemsResult = await QueueitemsService.getAll({
+            select: [
+              'queueitemid',
+              '_objectid_value',
+              '_workerid_value',
+              '_queueid_value',
+              'enteredon',
+              'workeridmodifiedon',
+              'statecode',
+            ],
+            filter: 'statecode eq 0',
+            maxPageSize: 5000,
+            ...(queueSkipToken ? { skipToken: queueSkipToken } : {}),
+          });
+
+          if (!queueitemsResult.success) {
+            queueitemsSuccess = false;
+            queueitemsErrorMessage = queueitemsResult.error?.message ?? 'Unable to load queue work metadata.';
+            break;
+          }
+
+          queueitems.push(...(queueitemsResult.data ?? []));
+          queueSkipToken = queueitemsResult.skipToken;
+        } while (queueSkipToken);
+
         const queueMap: Record<string, QueueWorkMeta> = {};
-        if (queueitemsResult.success) {
-          for (const q of queueitemsResult.data ?? []) {
-            const enrolmentId = q._objectid_value;
+        if (queueitemsSuccess) {
+          for (const q of queueitems) {
+            const enrolmentId = normalizeGuid(q._objectid_value);
             if (!enrolmentId) continue;
             const isActive = q.statecode === 0;
-            const existing = queueMap[enrolmentId];
-            // Prefer active queueitems; otherwise keep first seen.
-            if (existing && (existing.isActive || !isActive)) continue;
-            const workerDisplayName = (q as unknown as Record<string, unknown>)['_workerid_value@OData.Community.Display.V1.FormattedValue'] as string | undefined;
+            if (!isActive) continue;
+
             const queueDisplayName = (q as unknown as Record<string, unknown>)['_queueid_value@OData.Community.Display.V1.FormattedValue'] as string | undefined;
+            const queueId = normalizeGuid(q._queueid_value);
+            const isSupervisorQueue =
+              (queueId ? supervisorQueueIdSet.has(queueId) : false)
+              || isSupervisorApprovalQueueName(queueDisplayName);
+            if (!isSupervisorQueue) continue;
+
+            const existing = queueMap[enrolmentId];
+            if (existing) continue;
+
+            const workerDisplayName = (q as unknown as Record<string, unknown>)['_workerid_value@OData.Community.Display.V1.FormattedValue'] as string | undefined;
             queueMap[enrolmentId] = {
               workedBy: workerDisplayName ?? '—',
               workedOn: formatWorkedOn(q.workeridmodifiedon),
@@ -625,11 +276,17 @@ export function SupervisorApprovalPage() {
               enteredQueueRaw: q.enteredon,
               workerId: q._workerid_value,
               queueitemId: q.queueitemid,
-              queueId: q._queueid_value,
+              queueId,
               queueName: queueDisplayName,
               isActive,
             };
           }
+        }
+
+        if (Object.keys(queueMap).length > 0) {
+          Object.values(queueMap).forEach(meta => {
+            if (meta.queueId) supervisorQueueIdSet.add(meta.queueId);
+          });
         }
 
         if (!cancelled) {
@@ -637,12 +294,17 @@ export function SupervisorApprovalPage() {
             setItems([]);
             setError(result.error?.message ?? 'Unable to load supervisor approval items.');
           } else {
-            setItems(result.data ?? []);
+            const allowedEnrolmentIds = new Set(Object.keys(queueMap));
+            setItems((result.data ?? []).filter(item => {
+              const id = normalizeGuid(item.vsi_participantprogramyearid);
+              return !!id && allowedEnrolmentIds.has(id);
+            }));
           }
 
           setQueueWorkByEnrolmentId(queueMap);
-          if (!queueitemsResult.success) {
-            setError(queueitemsResult.error?.message ?? 'Unable to load queue work metadata.');
+          setSupervisorQueueIds(new Set(supervisorQueueIdSet));
+          if (!queueitemsSuccess) {
+            setError(queueitemsErrorMessage ?? 'Unable to load queue work metadata.');
           }
         }
       } catch (err) {
@@ -655,7 +317,7 @@ export function SupervisorApprovalPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [refreshCounter]);
 
   useEffect(() => {
     const workerIds = [...new Set(
@@ -684,10 +346,11 @@ export function SupervisorApprovalPage() {
   // Per-row fallback: for items not resolved by the bulk fetch, query individually
   useEffect(() => {
     if (items.length === 0) return;
+    if (supervisorQueueIds.size === 0) return;
     let cancelled = false;
 
     const missingIds = items
-      .map(item => item.vsi_participantprogramyearid)
+      .map(item => normalizeGuid(item.vsi_participantprogramyearid))
       .filter((id): id is string => !!id && !fetchedQueueIds.current.has(id));
 
     if (missingIds.length === 0) return;
@@ -697,9 +360,12 @@ export function SupervisorApprovalPage() {
       const updates: Record<string, QueueWorkMeta> = {};
       for (const enrolmentId of missingIds) {
         if (cancelled) break;
+        const queueConstraint = [...supervisorQueueIds]
+          .map(id => `_queueid_value eq '${id}'`)
+          .join(' or ');
         const result = await QueueitemsService.getAll({
           select: ['queueitemid', '_objectid_value', '_workerid_value', '_queueid_value', 'enteredon', 'workeridmodifiedon'],
-          filter: `objectid_vsi_participantprogramyear/vsi_participantprogramyearid eq '${enrolmentId}' and statecode eq 0`,
+          filter: `objectid_vsi_participantprogramyear/vsi_participantprogramyearid eq '${enrolmentId}' and statecode eq 0 and (${queueConstraint})`,
           maxPageSize: 1,
         });
         if (!cancelled && result.success && (result.data?.length ?? 0) > 0) {
@@ -726,41 +392,66 @@ export function SupervisorApprovalPage() {
     })();
 
     return () => { cancelled = true; };
-  }, [items]);
+  }, [items, supervisorQueueIds]);
 
   const resolveCurrentUser = async (): Promise<{ systemUserId: string; displayName: string }> => {
     if (currentUser) return currentUser;
-    // Resolve via authenticated user email against internalemailaddress only.
-    const autoEmail = await resolveAuthenticatedEmail();
-    if (autoEmail) {
-      const u = await lookupSystemUserByEmail(autoEmail);
-      if (u?.systemuserid) {
-        const resolved = { systemUserId: u.systemuserid, displayName: u.fullname ?? 'Me' };
-        setCurrentUser(resolved);
-        return resolved;
-      }
+
+    const resolved = await resolveCurrentSystemUser();
+    const nextUser = {
+      systemUserId: resolved.systemUserId,
+      displayName: resolved.displayName,
+    };
+    setCurrentUser(nextUser);
+    return nextUser;
+  };
+
+  const canApproveRow = (row: SupervisorRowView): boolean => {
+    const workerId = normalizeGuid(row.workMeta?.workerId);
+    if (!workerId) return true;
+    if (!currentUser?.systemUserId) return false;
+    return workerId === normalizeGuid(currentUser.systemUserId);
+  };
+
+  const getApprovalOwnershipError = (rows: SupervisorRowView[]): string | null => {
+    const blockedRows = rows.filter(row => !canApproveRow(row));
+    if (blockedRows.length === 0) return null;
+
+    if (blockedRows.length === 1) {
+      return `${blockedRows[0].enrolmentName} is assigned to ${blockedRows[0].workedBy}. You can only approve items worked by you or with a blank Worked By value.`;
     }
 
-    throw new Error('Could not determine authenticated user email.');
+    return 'Some selected enrolments are assigned to another worker. You can only approve items worked by you or with a blank Worked By value.';
+  };
+
+  const approvalBlockedTooltip = 'You cannot approve enrolments being worked on by another user.';
+  const bulkApprovalBlockedTooltip = 'One or more selected approvals is being worked on by another user';
+
+  const updateQueueItemWorker = async (queueItemId: string, systemUserId: string | null): Promise<void> => {
+    const bindingValue = systemUserId ? `/systemusers(${systemUserId})` : null;
+
+    let updateResult = await QueueitemsService.update(queueItemId, {
+      'workerid_systemuser@odata.bind': bindingValue,
+    } as unknown as Parameters<typeof QueueitemsService.update>[1]);
+
+    if (!updateResult.success) {
+      updateResult = await QueueitemsService.update(queueItemId, {
+        'WorkerId@odata.bind': bindingValue,
+      } as Parameters<typeof QueueitemsService.update>[1]);
+    }
+
+    if (!updateResult.success) {
+      throw new Error(updateResult.error?.message ?? 'Failed to update queue item worker.');
+    }
   };
 
   const handlePick = async (row: SupervisorRowView) => {
     if (!row.workMeta?.queueitemId || !row.itemId) return;
     setPickingRowId(row.itemId);
-    setPickError(null);
+    setActionError(null);
     try {
       const user = await resolveCurrentUser();
-      let updateResult = await QueueitemsService.update(row.workMeta.queueitemId, {
-        'workerid_systemuser@odata.bind': `/systemusers(${user.systemUserId})`,
-      } as unknown as Parameters<typeof QueueitemsService.update>[1]);
-      if (!updateResult.success) {
-        updateResult = await QueueitemsService.update(row.workMeta.queueitemId, {
-          'WorkerId@odata.bind': `/systemusers(${user.systemUserId})`,
-        } as Parameters<typeof QueueitemsService.update>[1]);
-      }
-      if (!updateResult.success) {
-        throw new Error(updateResult.error?.message ?? 'Failed to update queue item worker.');
-      }
+      await updateQueueItemWorker(row.workMeta.queueitemId, user.systemUserId);
       setQueueWorkByEnrolmentId(prev => ({
         ...prev,
         [row.itemId!]: {
@@ -772,9 +463,119 @@ export function SupervisorApprovalPage() {
         },
       }));
     } catch (err) {
-      setPickError(err instanceof Error ? err.message : 'Pick failed');
+      setActionError(err instanceof Error ? err.message : 'Pick failed');
     } finally {
       setPickingRowId(null);
+    }
+  };
+
+  const handleRelease = async (row: SupervisorRowView) => {
+    if (!row.workMeta?.queueitemId || !row.itemId) return;
+    setReleasingRowId(row.itemId);
+    setActionError(null);
+    try {
+      await updateQueueItemWorker(row.workMeta.queueitemId, null);
+
+      setQueueWorkByEnrolmentId(prev => ({
+        ...prev,
+        [row.itemId!]: {
+          ...prev[row.itemId!],
+          workedBy: '—',
+          workedOn: '—',
+          workedOnRaw: undefined,
+          workerId: undefined,
+        },
+      }));
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Release failed');
+    } finally {
+      setReleasingRowId(null);
+    }
+  };
+
+  const removeApprovedRowsFromState = (rows: SupervisorRowView[]) => {
+    const normalizedApproved = new Set(
+      rows
+        .map(r => normalizeGuid(r.itemId))
+        .filter((id): id is string => !!id)
+    );
+
+    setItems(prev => prev.filter(item => !normalizedApproved.has(normalizeGuid(item.vsi_participantprogramyearid))));
+
+    setQueueWorkByEnrolmentId(prev => {
+      const next = { ...prev };
+      for (const row of rows) {
+        if (row.itemId) {
+          delete next[row.itemId];
+          delete next[normalizeGuid(row.itemId)];
+        }
+      }
+      return next;
+    });
+
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      for (const row of rows) {
+        if (row.itemId) next.delete(row.itemId);
+      }
+      return next;
+    });
+  };
+
+  const approveRows = async (rows: SupervisorRowView[]) => {
+    const user = await resolveCurrentUser();
+    const approvedDate = new Date().toISOString();
+
+    for (const row of rows) {
+      if (!row.itemId) continue;
+
+      const enrolmentId = row.itemId;
+      const statusUpdateResult = await Vsi_participantprogramyearsService.update(enrolmentId, {
+        vsi_taskstatus: 865520003,
+        vsi_taskstatusapproveddate: approvedDate,
+        'vsi_TaskStatusApprover@odata.bind': `/systemusers(${user.systemUserId})`,
+      });
+      if (!statusUpdateResult.success) {
+        throw new Error(statusUpdateResult.error?.message ?? `Failed to set Approved status for ${enrolmentId}.`);
+      }
+
+      if (row.workMeta?.queueitemId) {
+        await QueueitemsService.delete(row.workMeta.queueitemId);
+      }
+    }
+
+    removeApprovedRowsFromState(rows);
+  };
+
+  const handleApproveRow = async (row: SupervisorRowView) => {
+    if (!row.itemId) return;
+    setApprovingRowId(row.itemId);
+    setActionError(null);
+    try {
+      const ownershipError = getApprovalOwnershipError([row]);
+      if (ownershipError) throw new Error(ownershipError);
+      await approveRows([row]);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Approve failed');
+    } finally {
+      setApprovingRowId(null);
+    }
+  };
+
+  const handleApproveSelected = async () => {
+    if (selectedIds.size === 0) return;
+    setApprovingBulk(true);
+    setActionError(null);
+    try {
+      const rowsToApprove = allRows.filter(row => row.itemId != null && selectedIds.has(row.itemId));
+      if (rowsToApprove.length === 0) return;
+      const ownershipError = getApprovalOwnershipError(rowsToApprove);
+      if (ownershipError) throw new Error(ownershipError);
+      await approveRows(rowsToApprove);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Approve selected failed');
+    } finally {
+      setApprovingBulk(false);
     }
   };
 
@@ -1002,6 +803,8 @@ export function SupervisorApprovalPage() {
   };
 
   const selectedCount = selectedIds.size;
+  const selectedRows = allRows.filter(row => row.itemId != null && selectedIds.has(row.itemId));
+  const hasBlockedSelectedRows = selectedRows.some(row => !canApproveRow(row));
 
   return (
     <div className="sa-wrapper">
@@ -1017,6 +820,14 @@ export function SupervisorApprovalPage() {
           <Filter size={14} />
           Filters
         </button>
+        <button
+          type="button"
+          className="sa-filter-btn"
+          disabled={loading}
+          onClick={() => setRefreshCounter(prev => prev + 1)}
+        >
+          {loading ? 'Refreshing...' : 'Refresh'}
+        </button>
       </div>
 
       <div className="sa-card">
@@ -1027,22 +838,27 @@ export function SupervisorApprovalPage() {
           </div>
           <div className="sa-bulk-actions">
             <button type="button" className="sa-btn-secondary">Bulk Actions</button>
-            <button
-              type="button"
-              className="sa-btn-primary"
-              disabled={selectedCount === 0}
-            >
-              Approve Selected{selectedCount > 0 ? ` (${selectedCount})` : ''}
-            </button>
+            <span title={hasBlockedSelectedRows ? bulkApprovalBlockedTooltip : undefined}>
+              <button
+                type="button"
+                className="sa-btn-primary"
+                disabled={selectedCount === 0 || approvingBulk || hasBlockedSelectedRows}
+                onClick={() => void handleApproveSelected()}
+              >
+                {approvingBulk
+                  ? 'Approving...'
+                  : `Approve Selected${selectedCount > 0 ? ` (${selectedCount})` : ''}`}
+              </button>
+            </span>
           </div>
         </div>
 
         <div className="sa-table-container">
           {loading && <p className="sa-state-msg loading">Loading queue items…</p>}
           {error && <p className="sa-state-msg error">Error: {error}</p>}
-          {pickError && (
-            <p className="sa-state-msg error" style={{ cursor: 'pointer' }} onClick={() => setPickError(null)}>
-              Pick failed: {pickError} &times;
+          {actionError && (
+            <p className="sa-state-msg error" style={{ cursor: 'pointer' }} onClick={() => setActionError(null)}>
+              Action failed: {actionError} &times;
             </p>
           )}
           {!loading && !error && items.length === 0 && (
@@ -1175,6 +991,12 @@ export function SupervisorApprovalPage() {
                             onClick={() => void handlePick(row)}
                           >{pickingRowId === itemId ? '…' : 'Pick'}</button>
                           <button
+                            type="button"
+                            className="sa-action-btn"
+                            disabled={!itemId || !workMeta?.queueitemId || releasingRowId === itemId}
+                            onClick={() => void handleRelease(row)}
+                          >{releasingRowId === itemId ? '…' : 'Release'}</button>
+                          <button
                           type="button"
                           className="sa-action-btn"
                           disabled={!itemId}
@@ -1191,7 +1013,16 @@ export function SupervisorApprovalPage() {
                           {itemId
                             ? <Link className="sa-action-btn sa-action-link" to={`/calculation/${itemId}`}>Go to calculation</Link>
                             : <button type="button" className="sa-action-btn" disabled>Go to calculation</button>}
-                          <button type="button" className="sa-action-btn sa-action-ready">Approve</button>
+                          <span title={!canApproveRow(row) ? approvalBlockedTooltip : undefined}>
+                            <button
+                              type="button"
+                              className="sa-action-btn sa-action-ready"
+                              disabled={!itemId || approvingRowId === itemId || !canApproveRow(row)}
+                              onClick={() => void handleApproveRow(row)}
+                            >
+                              {approvingRowId === itemId ? '...' : 'Approve'}
+                            </button>
+                          </span>
                         </div>
                       </td>
                     </tr>
