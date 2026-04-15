@@ -15,17 +15,6 @@ import { SavedqueriesService } from '../generated/services/SavedqueriesService';
 import { generateLayoutXml, userqueryToView, savedqueryToView, loadActiveViewId, saveActiveViewId } from '../utils/viewSerializer';
 import { serializeFilterNodes, deserializeFilterNodes } from '../utils/filterTree';
 
-function ensureTaskApprovedDatePlacement(keys: SortKey[]): SortKey[] {
-  if (keys.includes('taskApprovedDate')) return keys;
-
-  const modifiedOnIndex = keys.indexOf('modifiedOn');
-  if (modifiedOnIndex === -1) return keys;
-
-  const next = [...keys];
-  next.splice(modifiedOnIndex + 1, 0, 'taskApprovedDate');
-  return next;
-}
-
 export interface ViewState {
   visibleColumnKeys: SortKey[];
   columnWidths: Partial<Record<SortKey, number>>;
