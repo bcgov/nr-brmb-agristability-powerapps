@@ -1,4 +1,6 @@
 import { SystemusersService } from '../generated/services/SystemusersService';
+import { getClient } from '@microsoft/power-apps/data';
+import { dataSourcesInfo } from '../../.power/schemas/appschemas/dataSourcesInfo';
 
 export type ResolvedCurrentUser = {
   systemUserId: string;
@@ -10,17 +12,17 @@ type XrmUserSettings = { userId?: string; userName?: string; userPrincipalName?:
 type WinWithXrm = { Xrm?: { Utility?: { getGlobalContext?: () => { userSettings?: XrmUserSettings } } } };
 
 function getXrmUserSettings(): XrmUserSettings | undefined {
-  try {
-    const candidates = [window, window.parent, window.top];
-    for (const candidate of candidates) {
+  const candidates = [window, window.parent, window.top];
+  for (const candidate of candidates) {
+    try {
       if (!candidate) continue;
       const settings = (candidate as unknown as WinWithXrm).Xrm?.Utility?.getGlobalContext?.()?.userSettings;
       if (settings?.userId || settings?.userName || settings?.userPrincipalName) {
         return settings;
       }
+    } catch {
+      // ignore cross-origin frame access and keep checking other candidates
     }
-  } catch {
-    return undefined;
   }
 
   return undefined;
@@ -38,6 +40,31 @@ function isGuid(value?: string): boolean {
 function isEmail(value?: string): boolean {
   if (!value) return false;
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(value.trim());
+}
+
+function extractStringField(input: unknown, fieldNames: string[]): string | undefined {
+  if (!input || typeof input !== 'object') return undefined;
+  const stack: unknown[] = [input];
+  const seen = new Set<object>();
+
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (!current || typeof current !== 'object' || Array.isArray(current)) continue;
+
+    const obj = current as Record<string, unknown>;
+    if (seen.has(obj)) continue;
+    seen.add(obj);
+
+    for (const fieldName of fieldNames) {
+      const value = obj[fieldName];
+      if (typeof value === 'string' && value.trim()) return value.trim();
+    }
+
+    stack.push(obj.data);
+    stack.push(obj.value);
+  }
+
+  return undefined;
 }
 
 function decodeJwtPayload(token: string): Record<string, unknown> | null {
@@ -202,6 +229,46 @@ async function lookupSystemUserById(userId: string, fallbackName?: string): Prom
   };
 }
 
+async function lookupSystemUserByWhoAmI(): Promise<ResolvedCurrentUser | null> {
+  try {
+    const client = getClient(dataSourcesInfo);
+    const whoAmIRequest = {
+      dataverseRequest: {
+        action: 'WhoAmI',
+        parameters: {},
+      },
+    } as unknown as Parameters<typeof client.executeAsync>[0];
+
+    const whoAmIResult = await client.executeAsync(whoAmIRequest);
+    const rawUserId = extractStringField(whoAmIResult, ['UserId', 'userId', 'userid']);
+    if (!rawUserId) return null;
+    return lookupSystemUserById(rawUserId);
+  } catch {
+    return null;
+  }
+}
+
+async function lookupSystemUserByEqualUserId(): Promise<ResolvedCurrentUser | null> {
+  try {
+    const result = await SystemusersService.getAll({
+      select: ['systemuserid', 'fullname', 'internalemailaddress', 'domainname'],
+      filter: "Microsoft.Dynamics.CRM.EqualUserId(PropertyName='systemuserid')",
+      maxPageSize: 1,
+    });
+
+    const user = result.success ? result.data?.[0] : undefined;
+    if (!user?.systemuserid) return null;
+
+    return {
+      systemUserId: user.systemuserid,
+      displayName: user.fullname ?? user.domainname ?? 'Me',
+      email: user.internalemailaddress ?? undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function resolveAuthenticatedEmail(): Promise<string | undefined> {
   const xrmSettings = getXrmUserSettings();
   if (xrmSettings?.userPrincipalName && isEmail(xrmSettings.userPrincipalName)) {
@@ -230,17 +297,35 @@ export async function resolveAuthenticatedEmail(): Promise<string | undefined> {
 }
 
 export async function resolveCurrentSystemUser(): Promise<ResolvedCurrentUser> {
+  const attempts: string[] = [];
+
   const xrmSettings = getXrmUserSettings();
   if (xrmSettings?.userId) {
+    attempts.push('xrm.userId:present');
     const byId = await lookupSystemUserById(xrmSettings.userId, xrmSettings.userName);
     if (byId) return byId;
+    attempts.push('xrm.userId:lookup-failed');
+  } else {
+    attempts.push('xrm.userId:empty');
   }
+
+  const byWhoAmI = await lookupSystemUserByWhoAmI();
+  if (byWhoAmI) return byWhoAmI;
+  attempts.push('dataverse.whoami:failed');
+
+  const byEqualUserId = await lookupSystemUserByEqualUserId();
+  if (byEqualUserId) return byEqualUserId;
+  attempts.push('dataverse.EqualUserId:failed');
 
   const email = await resolveAuthenticatedEmail();
   if (email) {
+    attempts.push('email:present');
     const byEmail = await lookupSystemUserByEmail(email);
     if (byEmail) return byEmail;
+    attempts.push('email:lookup-failed');
+  } else {
+    attempts.push('email:empty');
   }
 
-  throw new Error('Could not determine the authenticated system user.');
+  throw new Error(`Could not determine the authenticated system user. Attempts: ${attempts.join(', ')}`);
 }
