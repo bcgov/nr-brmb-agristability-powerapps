@@ -57,6 +57,10 @@
         "enrolments": {
           "entitySetName": "vsi_participantprogramyears",
           "logicalName": "vsi_participantprogramyear"
+        },
+        "coreconfiguration": {
+          "entitySetName": "vsi_armsconfigurations",
+          "logicalName": "vsi_armsconfiguration"
         }
       },
       "version": "v9.0",

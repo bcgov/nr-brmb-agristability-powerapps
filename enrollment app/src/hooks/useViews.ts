@@ -46,8 +46,19 @@ export function useViews(state: ViewState, setters: {
   const [viewsLoading, setViewsLoading] = useState(true);
   const [activeViewId, setActiveViewId] = useState<string | null>(() => loadActiveViewId());
 
+  const ensureCoreColumn = useCallback((keys: SortKey[]): SortKey[] => {
+    if (keys.includes('core')) return keys;
+    const sharepointIndex = keys.indexOf('sharepoint');
+    if (sharepointIndex >= 0) {
+      const next = [...keys];
+      next.splice(sharepointIndex + 1, 0, 'core');
+      return next;
+    }
+    return [...keys, 'core'];
+  }, []);
+
   const applyView = useCallback((view: ViewPayload) => {
-    setters.setVisibleColumnKeys([...view.visibleColumnKeys]);
+    setters.setVisibleColumnKeys(ensureCoreColumn(view.visibleColumnKeys));
     setters.setColumnWidths({ ...view.columnWidths });
     setters.setSortKey(view.sortKey);
     setters.setSortDir(view.sortDir);
@@ -58,10 +69,10 @@ export function useViews(state: ViewState, setters: {
     setters.setEnrolFilterOp(view.enrolFilterOp);
     setters.setAdvFilterNodes(deserializeFilterNodes(view.advFilterNodes as unknown[]));
     setters.setAdvLogicOp(view.advLogicOp);
-  }, [setters]);
+  }, [setters, ensureCoreColumn]);
 
   const captureCurrentSnapshot = useCallback((): ViewPayload => ({
-    visibleColumnKeys: [...state.visibleColumnKeys],
+    visibleColumnKeys: ensureCoreColumn(state.visibleColumnKeys),
     columnWidths: { ...state.columnWidths },
     sortKey: state.sortKey,
     sortDir: state.sortDir,
@@ -72,7 +83,7 @@ export function useViews(state: ViewState, setters: {
     enrolFilterOp: state.enrolFilterOp,
     advFilterNodes: serializeFilterNodes(state.advFilterNodes),
     advLogicOp: state.advLogicOp,
-  }), [state]);
+  }), [state, ensureCoreColumn]);
 
   const hasUnsavedChanges = useMemo(() => {
     const current = JSON.stringify(captureCurrentSnapshot());
@@ -80,7 +91,7 @@ export function useViews(state: ViewState, setters: {
       const view = savedViews.find(v => v.id === activeViewId);
       if (!view) return true;
       const savedSnapshot: ViewPayload = {
-        visibleColumnKeys: [...view.visibleColumnKeys],
+        visibleColumnKeys: ensureCoreColumn(view.visibleColumnKeys),
         columnWidths: { ...view.columnWidths },
         sortKey: view.sortKey,
         sortDir: view.sortDir,
@@ -95,7 +106,7 @@ export function useViews(state: ViewState, setters: {
       return current !== JSON.stringify(savedSnapshot);
     }
     return current !== JSON.stringify(DEFAULT_VIEW_SNAPSHOT);
-  }, [captureCurrentSnapshot, activeViewId, savedViews]);
+  }, [captureCurrentSnapshot, activeViewId, savedViews, ensureCoreColumn]);
 
   // Load views on mount
   useEffect(() => {

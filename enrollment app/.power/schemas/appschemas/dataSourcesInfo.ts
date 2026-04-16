@@ -5,6 +5,13 @@
  */
 
 export const dataSourcesInfo = {
+  "vsi_armsconfigurations": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "vsi_armsconfigurationid",
+    "dataSourceType": "Dataverse",
+    "apis": {}
+  },
   "vsi_enrolmenthistories": {
     "tableId": "",
     "version": "",

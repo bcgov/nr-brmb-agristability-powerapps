@@ -34,6 +34,7 @@ type Props = {
   columnWidths: Partial<Record<SortKey, number>>;
   onColumnWidthChange: (key: SortKey) => (width: number | undefined) => void;
   avatarUrls: Record<string, string>;
+  coreAppId: string | null;
 };
 
 export function EnrolmentDataTable({
@@ -65,6 +66,7 @@ export function EnrolmentDataTable({
   columnWidths,
   onColumnWidthChange,
   avatarUrls,
+  coreAppId,
 }: Props) {
   return (
     <div className="enrolment-table-container">
@@ -107,8 +109,8 @@ export function EnrolmentDataTable({
                 className: colDragIdx === colIdx ? 'col-dragging' : undefined,
               };
 
-              if (k === 'sharepoint') {
-                return <th key={k} {...dragProps} style={{ cursor: 'grab' }}>SharePoint</th>;
+              if (k === 'sharepoint' || k === 'core') {
+                return <th key={k} {...dragProps} style={{ cursor: 'grab' }}>{def.label}</th>;
               }
 
               return (
@@ -145,7 +147,7 @@ export function EnrolmentDataTable({
                       onChange={() => onToggleSelect(row.vsi_participantprogramyearid)}
                     />
                   </td>
-                  {visibleColumnKeys.map(key => renderCell(key, row, raw, avatarUrls))}
+                  {visibleColumnKeys.map(key => renderCell(key, row, raw, avatarUrls, coreAppId))}
                 </tr>
               );
             })

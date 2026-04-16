@@ -1,3 +1,4 @@
+import { resolveCurrentSystemUser } from '../utils/currentUser';
 import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { Filter } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -6,12 +7,10 @@ import { Vsi_participantprogramyearsvsi_enrolmentstatus } from '../generated/mod
 import { Vsi_participantprogramyearsService } from '../generated/services/Vsi_participantprogramyearsService';
 import { QueueitemsService } from '../generated/services/QueueitemsService';
 import { QueuesService } from '../generated/services/QueuesService';
-import { Office365UsersService } from '../generated/services/Office365UsersService';
 import { ColumnHeaderMenu } from '../components/ColumnHeaderMenu';
 import { calculateVariance, enrolmentStatusClass, formatCurrencyOr, formatVariancePercent, getEnrolmentStatusLabel, getInitials, getTaskStatusLabel, getVarianceClass } from '../utils/helpers';
 import { AssignWorkerModal } from '../components/AssignWorkerModal';
 import type { FilterOperator, SortDir } from '../types/enrollment';
-import { resolveCurrentSystemUser } from '../utils/currentUser';
 import '../styles/supervisor-approval.css';
 
 const PAGE_SIZE = 20;
@@ -396,7 +395,6 @@ export function SupervisorApprovalPage() {
 
   const resolveCurrentUser = async (): Promise<{ systemUserId: string; displayName: string }> => {
     if (currentUser) return currentUser;
-
     const resolved = await resolveCurrentSystemUser();
     const nextUser = {
       systemUserId: resolved.systemUserId,
