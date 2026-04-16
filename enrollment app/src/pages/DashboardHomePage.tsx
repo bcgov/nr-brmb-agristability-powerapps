@@ -75,7 +75,6 @@ export function DashboardHomePage() {
 
     const loadProfile = async () => {
       setProfileLoading(true);
-      const xrmSettings = getXrmUserSettings();
       try {
         // Reuse the same identity resolution path used by approval actions.
         const currentUser = await resolveCurrentSystemUser();
@@ -94,7 +93,6 @@ export function DashboardHomePage() {
 
       try {
         const hasText = (v: unknown): v is string => typeof v === 'string' && v.trim().length > 0;
-        const authenticatedEmail = await resolveAuthenticatedEmail();
 
         const pickPayload = (input: unknown): Record<string, unknown> | null => {
           const queue: unknown[] = [input];
