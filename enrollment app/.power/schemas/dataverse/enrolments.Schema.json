@@ -1802,6 +1802,38 @@
           "x-ms-optionsetdisplayname": "Enrolment Task Status",
           "x-ms-optionSetType": "Picklist"
         },
+        "vsi_taskstatusapproveddate": {
+          "type": "string",
+          "title": "Task Status Approved Date",
+          "x-ms-dataverse-attribute": "vsi_taskstatusapproveddate",
+          "x-ms-dataverse-type": "DateTimeType",
+          "x-ms-schema-name": "vsi_TaskStatusApprovedDate"
+        },
+        "vsi_taskstatusapprover": {
+          "type": "string",
+          "title": "Task Status Approver",
+          "x-ms-dataverse-attribute": "vsi_taskstatusapprover",
+          "x-ms-dataverse-type": "LookupType",
+          "x-ms-schema-name": "vsi_TaskStatusApprover"
+        },
+        "vsi_taskstatusapprovername": {
+          "type": "string",
+          "title": "vsi_taskstatusapprovername",
+          "x-ms-dataverse-attribute": "vsi_taskstatusapprovername",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vsi_TaskStatusApproverName",
+          "x-ms-read-only": true,
+          "maxLength": 200
+        },
+        "vsi_taskstatusapproveryominame": {
+          "type": "string",
+          "title": "vsi_taskstatusapproveryominame",
+          "x-ms-dataverse-attribute": "vsi_taskstatusapproveryominame",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vsi_TaskStatusApproverYomiName",
+          "x-ms-read-only": true,
+          "maxLength": 200
+        },
         "vsi_taskstatusname": {
           "type": "string",
           "title": "vsi_taskstatusname",

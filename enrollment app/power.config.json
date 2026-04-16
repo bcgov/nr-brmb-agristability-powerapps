@@ -26,10 +26,6 @@
       "instanceUrl": "https://aff-brmb-crm-dev.crm3.dynamics.com/",
       "webApiVersion": "v9.0",
       "dataSources": {
-        "enrolments": {
-          "entitySetName": "vsi_participantprogramyears",
-          "logicalName": "vsi_participantprogramyear"
-        },
         "enrolmenthistory": {
           "entitySetName": "vsi_enrolmenthistories",
           "logicalName": "vsi_enrolmenthistory"
@@ -57,6 +53,10 @@
         "queuemembership": {
           "entitySetName": "queuememberships",
           "logicalName": "queuemembership"
+        },
+        "enrolments": {
+          "entitySetName": "vsi_participantprogramyears",
+          "logicalName": "vsi_participantprogramyear"
         },
         "coreconfiguration": {
           "entitySetName": "vsi_armsconfigurations",

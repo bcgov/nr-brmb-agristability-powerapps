@@ -79,13 +79,17 @@ export function renderCell(
       return <td key={key} className="cell-sp"><a href={href} target="_blank" rel="noopener noreferrer" className="sp-link">Core</a></td>;
     }
     case 'modifiedBy': {
-      const name = (row.modifiedbyname ?? raw['_modifiedby_value@OData.Community.Display.V1.FormattedValue'] ?? '') as string;
-      const uid = raw['_modifiedby_value'] as string | undefined;
+      const name = (row.vsi_taskstatusapprovername ?? raw['_vsi_taskstatusapprover_value@OData.Community.Display.V1.FormattedValue'] ?? '') as string;
+      const uid = raw['_vsi_taskstatusapprover_value'] as string | undefined;
+      if (!name.trim() && !uid) {
+        return <td key={key} className="cell-modified-by"></td>;
+      }
       const photo = uid ? avatarUrls[uid] : undefined;
       return <td key={key} className="cell-modified-by">{photo
         ? <img className="avatar-circle" src={`data:image/jpeg;base64,${photo}`} alt={name} title={name} />
         : <span className="avatar-circle" title={name}>{getInitials(name)}</span>}</td>;
     }
+    case 'taskApprovedDate': return <td key={key}>{fmtDate(row.vsi_taskstatusapproveddate)}</td>;
     case 'modifiedOn': return <td key={key}>{fmtDate(row.modifiedon)}</td>;
     case 'regionalOffice': return <td key={key}>{enumLabel(Vsi_participantprogramyearsvsi_enrollmentregionaloffice, row.vsi_enrollmentregionaloffice)}</td>;
     case 'farmingSector': return <td key={key}>{enumLabel(Vsi_participantprogramyearsvsi_farmingsector, row.vsi_farmingsector)}</td>;
