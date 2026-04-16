@@ -30,6 +30,10 @@
   border-radius: 6px;
   background: #fff;
 }
+
+.enrolment-table-container.is-empty {
+  min-height: 240px;
+}
 .enrolment-table {
   width: 100%;
   min-width: 100%;

@@ -68,8 +68,10 @@ export function EnrolmentDataTable({
   avatarUrls,
   coreAppId,
 }: Props) {
+  const isEmptyState = allRowsCount === 0 || pagedRows.length === 0;
+
   return (
-    <div className="enrolment-table-container">
+    <div className={`enrolment-table-container${isEmptyState ? ' is-empty' : ''}`}>
       <table className="enrolment-table">
         <thead>
           <tr>
