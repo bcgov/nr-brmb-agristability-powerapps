@@ -13,6 +13,7 @@ export * as QueuesModel from './models/QueuesModel';
 export * as SavedqueriesModel from './models/SavedqueriesModel';
 export * as SystemusersModel from './models/SystemusersModel';
 export * as UserqueriesModel from './models/UserqueriesModel';
+export * as Vsi_armsconfigurationsModel from './models/Vsi_armsconfigurationsModel';
 export * as Vsi_enrolmenthistoriesModel from './models/Vsi_enrolmenthistoriesModel';
 export * as Vsi_participantprogramyearsModel from './models/Vsi_participantprogramyearsModel';
 
@@ -25,5 +26,6 @@ export * from './services/QueuesService';
 export * from './services/SavedqueriesService';
 export * from './services/SystemusersService';
 export * from './services/UserqueriesService';
+export * from './services/Vsi_armsconfigurationsService';
 export * from './services/Vsi_enrolmenthistoriesService';
 export * from './services/Vsi_participantprogramyearsService';

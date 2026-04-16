@@ -1,0 +1,628 @@
+{
+  "name": "vsi_armsconfiguration",
+  "title": "CORE Configuration",
+  "schema": {
+    "type": "array",
+    "items": {
+      "type": "object",
+      "x-ms-dataverse-entity": true,
+      "x-ms-dataverse-entityset": "vsi_armsconfigurations",
+      "x-ms-dataverse-primary-id": "vsi_armsconfigurationid",
+      "x-ms-dataverse-primary-name": "vsi_environment",
+      "properties": {
+        "cr4dd_coreappid": {
+          "type": "string",
+          "title": "Core App Id",
+          "x-ms-dataverse-attribute": "cr4dd_coreappid",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "cr4dd_CoreAppId",
+          "maxLength": 100
+        },
+        "cr4dd_triagepaymentthreshold": {
+          "type": "string",
+          "title": "TriagePaymentThreshold",
+          "x-ms-dataverse-attribute": "cr4dd_triagepaymentthreshold",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "cr4dd_TriagePaymentThreshold",
+          "maxLength": 100
+        },
+        "createdby": {
+          "type": "string",
+          "title": "Created By",
+          "x-ms-dataverse-attribute": "createdby",
+          "x-ms-dataverse-type": "LookupType",
+          "x-ms-schema-name": "CreatedBy",
+          "x-ms-read-only": true
+        },
+        "createdbyname": {
+          "type": "string",
+          "title": "createdbyname",
+          "x-ms-dataverse-attribute": "createdbyname",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "CreatedByName",
+          "x-ms-read-only": true,
+          "maxLength": 100
+        },
+        "createdbyyominame": {
+          "type": "string",
+          "title": "createdbyyominame",
+          "x-ms-dataverse-attribute": "createdbyyominame",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "CreatedByYomiName",
+          "x-ms-read-only": true,
+          "required": true,
+          "maxLength": 100
+        },
+        "createdon": {
+          "type": "string",
+          "title": "Created On",
+          "x-ms-dataverse-attribute": "createdon",
+          "x-ms-dataverse-type": "DateTimeType",
+          "x-ms-schema-name": "CreatedOn",
+          "x-ms-read-only": true
+        },
+        "createdonbehalfby": {
+          "type": "string",
+          "title": "Created By (Delegate)",
+          "x-ms-dataverse-attribute": "createdonbehalfby",
+          "x-ms-dataverse-type": "LookupType",
+          "x-ms-schema-name": "CreatedOnBehalfBy",
+          "x-ms-read-only": true
+        },
+        "createdonbehalfbyname": {
+          "type": "string",
+          "title": "createdonbehalfbyname",
+          "x-ms-dataverse-attribute": "createdonbehalfbyname",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "CreatedOnBehalfByName",
+          "x-ms-read-only": true,
+          "maxLength": 100
+        },
+        "createdonbehalfbyyominame": {
+          "type": "string",
+          "title": "createdonbehalfbyyominame",
+          "x-ms-dataverse-attribute": "createdonbehalfbyyominame",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "CreatedOnBehalfByYomiName",
+          "x-ms-read-only": true,
+          "required": true,
+          "maxLength": 100
+        },
+        "dynamics_integrationkey": {
+          "type": "string",
+          "title": "Integration Key",
+          "x-ms-dataverse-attribute": "dynamics_integrationkey",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "dynamics_integrationkey",
+          "maxLength": 256
+        },
+        "exchangerate": {
+          "type": "string",
+          "title": "Exchange Rate",
+          "x-ms-dataverse-attribute": "exchangerate",
+          "x-ms-dataverse-type": "DecimalType",
+          "x-ms-schema-name": "ExchangeRate",
+          "x-ms-read-only": true
+        },
+        "importsequencenumber": {
+          "type": "string",
+          "title": "Import Sequence Number",
+          "x-ms-dataverse-attribute": "importsequencenumber",
+          "x-ms-dataverse-type": "IntegerType",
+          "x-ms-schema-name": "ImportSequenceNumber"
+        },
+        "modifiedby": {
+          "type": "string",
+          "title": "Modified By",
+          "x-ms-dataverse-attribute": "modifiedby",
+          "x-ms-dataverse-type": "LookupType",
+          "x-ms-schema-name": "ModifiedBy",
+          "x-ms-read-only": true
+        },
+        "modifiedbyname": {
+          "type": "string",
+          "title": "modifiedbyname",
+          "x-ms-dataverse-attribute": "modifiedbyname",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "ModifiedByName",
+          "x-ms-read-only": true,
+          "maxLength": 100
+        },
+        "modifiedbyyominame": {
+          "type": "string",
+          "title": "modifiedbyyominame",
+          "x-ms-dataverse-attribute": "modifiedbyyominame",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "ModifiedByYomiName",
+          "x-ms-read-only": true,
+          "required": true,
+          "maxLength": 100
+        },
+        "modifiedon": {
+          "type": "string",
+          "title": "Modified On",
+          "x-ms-dataverse-attribute": "modifiedon",
+          "x-ms-dataverse-type": "DateTimeType",
+          "x-ms-schema-name": "ModifiedOn",
+          "x-ms-read-only": true
+        },
+        "modifiedonbehalfby": {
+          "type": "string",
+          "title": "Modified By (Delegate)",
+          "x-ms-dataverse-attribute": "modifiedonbehalfby",
+          "x-ms-dataverse-type": "LookupType",
+          "x-ms-schema-name": "ModifiedOnBehalfBy",
+          "x-ms-read-only": true
+        },
+        "modifiedonbehalfbyname": {
+          "type": "string",
+          "title": "modifiedonbehalfbyname",
+          "x-ms-dataverse-attribute": "modifiedonbehalfbyname",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "ModifiedOnBehalfByName",
+          "x-ms-read-only": true,
+          "maxLength": 100
+        },
+        "modifiedonbehalfbyyominame": {
+          "type": "string",
+          "title": "modifiedonbehalfbyyominame",
+          "x-ms-dataverse-attribute": "modifiedonbehalfbyyominame",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "ModifiedOnBehalfByYomiName",
+          "x-ms-read-only": true,
+          "required": true,
+          "maxLength": 100
+        },
+        "overriddencreatedon": {
+          "type": "string",
+          "title": "Record Created On",
+          "x-ms-dataverse-attribute": "overriddencreatedon",
+          "x-ms-dataverse-type": "DateTimeType",
+          "x-ms-schema-name": "OverriddenCreatedOn"
+        },
+        "ownerid": {
+          "type": "string",
+          "title": "Owner",
+          "x-ms-dataverse-attribute": "ownerid",
+          "x-ms-dataverse-type": "OwnerType",
+          "x-ms-schema-name": "OwnerId",
+          "required": true
+        },
+        "owneridname": {
+          "type": "string",
+          "title": "owneridname",
+          "x-ms-dataverse-attribute": "owneridname",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "OwnerIdName",
+          "x-ms-read-only": true,
+          "required": true,
+          "maxLength": 100
+        },
+        "owneridtype": {
+          "type": "string",
+          "title": "owneridtype",
+          "x-ms-dataverse-attribute": "owneridtype",
+          "x-ms-dataverse-type": "EntityNameType",
+          "x-ms-schema-name": "OwnerIdType",
+          "required": true
+        },
+        "owneridyominame": {
+          "type": "string",
+          "title": "owneridyominame",
+          "x-ms-dataverse-attribute": "owneridyominame",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "OwnerIdYomiName",
+          "x-ms-read-only": true,
+          "required": true,
+          "maxLength": 100
+        },
+        "owningbusinessunit": {
+          "type": "string",
+          "title": "Owning Business Unit",
+          "x-ms-dataverse-attribute": "owningbusinessunit",
+          "x-ms-dataverse-type": "LookupType",
+          "x-ms-schema-name": "OwningBusinessUnit",
+          "x-ms-read-only": true
+        },
+        "owningbusinessunitname": {
+          "type": "string",
+          "title": "owningbusinessunitname",
+          "x-ms-dataverse-attribute": "owningbusinessunitname",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "OwningBusinessUnitName",
+          "x-ms-read-only": true,
+          "required": true,
+          "maxLength": 100
+        },
+        "owningteam": {
+          "type": "string",
+          "title": "Owning Team",
+          "x-ms-dataverse-attribute": "owningteam",
+          "x-ms-dataverse-type": "LookupType",
+          "x-ms-schema-name": "OwningTeam",
+          "x-ms-read-only": true
+        },
+        "owninguser": {
+          "type": "string",
+          "title": "Owning User",
+          "x-ms-dataverse-attribute": "owninguser",
+          "x-ms-dataverse-type": "LookupType",
+          "x-ms-schema-name": "OwningUser",
+          "x-ms-read-only": true
+        },
+        "statecode": {
+          "type": "string",
+          "title": "Status",
+          "x-ms-dataverse-attribute": "statecode",
+          "x-ms-dataverse-type": "StateType",
+          "x-ms-schema-name": "statecode",
+          "required": true,
+          "enum": [
+            "Active",
+            "Inactive"
+          ],
+          "x-ms-enum-values": [
+            0,
+            1
+          ],
+          "Color": [
+            null,
+            null
+          ],
+          "x-ms-optionsetmetadataid": "eb1a6e76-365a-ed11-9562-0022483c5d19",
+          "x-ms-isGlobal": false,
+          "x-ms-optionsetdisplayname": "Status",
+          "x-ms-optionSetType": "State"
+        },
+        "statecodename": {
+          "type": "string",
+          "title": "statecodename",
+          "x-ms-dataverse-attribute": "statecodename",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "statecodeName",
+          "x-ms-read-only": true
+        },
+        "statuscode": {
+          "type": "string",
+          "title": "Status Reason",
+          "x-ms-dataverse-attribute": "statuscode",
+          "x-ms-dataverse-type": "StatusType",
+          "x-ms-schema-name": "statuscode",
+          "enum": [
+            "Active",
+            "Inactive"
+          ],
+          "x-ms-enum-values": [
+            1,
+            2
+          ],
+          "Color": [
+            null,
+            null
+          ],
+          "x-ms-optionsetmetadataid": "f51a6e76-365a-ed11-9562-0022483c5d19",
+          "x-ms-isGlobal": false,
+          "x-ms-optionsetdisplayname": "Status Reason",
+          "x-ms-optionSetType": "Status"
+        },
+        "statuscodename": {
+          "type": "string",
+          "title": "statuscodename",
+          "x-ms-dataverse-attribute": "statuscodename",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "statuscodeName",
+          "x-ms-read-only": true
+        },
+        "timezoneruleversionnumber": {
+          "type": "string",
+          "title": "Time Zone Rule Version Number",
+          "x-ms-dataverse-attribute": "timezoneruleversionnumber",
+          "x-ms-dataverse-type": "IntegerType",
+          "x-ms-schema-name": "TimeZoneRuleVersionNumber"
+        },
+        "transactioncurrencyid": {
+          "type": "string",
+          "title": "Currency",
+          "x-ms-dataverse-attribute": "transactioncurrencyid",
+          "x-ms-dataverse-type": "LookupType",
+          "x-ms-schema-name": "TransactionCurrencyId"
+        },
+        "transactioncurrencyidname": {
+          "type": "string",
+          "title": "transactioncurrencyidname",
+          "x-ms-dataverse-attribute": "transactioncurrencyidname",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "TransactionCurrencyIdName",
+          "x-ms-read-only": true,
+          "maxLength": 100
+        },
+        "utcconversiontimezonecode": {
+          "type": "string",
+          "title": "UTC Conversion Time Zone Code",
+          "x-ms-dataverse-attribute": "utcconversiontimezonecode",
+          "x-ms-dataverse-type": "IntegerType",
+          "x-ms-schema-name": "UTCConversionTimeZoneCode"
+        },
+        "versionnumber": {
+          "type": "string",
+          "title": "Version Number",
+          "x-ms-dataverse-attribute": "versionnumber",
+          "x-ms-dataverse-type": "BigIntType",
+          "x-ms-schema-name": "VersionNumber",
+          "x-ms-read-only": true
+        },
+        "vsi_activeconfiguration": {
+          "type": "string",
+          "title": "Active Configuration?",
+          "x-ms-dataverse-attribute": "vsi_activeconfiguration",
+          "x-ms-dataverse-type": "BooleanType",
+          "x-ms-schema-name": "vsi_ActiveConfiguration",
+          "required": true,
+          "enum": [
+            "No",
+            "Yes"
+          ],
+          "x-ms-enum-values": [
+            0,
+            1
+          ],
+          "Color": [
+            null,
+            null
+          ],
+          "x-ms-optionsetmetadataid": "2d1b6e76-365a-ed11-9562-0022483c5d19",
+          "x-ms-isGlobal": false,
+          "x-ms-optionsetdisplayname": "Active Configuration?",
+          "x-ms-optionSetType": "Boolean"
+        },
+        "vsi_activeconfigurationname": {
+          "type": "string",
+          "title": "vsi_activeconfigurationname",
+          "x-ms-dataverse-attribute": "vsi_activeconfigurationname",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "vsi_activeconfigurationName",
+          "x-ms-read-only": true
+        },
+        "vsi_addressmanagementteamid": {
+          "type": "string",
+          "title": "Address Management Team",
+          "x-ms-dataverse-attribute": "vsi_addressmanagementteamid",
+          "x-ms-dataverse-type": "LookupType",
+          "x-ms-schema-name": "vsi_AddressManagementTeamId",
+          "required": true
+        },
+        "vsi_addressmanagementteamidname": {
+          "type": "string",
+          "title": "vsi_addressmanagementteamidname",
+          "x-ms-dataverse-attribute": "vsi_addressmanagementteamidname",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vsi_AddressManagementTeamIdName",
+          "x-ms-read-only": true,
+          "maxLength": 160
+        },
+        "vsi_addressmanagementteamidyominame": {
+          "type": "string",
+          "title": "vsi_addressmanagementteamidyominame",
+          "x-ms-dataverse-attribute": "vsi_addressmanagementteamidyominame",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vsi_AddressManagementTeamIdYomiName",
+          "x-ms-read-only": true,
+          "maxLength": 160
+        },
+        "vsi_armsconfigurationid": {
+          "type": "string",
+          "title": "ARMS Configuration",
+          "x-ms-dataverse-attribute": "vsi_armsconfigurationid",
+          "x-ms-dataverse-type": "UniqueidentifierType",
+          "x-ms-schema-name": "vsi_armsconfigurationId",
+          "x-ms-dataverse-primary-id": true,
+          "required": true,
+          "x-ms-keyType": "primary"
+        },
+        "vsi_claimsadministratorteamid": {
+          "type": "string",
+          "title": "Claims Administration Team",
+          "x-ms-dataverse-attribute": "vsi_claimsadministratorteamid",
+          "x-ms-dataverse-type": "LookupType",
+          "x-ms-schema-name": "vsi_ClaimsAdministratorTeamId"
+        },
+        "vsi_claimsadministratorteamidname": {
+          "type": "string",
+          "title": "vsi_claimsadministratorteamidname",
+          "x-ms-dataverse-attribute": "vsi_claimsadministratorteamidname",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vsi_ClaimsAdministratorTeamIdName",
+          "x-ms-read-only": true,
+          "maxLength": 160
+        },
+        "vsi_claimsadministratorteamidyominame": {
+          "type": "string",
+          "title": "vsi_claimsadministratorteamidyominame",
+          "x-ms-dataverse-attribute": "vsi_claimsadministratorteamidyominame",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vsi_ClaimsAdministratorTeamIdYomiName",
+          "x-ms-read-only": true,
+          "maxLength": 160
+        },
+        "vsi_defaultadministrativecostsharingfee": {
+          "type": "string",
+          "title": "Default Administrative Cost Sharing Fee",
+          "x-ms-dataverse-attribute": "vsi_defaultadministrativecostsharingfee",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_DefaultAdministrativeCostSharingFee",
+          "required": true
+        },
+        "vsi_defaultadministrativecostsharingfee_base": {
+          "type": "string",
+          "title": "Default Administrative Cost Sharing Fee (Base)",
+          "x-ms-dataverse-attribute": "vsi_defaultadministrativecostsharingfee_base",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_defaultadministrativecostsharingfee_Base",
+          "x-ms-read-only": true
+        },
+        "vsi_enrolmentnoticereportbulkoutputenabled": {
+          "type": "string",
+          "title": "Enrolment Notice Report Bulk Output Enabled?",
+          "x-ms-dataverse-attribute": "vsi_enrolmentnoticereportbulkoutputenabled",
+          "x-ms-dataverse-type": "BooleanType",
+          "x-ms-schema-name": "vsi_EnrolmentNoticeReportBulkOutputEnabled",
+          "required": true,
+          "enum": [
+            "No",
+            "Yes"
+          ],
+          "x-ms-enum-values": [
+            0,
+            1
+          ],
+          "Color": [
+            null,
+            null
+          ],
+          "x-ms-optionsetmetadataid": "3d1b6e76-365a-ed11-9562-0022483c5d19",
+          "x-ms-isGlobal": false,
+          "x-ms-optionsetdisplayname": "Enrolment Notice Report Bulk Output Enabled?",
+          "x-ms-optionSetType": "Boolean"
+        },
+        "vsi_enrolmentnoticereportbulkoutputenabledname": {
+          "type": "string",
+          "title": "vsi_enrolmentnoticereportbulkoutputenabledname",
+          "x-ms-dataverse-attribute": "vsi_enrolmentnoticereportbulkoutputenabledname",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "vsi_enrolmentnoticereportbulkoutputenabledName",
+          "x-ms-read-only": true
+        },
+        "vsi_enrolmentnoticereportpath": {
+          "type": "string",
+          "title": "Enrolment Notice Report Path",
+          "x-ms-dataverse-attribute": "vsi_enrolmentnoticereportpath",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vsi_EnrolmentNoticeReportPath",
+          "maxLength": 1000
+        },
+        "vsi_environment": {
+          "type": "string",
+          "title": "Environment",
+          "x-ms-dataverse-attribute": "vsi_environment",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vsi_environment",
+          "x-ms-dataverse-primary-name": true,
+          "required": true,
+          "maxLength": 100
+        },
+        "vsi_farmsaccountdetailstatuspage": {
+          "type": "string",
+          "title": "FARMS Account Detail Status Page URL",
+          "x-ms-dataverse-attribute": "vsi_farmsaccountdetailstatuspage",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vsi_FARMSAccountDetailStatusPage",
+          "required": true,
+          "maxLength": 500
+        },
+        "vsi_farmsscenarioparameter": {
+          "type": "string",
+          "title": "FARMS Scenario parameter",
+          "x-ms-dataverse-attribute": "vsi_farmsscenarioparameter",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vsi_FARMSScenarioparameter",
+          "maxLength": 100
+        },
+        "vsi_farmsurl": {
+          "type": "string",
+          "title": "FARMS URL",
+          "x-ms-dataverse-attribute": "vsi_farmsurl",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vsi_FARMSURL",
+          "required": true,
+          "maxLength": 500
+        },
+        "vsi_minimumenrolmentfee": {
+          "type": "string",
+          "title": "Minimum Enrolment Fee",
+          "x-ms-dataverse-attribute": "vsi_minimumenrolmentfee",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_MinimumEnrolmentFee",
+          "required": true
+        },
+        "vsi_minimumenrolmentfee_base": {
+          "type": "string",
+          "title": "Minimum Enrolment Fee (Base)",
+          "x-ms-dataverse-attribute": "vsi_minimumenrolmentfee_base",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_minimumenrolmentfee_Base",
+          "x-ms-read-only": true
+        },
+        "vsi_reportbulkoutputpath": {
+          "type": "string",
+          "title": "Report Bulk Output Path",
+          "x-ms-dataverse-attribute": "vsi_reportbulkoutputpath",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vsi_ReportBulkOutputPath",
+          "maxLength": 1000
+        },
+        "vsi_reportexecutionserviceurl": {
+          "type": "string",
+          "title": "Report Execution Service URL",
+          "x-ms-dataverse-attribute": "vsi_reportexecutionserviceurl",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vsi_ReportExecutionServiceURL",
+          "maxLength": 300
+        },
+        "vsi_reportpath": {
+          "type": "string",
+          "title": "Report Path",
+          "x-ms-dataverse-attribute": "vsi_reportpath",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vsi_ReportPath",
+          "maxLength": 100
+        },
+        "vsi_repositoryrootdirectory": {
+          "type": "string",
+          "title": "Repository Root Directory",
+          "x-ms-dataverse-attribute": "vsi_repositoryrootdirectory",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vsi_RepositoryRootDirectory",
+          "required": true,
+          "maxLength": 300
+        },
+        "vsi_triagepaymentthreshold": {
+          "type": "string",
+          "title": "TriagePaymentThreshold",
+          "x-ms-dataverse-attribute": "vsi_triagepaymentthreshold",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_TriagePaymentThreshold"
+        },
+        "vsi_triagepaymentthreshold_base": {
+          "type": "string",
+          "title": "TriagePaymentThreshold (Base)",
+          "x-ms-dataverse-attribute": "vsi_triagepaymentthreshold_base",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_triagepaymentthreshold_Base",
+          "x-ms-read-only": true
+        }
+      },
+      "required": [
+        "createdbyyominame",
+        "createdonbehalfbyyominame",
+        "modifiedbyyominame",
+        "modifiedonbehalfbyyominame",
+        "ownerid",
+        "owneridname",
+        "owneridtype",
+        "owneridyominame",
+        "owningbusinessunitname",
+        "statecode",
+        "vsi_activeconfiguration",
+        "vsi_addressmanagementteamid",
+        "vsi_armsconfigurationid",
+        "vsi_defaultadministrativecostsharingfee",
+        "vsi_enrolmentnoticereportbulkoutputenabled",
+        "vsi_environment",
+        "vsi_farmsaccountdetailstatuspage",
+        "vsi_farmsurl",
+        "vsi_minimumenrolmentfee",
+        "vsi_repositoryrootdirectory"
+      ]
+    }
+  }
+}

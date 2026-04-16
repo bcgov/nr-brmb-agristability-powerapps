@@ -11,7 +11,8 @@ export const ALL_COLUMNS: ColumnDef[] = [
   { key: 'totalFeesPaid', label: 'Total Fees Paid', icon: 'number', removable: true },
   { key: 'enrolmentFee', label: 'Enrolment Fee', icon: 'number', removable: true },
   { key: 'latePay', label: 'Late Payment Fee', icon: 'number', removable: true },
-  { key: 'sharepoint', label: 'SharePoint', icon: 'link', removable: true },
+  { key: 'sharepoint', label: '', icon: 'link', removable: true },
+  { key: 'core', label: '', icon: 'link', removable: true },
   { key: 'modifiedBy', label: 'Task Approver', icon: 'user', removable: true },
   { key: 'modifiedOn', label: 'Modified on', icon: 'date', removable: true },
   { key: 'taskApprovedDate', label: 'Task Approved Date', icon: 'date', removable: true },
@@ -28,7 +29,7 @@ export const ALL_COLUMNS: ColumnDef[] = [
 ];
 
 export const DEFAULT_VISIBLE_KEYS: SortKey[] = [
-  'pin', 'producer', 'year', 'taskStatus', 'enrolStatus', 'fee', 'sharepoint', 'modifiedBy', 'taskApprovedDate',
+  'pin', 'producer', 'year', 'taskStatus', 'enrolStatus', 'fee', 'sharepoint', 'core', 'modifiedBy', 'taskApprovedDate',
 ];
 
 export const SORTKEY_TO_FIELD: Record<SortKey, string> = {
@@ -43,6 +44,7 @@ export const SORTKEY_TO_FIELD: Record<SortKey, string> = {
   enrolmentFee: 'vsi_enrolmentfee',
   latePay: 'vsi_latepaymentfee',
   sharepoint: 'vsi_sharepointdocumentfolder',
+  core: 'vsi_participantprogramyearid',
   modifiedBy: 'vsi_taskstatusapprover',
   taskApprovedDate: 'vsi_taskstatusapproveddate',
   modifiedOn: 'modifiedon',

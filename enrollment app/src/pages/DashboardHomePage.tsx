@@ -50,7 +50,7 @@ function getXrmUserSettings(): XrmUserSettings | undefined {
 }
 
 export function DashboardHomePage() {
-  const { rows, setRows, loading, error, avatarUrls, fetchEnrolments } = useEnrolmentData();
+  const { rows, setRows, loading, error, avatarUrls, fetchEnrolments, coreAppId, fetchCoreAppId } = useEnrolmentData();
   const [profileLoading, setProfileLoading] = useState(true);
   const [profile, setProfile] = useState<ResolvedProfile | null>(null);
 
@@ -258,11 +258,11 @@ export function DashboardHomePage() {
       active = false;
     };
   }, []);
-
   // Refresh handler for manual reload
   const handleRefresh = useCallback(() => {
     if (typeof fetchEnrolments === 'function') fetchEnrolments();
-  }, [fetchEnrolments]);
+    if (typeof fetchCoreAppId === 'function') fetchCoreAppId();
+  }, [fetchEnrolments, fetchCoreAppId]);
 
   // Column & sort state
   const [visibleColumnKeys, setVisibleColumnKeys] = useState<SortKey[]>([...DEFAULT_VISIBLE_KEYS]);
@@ -511,6 +511,7 @@ export function DashboardHomePage() {
             columnWidths={columnWidths}
             onColumnWidthChange={setColumnWidth}
             avatarUrls={avatarUrls}
+            coreAppId={coreAppId}
           />
 
           <EnrolmentPagination

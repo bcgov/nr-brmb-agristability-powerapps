@@ -4,7 +4,7 @@ export type SortDir = 'asc' | 'desc';
 
 export type SortKey =
   | 'pin' | 'producer' | 'year' | 'taskStatus' | 'enrolStatus' | 'fee'
-  | 'modifiedBy' | 'sharepoint' | 'totalFeesOwed' | 'totalFeesPaid'
+  | 'modifiedBy' | 'sharepoint' | 'core' | 'totalFeesOwed' | 'totalFeesPaid'
   | 'enrolmentFee' | 'latePay' | 'regionalOffice' | 'farmingSector'
   | 'bringForward' | 'broughtForward' | 'hasPartners' | 'inCombinedFarm'
   | 'manualReview' | 'enrolNoticeDate' | 'fileReceivedDate' | 'feesPaidDate'
