@@ -21,7 +21,7 @@ import { Office365UsersService } from '../generated/services/Office365UsersServi
 import { SystemusersService } from '../generated/services/SystemusersService';
 import { getClient } from '@microsoft/power-apps/data';
 import { dataSourcesInfo } from '../../.power/schemas/appschemas/dataSourcesInfo';
-import { resolveAuthenticatedEmail } from '../utils/currentUser';
+import { resolveAuthenticatedEmail, resolveCurrentSystemUser } from '../utils/currentUser';
 
 const PAGE_SIZE = 20;
 
@@ -36,15 +36,15 @@ type XrmUserSettings = { userId?: string; userName?: string; userPrincipalName?:
 type WinWithXrm = { Xrm?: { Utility?: { getGlobalContext?: () => { userSettings?: XrmUserSettings } } } };
 
 function getXrmUserSettings(): XrmUserSettings | undefined {
-  try {
-    const candidates = [window, window.parent, window.top];
-    for (const w of candidates) {
+  const candidates = [window, window.parent, window.top];
+  for (const w of candidates) {
+    try {
       if (!w) continue;
       const settings = (w as unknown as WinWithXrm).Xrm?.Utility?.getGlobalContext?.()?.userSettings;
       if (settings?.userId || settings?.userName || settings?.userPrincipalName) return settings;
+    } catch {
+      // ignore cross-origin frame access and keep trying
     }
-  } catch {
-    // cross-origin frame access may throw
   }
   return undefined;
 }
@@ -55,17 +55,16 @@ export function DashboardHomePage() {
   const [profile, setProfile] = useState<ResolvedProfile | null>(null);
 
   const welcomeName = useMemo(() => {
-    const nameValue = profile?.name?.trim();
-    if (nameValue) {
-      const [first] = nameValue.split(/\s+/);
-      if (first) return first;
-    }
+    const profileName = profile?.name?.trim();
+    if (profileName) return profileName;
 
-    const emailValue = profile?.email?.trim();
-    if (emailValue && emailValue.includes('@')) {
-      const localPart = emailValue.split('@')[0];
-      const [firstToken] = localPart.split(/[._-]+/);
-      if (firstToken) return firstToken;
+    const xrmSettings = getXrmUserSettings();
+    const xrmName = xrmSettings?.userName?.trim();
+    if (xrmName) return xrmName;
+
+    const emailCandidate = profile?.email?.trim() || xrmSettings?.userPrincipalName?.trim();
+    if (emailCandidate && emailCandidate.includes('@')) {
+      return emailCandidate.split('@')[0].trim();
     }
 
     return '';
@@ -76,8 +75,26 @@ export function DashboardHomePage() {
 
     const loadProfile = async () => {
       setProfileLoading(true);
+      const xrmSettings = getXrmUserSettings();
+      try {
+        // Reuse the same identity resolution path used by approval actions.
+        const currentUser = await resolveCurrentSystemUser();
+        if (active && currentUser.displayName?.trim()) {
+          setProfile({
+            id: currentUser.systemUserId,
+            name: currentUser.displayName,
+            email: currentUser.email ?? '',
+            source: 'resolveCurrentSystemUser',
+          });
+          return;
+        }
+      } catch {
+        // fall through to legacy lookup path below
+      }
+
       try {
         const hasText = (v: unknown): v is string => typeof v === 'string' && v.trim().length > 0;
+        const authenticatedEmail = await resolveAuthenticatedEmail();
 
         const pickPayload = (input: unknown): Record<string, unknown> | null => {
           const queue: unknown[] = [input];
@@ -439,8 +456,12 @@ export function DashboardHomePage() {
 
   return (
     <div className="enrolment-wrapper">
-      <div className="dashboard-welcome" aria-label="Welcome message">
-        {profileLoading ? 'Welcome' : `Welcome${welcomeName ? ` ${welcomeName}` : ''}`}
+      <div
+        className="dashboard-welcome"
+        aria-label="Welcome message"
+        title={profileLoading ? 'Loading profile...' : undefined}
+      >
+        {`Welcome${welcomeName ? ` ${welcomeName}` : ''}`}
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
