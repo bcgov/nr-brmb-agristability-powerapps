@@ -57,6 +57,10 @@
         "queuemembership": {
           "entitySetName": "queuememberships",
           "logicalName": "queuemembership"
+        },
+        "coreconfiguration": {
+          "entitySetName": "vsi_armsconfigurations",
+          "logicalName": "vsi_armsconfiguration"
         }
       },
       "version": "v9.0",

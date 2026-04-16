@@ -1,11 +1,14 @@
 // In-memory cache for enrolment rows (persists while app is open)
 let enrolmentRowsCache: Vsi_participantprogramyears[] | null = null;
+let coreAppIdCache: string | null = null;
+let coreAppIdLoaded = false;
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Vsi_participantprogramyears } from '../generated/models/Vsi_participantprogramyearsModel';
 import {
   Vsi_participantprogramyearsvsi_enrolmentstatus,
   Vsi_participantprogramyearsvsi_taskstatus,
 } from '../generated/models/Vsi_participantprogramyearsModel';
+import { Vsi_armsconfigurationsService } from '../generated/services/Vsi_armsconfigurationsService';
 import { Vsi_participantprogramyearsService } from '../generated/services/Vsi_participantprogramyearsService';
 import { Office365UsersService } from '../generated/services/Office365UsersService';
 import type {
@@ -27,6 +30,29 @@ export function useEnrolmentData() {
   const [loading, setLoading] = useState(() => !enrolmentRowsCache);
   const [error, setError] = useState<string | null>(null);
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string>>({});
+  const [coreAppId, setCoreAppId] = useState<string | null>(() => (coreAppIdLoaded ? coreAppIdCache : null));
+
+  const fetchCoreAppId = useCallback(async () => {
+    try {
+      const result = await Vsi_armsconfigurationsService.getAll({
+        maxPageSize: 50,
+        select: ['cr4dd_coreappid'],
+      });
+      const value = (result.data ?? [])
+        .map(row => row.cr4dd_coreappid?.trim())
+        .find((candidate): candidate is string => !!candidate);
+      const normalized = value ?? null;
+      setCoreAppId(normalized);
+      coreAppIdCache = normalized;
+      coreAppIdLoaded = true;
+    } catch {
+      if (!coreAppIdLoaded) {
+        setCoreAppId(null);
+        coreAppIdCache = null;
+        coreAppIdLoaded = true;
+      }
+    }
+  }, []);
 
   // Fetch function (used for initial load and manual refresh)
   const fetchEnrolments = async () => {
@@ -95,6 +121,11 @@ export function useEnrolmentData() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (coreAppIdLoaded) return;
+    fetchCoreAppId();
+  }, [fetchCoreAppId]);
+
   // Fetch avatar photos
   useEffect(() => {
     if (rows.length === 0) return;
@@ -120,7 +151,7 @@ export function useEnrolmentData() {
     return () => { cancelled = true; };
   }, [rows]);
 
-  return { rows, setRows, loading, error, avatarUrls, fetchEnrolments };
+  return { rows, setRows, loading, error, avatarUrls, fetchEnrolments, coreAppId, fetchCoreAppId };
 }
 
 export function useSortedAndFilteredRows(

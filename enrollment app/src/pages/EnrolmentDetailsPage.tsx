@@ -18,6 +18,7 @@ type DateField =
 
 type DetailFormState = {
   enrolmentStatus: EnrolmentStatusValue;
+  vsi_fullyprovinciallyfunded: boolean;
   vsi_enrolmentnoticesentdate: string;
   vsi_programyearoptoutdate: string;
   vsi_lateenrolmentnoticesentdate: string;
@@ -47,6 +48,7 @@ const DETAIL_SELECT = [
   'vsi_programyearoptoutdate',
   'vsi_lateenrolmentnoticesentdate',
   'vsi_manualreview',
+  'vsi_fullyprovinciallyfunded',
   'vsi_enrolmentfee',
   'vsi_enrolmentfeespaiddate',
   'vsi_enrolmentfeesnonpenaltyduedate',
@@ -83,6 +85,7 @@ const toDateInputValue = (value: string | undefined): string => {
 
 const initialFormFromRecord = (record: Vsi_participantprogramyears): DetailFormState => ({
   enrolmentStatus: record.vsi_enrolmentstatus,
+  vsi_fullyprovinciallyfunded: Boolean(record.vsi_fullyprovinciallyfunded),
   vsi_enrolmentnoticesentdate: toDateInputValue(record.vsi_enrolmentnoticesentdate),
   vsi_programyearoptoutdate: toDateInputValue(record.vsi_programyearoptoutdate),
   vsi_lateenrolmentnoticesentdate: toDateInputValue(record.vsi_lateenrolmentnoticesentdate),
@@ -166,6 +169,7 @@ export function EnrolmentDetailsPage() {
     if (!baseline || !formState) return false;
     return (
       baseline.enrolmentStatus !== formState.enrolmentStatus
+      || baseline.vsi_fullyprovinciallyfunded !== formState.vsi_fullyprovinciallyfunded
       || DATE_FIELDS.some(field => baseline[field] !== formState[field])
     );
   }, [baseline, formState]);
@@ -203,6 +207,12 @@ export function EnrolmentDetailsPage() {
     setFormState(prev => (prev ? { ...prev, enrolmentStatus: nextValue } : prev));
   };
 
+  const onLateParticipantChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const checked = event.target.checked;
+    setSaveNotice(null);
+    setFormState(prev => (prev ? { ...prev, vsi_fullyprovinciallyfunded: checked } : prev));
+  };
+
   const handleSave = async () => {
     if (!record || !formState) return;
 
@@ -210,6 +220,9 @@ export function EnrolmentDetailsPage() {
 
     if (formState.enrolmentStatus !== record.vsi_enrolmentstatus) {
       changedFields.vsi_enrolmentstatus = formState.enrolmentStatus;
+    }
+    if (formState.vsi_fullyprovinciallyfunded !== Boolean(record.vsi_fullyprovinciallyfunded)) {
+      changedFields.vsi_fullyprovinciallyfunded = formState.vsi_fullyprovinciallyfunded;
     }
 
     for (const field of DATE_FIELDS) {
@@ -277,6 +290,18 @@ export function EnrolmentDetailsPage() {
             <div className="details-field">
               <span className="details-label">Program Year <span className="required-mark">*</span></span>
               <strong className="details-value-strong">{programYear}</strong>
+            </div>
+            <div className="details-field">
+              <span className="details-label">Late Participant</span>
+              <label htmlFor="late-participant" className="details-checkbox-control">
+                <input
+                  id="late-participant"
+                  type="checkbox"
+                  checked={formState.vsi_fullyprovinciallyfunded}
+                  onChange={onLateParticipantChange}
+                  disabled={saving}
+                />
+              </label>
             </div>
             <div className="details-field details-link-field">
               {record.vsi_sharepointdocumentfolder

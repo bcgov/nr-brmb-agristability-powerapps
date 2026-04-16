@@ -119,6 +119,7 @@ export function getSortValue(row: Vsi_participantprogramyears, key: SortKey): st
     case 'totalFeesPaid': return Number(row.vsi_totalfeespaid) || 0;
     case 'enrolmentFee': return Number(row.vsi_enrolmentfee) || 0;
     case 'latePay': return Number(row.vsi_latepaymentfee) || 0;
+    case 'core': return row.vsi_participantprogramyearid ?? '';
     case 'modifiedOn': return row.modifiedon ?? '';
     case 'regionalOffice': return Vsi_participantprogramyearsvsi_enrollmentregionaloffice[row.vsi_enrollmentregionaloffice as keyof typeof Vsi_participantprogramyearsvsi_enrollmentregionaloffice] ?? '';
     case 'farmingSector': return Vsi_participantprogramyearsvsi_farmingsector[row.vsi_farmingsector as keyof typeof Vsi_participantprogramyearsvsi_farmingsector] ?? '';

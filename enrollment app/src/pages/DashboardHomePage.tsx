@@ -21,11 +21,12 @@ import { EnrolmentActionsBar } from '../components/EnrolmentActionsBar';
 const PAGE_SIZE = 20;
 
 export function DashboardHomePage() {
-  const { rows, setRows, loading, error, avatarUrls, fetchEnrolments } = useEnrolmentData();
+  const { rows, setRows, loading, error, avatarUrls, fetchEnrolments, coreAppId, fetchCoreAppId } = useEnrolmentData();
   // Refresh handler for manual reload
   const handleRefresh = useCallback(() => {
     if (typeof fetchEnrolments === 'function') fetchEnrolments();
-  }, [fetchEnrolments]);
+    if (typeof fetchCoreAppId === 'function') fetchCoreAppId();
+  }, [fetchEnrolments, fetchCoreAppId]);
 
   // Column & sort state
   const [visibleColumnKeys, setVisibleColumnKeys] = useState<SortKey[]>([...DEFAULT_VISIBLE_KEYS]);
@@ -270,6 +271,7 @@ export function DashboardHomePage() {
             columnWidths={columnWidths}
             onColumnWidthChange={setColumnWidth}
             avatarUrls={avatarUrls}
+            coreAppId={coreAppId}
           />
 
           <EnrolmentPagination

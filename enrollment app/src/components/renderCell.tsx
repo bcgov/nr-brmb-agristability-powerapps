@@ -11,11 +11,15 @@ import {
   calculateVariance, getVarianceClass, formatVariancePercent,
 } from '../utils/helpers';
 
+const CORE_APP_ID_FALLBACK = '88c024d9-9fd5-ec11-a7b5-002248ada475';
+const CORE_BASE_URL = 'https://aff-brmb-crm-dev.crm3.dynamics.com/main.aspx';
+
 export function renderCell(
   key: SortKey,
   row: Vsi_participantprogramyears,
   raw: Record<string, unknown>,
   avatarUrls: Record<string, string>,
+  coreAppId: string | null,
 ) {
   const yesNo = (v: unknown) => v === 1 ? 'Yes' : v === 0 ? 'No' : '';
   const enumLabel = (map: Record<number, string>, v: unknown) =>
@@ -68,6 +72,12 @@ export function renderCell(
     case 'latePay': return <td key={key} className="cell-fee">{formatCurrency(row.vsi_latepaymentfee)}</td>;
     case 'sharepoint':
       return <td key={key} className="cell-sp">{row.vsi_sharepointdocumentfolder ? <a href={row.vsi_sharepointdocumentfolder} target="_blank" rel="noopener noreferrer" className="sp-link">SharePoint</a> : ''}</td>;
+    case 'core': {
+      if (!row.vsi_participantprogramyearid) return <td key={key}></td>;
+      const appId = coreAppId?.trim() || CORE_APP_ID_FALLBACK;
+      const href = `${CORE_BASE_URL}?appid=${encodeURIComponent(appId)}&pagetype=entityrecord&etn=vsi_participantprogramyear&id=${encodeURIComponent(row.vsi_participantprogramyearid)}`;
+      return <td key={key} className="cell-sp"><a href={href} target="_blank" rel="noopener noreferrer" className="sp-link">Core</a></td>;
+    }
     case 'modifiedBy': {
       const name = (row.modifiedbyname ?? raw['_modifiedby_value@OData.Community.Display.V1.FormattedValue'] ?? '') as string;
       const uid = raw['_modifiedby_value'] as string | undefined;
