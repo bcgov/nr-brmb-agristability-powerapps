@@ -47,14 +47,20 @@ export function useViews(state: ViewState, setters: {
   const [activeViewId, setActiveViewId] = useState<string | null>(() => loadActiveViewId());
 
   const ensureCoreColumn = useCallback((keys: SortKey[]): SortKey[] => {
-    if (keys.includes('core')) return keys;
-    const sharepointIndex = keys.indexOf('sharepoint');
-    if (sharepointIndex >= 0) {
-      const next = [...keys];
-      next.splice(sharepointIndex + 1, 0, 'core');
-      return next;
+    let result = [...keys];
+
+    // Ensure 'core' follows 'sharepoint'
+    if (!result.includes('core')) {
+      const sharepointIndex = result.indexOf('sharepoint');
+      if (sharepointIndex >= 0) result.splice(sharepointIndex + 1, 0, 'core');
+      else result.push('core');
     }
-    return [...keys, 'core'];
+
+    // Ensure 'flagged' is always the first column
+    result = result.filter(k => k !== 'flagged');
+    result.unshift('flagged');
+
+    return result;
   }, []);
 
   const applyView = useCallback((view: ViewPayload) => {

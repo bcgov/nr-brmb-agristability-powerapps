@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Vsi_participantprogramyears } from '../generated/models/Vsi_participantprogramyearsModel';
-import { getClient } from '@microsoft/power-apps/data';
-import { dataSourcesInfo } from '../../.power/schemas/appschemas/dataSourcesInfo';
+
+import { HTTPWorkflowsService } from '../generated/services/HTTPWorkflowsService';
 
 export function BulkNoticesModal({
   selectedIds,
@@ -20,6 +20,7 @@ export function BulkNoticesModal({
   const [bulkMergedPdf, setBulkMergedPdf] = useState(true);
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
   const [bulkError, setBulkError] = useState<string | null>(null);
+  const [bulkResult, setBulkResult] = useState<any>(null);
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -49,24 +50,22 @@ export function BulkNoticesModal({
             onClick={async () => {
               setBulkSubmitting(true);
               setBulkError(null);
+              setBulkResult(null);
               try {
-                const client = getClient(dataSourcesInfo);
-                const request = {
-                  dataverseRequest: {
-                    action: 'vsi_GenerateBulkEnrolmentNotices',
-                    parameters: {
-                      EnrolmentIds: JSON.stringify([...selectedIds]),
-                      EnrolmentSentDate: bulkSentDate,
-                      EnrolmentFeeDate: bulkFeeDate,
-                      ProduceMergedPdf: bulkMergedPdf,
-                    },
-                  },
-                } as unknown as Parameters<typeof client.executeAsync>[0];
-
-                await client.executeAsync(request);
-                onClose();
+                // Call the HTTP Workflows Bulk EN Flow
+                const enrolmentIds = Array.from(selectedIds);
+                const result = await HTTPWorkflowsService.BulkENFlow(
+                  enrolmentIds,
+                  bulkSentDate,
+                  bulkFeeDate,
+                  bulkMergedPdf,
+                  '2024-10-01'
+                );
+                setBulkResult(result);
               } catch (err) {
                 setBulkError(err instanceof Error ? err.message : 'Workflow failed');
+                // eslint-disable-next-line no-console
+                console.error('BulkENFlow error:', err);
               } finally {
                 setBulkSubmitting(false);
               }
@@ -76,6 +75,11 @@ export function BulkNoticesModal({
           </button>
           <button className="btn-cancel" disabled={bulkSubmitting} onClick={onClose}>Cancel</button>
           {bulkError && <span className="modal-error">{bulkError}</span>}
+          {bulkResult && (
+            <pre className="modal-api-result" style={{ maxHeight: 200, overflow: 'auto', marginTop: 8, background: '#f8f8f8', padding: 8, borderRadius: 4 }}>
+              {JSON.stringify(bulkResult, null, 2)}
+            </pre>
+          )}
         </div>
         {selectedIds.size > 0 && (
           <div className="modal-selected-list">

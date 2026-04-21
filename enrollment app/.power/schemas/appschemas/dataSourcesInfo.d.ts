@@ -1045,6 +1045,29 @@ export declare const dataSourcesInfo: {
             };
         };
     };
+    http_20workflows_5fe39d1efd21a19d13_5f571039b465579741: {
+        tableId: string;
+        version: string;
+        primaryKey: string;
+        dataSourceType: string;
+        apis: {
+            BulkENFlow: {
+                path: string;
+                method: string;
+                parameters: {
+                    name: string;
+                    in: string;
+                    required: boolean;
+                    type: string;
+                }[];
+                responseInfo: {
+                    default: {
+                        type: string;
+                    };
+                };
+            };
+        };
+    };
     office365users: {
         tableId: string;
         version: string;

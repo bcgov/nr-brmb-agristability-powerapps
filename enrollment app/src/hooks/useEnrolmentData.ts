@@ -1,6 +1,7 @@
 // In-memory cache for enrolment rows (persists while app is open)
 let enrolmentRowsCache: Vsi_participantprogramyears[] | null = null;
 let coreAppIdCache: string | null = null;
+let coreBaseUrlCache: string | null = null;
 let coreAppIdLoaded = false;
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Vsi_participantprogramyears } from '../generated/models/Vsi_participantprogramyearsModel';
@@ -24,7 +25,13 @@ import { ADV_FIELD_OPTIONS } from '../constants/columns';
 import { calculateVariance, getEnrolmentStatusLabel, getTaskStatusLabel, getSortValue } from '../utils/helpers';
 import { isNodeActive } from '../utils/filterTree';
 
-const FLAGGED_VARIANCE_THRESHOLD = 25;
+const FLAGGED_VARIANCE_THRESHOLD = 20;
+
+function normalizeCoreBaseUrl(url: string | null | undefined) {
+  const trimmed = url?.trim();
+  if (!trimmed) return null;
+  return /\/main\.aspx(?:$|[?#])/i.test(trimmed) ? trimmed : `${trimmed.replace(/\/$/, '')}/main.aspx`;
+}
 
 
 export function useEnrolmentData() {
@@ -33,24 +40,32 @@ export function useEnrolmentData() {
   const [error, setError] = useState<string | null>(null);
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string>>({});
   const [coreAppId, setCoreAppId] = useState<string | null>(() => (coreAppIdLoaded ? coreAppIdCache : null));
+  const [coreBaseUrl, setCoreBaseUrl] = useState<string | null>(() => (coreAppIdLoaded ? coreBaseUrlCache : null));
 
   const fetchCoreAppId = useCallback(async () => {
     try {
       const result = await Vsi_armsconfigurationsService.getAll({
         maxPageSize: 50,
-        select: ['cr4dd_coreappid'],
+        select: ['cr4dd_coreappid', 'vsi_coreenvironmenturl'],
       });
-      const value = (result.data ?? [])
+      const configRows = result.data ?? [];
+      const nextCoreAppId = configRows
         .map(row => row.cr4dd_coreappid?.trim())
-        .find((candidate): candidate is string => !!candidate);
-      const normalized = value ?? null;
-      setCoreAppId(normalized);
-      coreAppIdCache = normalized;
+        .find((candidate): candidate is string => !!candidate) ?? null;
+      const nextCoreBaseUrl = configRows
+        .map(row => normalizeCoreBaseUrl(row.vsi_coreenvironmenturl))
+        .find((candidate): candidate is string => !!candidate) ?? null;
+      setCoreAppId(nextCoreAppId);
+      setCoreBaseUrl(nextCoreBaseUrl);
+      coreAppIdCache = nextCoreAppId;
+      coreBaseUrlCache = nextCoreBaseUrl;
       coreAppIdLoaded = true;
     } catch {
       if (!coreAppIdLoaded) {
         setCoreAppId(null);
+        setCoreBaseUrl(null);
         coreAppIdCache = null;
+        coreBaseUrlCache = null;
         coreAppIdLoaded = true;
       }
     }
@@ -82,9 +97,9 @@ export function useEnrolmentData() {
           'vsi_haspartners',
           'vsi_incombinedfarm',
           'vsi_sharepointdocumentfolder',
-          '_vsi_taskstatusapprover_value',
           'vsi_taskstatusapproveddate',
           'modifiedon',
+          '_ownerid_value',
           'vsi_enrollmentregionaloffice',
           'vsi_farmingsector',
           'vsi_bringforward',
@@ -135,8 +150,8 @@ export function useEnrolmentData() {
     const ids = new Set<string>();
     for (const row of rows) {
       const raw = row as unknown as Record<string, unknown>;
-      const uid = raw['_vsi_taskstatusapprover_value'] as string | undefined;
-      if (uid) ids.add(uid);
+      const ownerUid = raw['_ownerid_value'] as string | undefined;
+      if (ownerUid) ids.add(ownerUid);
     }
     let cancelled = false;
     (async () => {
@@ -154,7 +169,7 @@ export function useEnrolmentData() {
     return () => { cancelled = true; };
   }, [rows]);
 
-  return { rows, setRows, loading, error, avatarUrls, fetchEnrolments, coreAppId, fetchCoreAppId };
+  return { rows, setRows, loading, error, avatarUrls, fetchEnrolments, coreAppId, coreBaseUrl, fetchCoreAppId };
 }
 
 export function useSortedAndFilteredRows(
@@ -164,6 +179,7 @@ export function useSortedAndFilteredRows(
   filters: QuickFilterState,
   taskStatusFilter: Set<string>,
   enrolStatusFilter: Set<string>,
+  yearFilter: Set<string>,
   taskFilterOp: FilterOperator,
   enrolFilterOp: FilterOperator,
   advFilterNodes: AdvFilterNode[],
@@ -175,6 +191,18 @@ export function useSortedAndFilteredRows(
   const enrolStatusOptions = useMemo(() =>
     Object.values(Vsi_participantprogramyearsvsi_enrolmentstatus) as string[],
   []);
+
+  const yearOptions = useMemo(() => {
+    const seen = new Set<string>();
+    for (const row of rows) {
+      const raw = row as unknown as Record<string, unknown>;
+      const name = (row.vsi_programyearidname
+        ?? raw['_vsi_programyearid_value@OData.Community.Display.V1.FormattedValue']
+        ?? '') as string;
+      if (name) seen.add(name);
+    }
+    return [...seen].sort();
+  }, [rows]);
 
   const getRowFieldValue = useCallback((row: Vsi_participantprogramyears, field: AdvFilterField): string => {
     const raw = row as unknown as Record<string, unknown>;
@@ -238,7 +266,7 @@ export function useSortedAndFilteredRows(
     });
   }, [rows, sortKey, sortDir]);
 
-  const anyFilter = filters.verifiedCalc || filters.unverifiedCalc || filters.flagged || filters.partnerships;
+  const anyFilter = filters.verifiedCalc || filters.unverifiedCalc || filters.flagged || filters.partnerships || filters.fortyFiveDayLetter;
 
   const isYesValue = useCallback((value: unknown): boolean => {
     if (value === true || value === 1 || value === '1') return true;
@@ -275,11 +303,13 @@ export function useSortedAndFilteredRows(
         const matchesUnverifiedCalc = !isReady && isEnCalc;
         const matchesFlagged = isFlaggedByVariance(row);
         const matchesPartnerships = isYesValue(row.vsi_haspartners) || isYesValue(row.vsi_incombinedfarm);
+        const matchesFortyFiveDayLetter = getEnrolmentStatusLabel(row.vsi_enrolmentstatus) === 'ToBeReviewed';
 
         if (filters.verifiedCalc && !matchesVerifiedCalc) return false;
         if (filters.unverifiedCalc && !matchesUnverifiedCalc) return false;
         if (filters.flagged && !matchesFlagged) return false;
         if (filters.partnerships && !matchesPartnerships) return false;
+        if (filters.fortyFiveDayLetter && !matchesFortyFiveDayLetter) return false;
         return true;
       });
     }
@@ -297,6 +327,16 @@ export function useSortedAndFilteredRows(
       });
     }
 
+    if (yearFilter.size > 0) {
+      result = result.filter(row => {
+        const raw = row as unknown as Record<string, unknown>;
+        const name = (row.vsi_programyearidname
+          ?? raw['_vsi_programyearid_value@OData.Community.Display.V1.FormattedValue']
+          ?? '') as string;
+        return yearFilter.has(name);
+      });
+    }
+
     const activeAdvNodes = advFilterNodes.filter(isNodeActive);
     if (activeAdvNodes.length > 0) {
       result = result.filter(row => {
@@ -306,7 +346,7 @@ export function useSortedAndFilteredRows(
     }
 
     return result;
-  }, [sortedRows, filters, anyFilter, taskStatusFilter, enrolStatusFilter, taskFilterOp, enrolFilterOp, advFilterNodes, advLogicOp, matchAdvNode, isYesValue, isReadyTaskStatus, isFlaggedByVariance]);
+  }, [sortedRows, filters, anyFilter, taskStatusFilter, enrolStatusFilter, yearFilter, taskFilterOp, enrolFilterOp, advFilterNodes, advLogicOp, matchAdvNode, isYesValue, isReadyTaskStatus, isFlaggedByVariance]);
 
-  return { filteredRows, taskStatusOptions, enrolStatusOptions };
+  return { filteredRows, taskStatusOptions, enrolStatusOptions, yearOptions };
 }

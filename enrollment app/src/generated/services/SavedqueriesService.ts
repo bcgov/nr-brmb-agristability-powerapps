@@ -27,7 +27,7 @@ export class SavedqueriesService {
   public static async update(id: string, changedFields: Partial<Omit<SavedqueriesBase, 'savedqueryid'>>): Promise<IOperationResult<Savedqueries>> {
     const result = await SavedqueriesService.client.updateRecordAsync<Partial<Omit<SavedqueriesBase, 'savedqueryid'>>, Savedqueries>(
       SavedqueriesService.dataSourceName,
-      id.toString(),
+      id,
       changedFields
     );
     return result;
@@ -36,13 +36,13 @@ export class SavedqueriesService {
   public static async delete(id: string): Promise<void> {
     await SavedqueriesService.client.deleteRecordAsync(
       SavedqueriesService.dataSourceName,
-      id.toString());
+      id);
   }
 
   public static async get(id: string, options?: IGetOptions): Promise<IOperationResult<Savedqueries>> {
     const result = await SavedqueriesService.client.retrieveRecordAsync<Savedqueries>(
       SavedqueriesService.dataSourceName,
-      id.toString(),
+      id,
       options
     );
     return result;

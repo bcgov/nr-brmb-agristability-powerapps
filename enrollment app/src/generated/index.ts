@@ -6,6 +6,8 @@
 // Models
 export * as CommonModels from './models/CommonModels';
 export * as FARMSAPIModel from './models/FARMSAPIModel';
+export * as HTTPWorkflowsModel from './models/HTTPWorkflowsModel';
+export * as MicrosoftDataverseModel from './models/MicrosoftDataverseModel';
 export * as Office365UsersModel from './models/Office365UsersModel';
 export * as QueueitemsModel from './models/QueueitemsModel';
 export * as QueuemembershipsModel from './models/QueuemembershipsModel';
@@ -19,6 +21,8 @@ export * as Vsi_participantprogramyearsModel from './models/Vsi_participantprogr
 
 // Services
 export * from './services/FARMSAPIService';
+export * from './services/HTTPWorkflowsService';
+export * from './services/MicrosoftDataverseService';
 export * from './services/Office365UsersService';
 export * from './services/QueueitemsService';
 export * from './services/QueuemembershipsService';

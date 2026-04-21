@@ -12,47 +12,38 @@ export const Vsi_armsconfigurationsstatuscode = {
   2: 'Inactive'
 } as const;
 export type Vsi_armsconfigurationsstatuscode = keyof typeof Vsi_armsconfigurationsstatuscode;
-export const Vsi_armsconfigurationsvsi_activeconfiguration = {
-  0: 'No',
-  1: 'Yes'
-} as const;
-export type Vsi_armsconfigurationsvsi_activeconfiguration = keyof typeof Vsi_armsconfigurationsvsi_activeconfiguration;
-export const Vsi_armsconfigurationsvsi_enrolmentnoticereportbulkoutputenabled = {
-  0: 'No',
-  1: 'Yes'
-} as const;
-export type Vsi_armsconfigurationsvsi_enrolmentnoticereportbulkoutputenabled = keyof typeof Vsi_armsconfigurationsvsi_enrolmentnoticereportbulkoutputenabled;
 
 export interface Vsi_armsconfigurationsBase {
   cr4dd_coreappid?: string;
   cr4dd_triagepaymentthreshold?: string;
   dynamics_integrationkey?: string;
-  importsequencenumber?: string;
+  importsequencenumber?: number;
   overriddencreatedon?: string;
   ownerid: string;
   owneridtype: string;
   statecode: Vsi_armsconfigurationsstatecode;
   statuscode?: Vsi_armsconfigurationsstatuscode;
-  timezoneruleversionnumber?: string;
+  timezoneruleversionnumber?: number;
   "TransactionCurrencyId@odata.bind"?: string;
-  utcconversiontimezonecode?: string;
-  vsi_activeconfiguration: Vsi_armsconfigurationsvsi_activeconfiguration;
+  utcconversiontimezonecode?: number;
+  vsi_activeconfiguration: boolean;
   "vsi_AddressManagementTeamId@odata.bind": string;
   vsi_armsconfigurationid: string;
   "vsi_ClaimsAdministratorTeamId@odata.bind"?: string;
-  vsi_defaultadministrativecostsharingfee: string;
-  vsi_enrolmentnoticereportbulkoutputenabled: Vsi_armsconfigurationsvsi_enrolmentnoticereportbulkoutputenabled;
+  vsi_coreenvironmenturl?: string;
+  vsi_defaultadministrativecostsharingfee: number;
+  vsi_enrolmentnoticereportbulkoutputenabled: boolean;
   vsi_enrolmentnoticereportpath?: string;
   vsi_environment: string;
   vsi_farmsaccountdetailstatuspage: string;
   vsi_farmsscenarioparameter?: string;
   vsi_farmsurl: string;
-  vsi_minimumenrolmentfee: string;
+  vsi_minimumenrolmentfee: number;
   vsi_reportbulkoutputpath?: string;
   vsi_reportexecutionserviceurl?: string;
   vsi_reportpath?: string;
   vsi_repositoryrootdirectory: string;
-  vsi_triagepaymentthreshold?: string;
+  vsi_triagepaymentthreshold?: number;
 }
 
 export interface Vsi_armsconfigurations extends Vsi_armsconfigurationsBase {
@@ -61,7 +52,7 @@ export interface Vsi_armsconfigurations extends Vsi_armsconfigurationsBase {
   createdon?: string;
   createdonbehalfbyname?: string;
   createdonbehalfbyyominame: string;
-  exchangerate?: string;
+  exchangerate?: number;
   modifiedbyname?: string;
   modifiedbyyominame: string;
   modifiedon?: string;
@@ -73,16 +64,16 @@ export interface Vsi_armsconfigurations extends Vsi_armsconfigurationsBase {
   statecodename?: string;
   statuscodename?: string;
   transactioncurrencyidname?: string;
-  versionnumber?: string;
+  versionnumber?: number;
   vsi_activeconfigurationname?: string;
   vsi_addressmanagementteamidname?: string;
   vsi_addressmanagementteamidyominame?: string;
   vsi_claimsadministratorteamidname?: string;
   vsi_claimsadministratorteamidyominame?: string;
-  vsi_defaultadministrativecostsharingfee_base?: string;
+  vsi_defaultadministrativecostsharingfee_base?: number;
   vsi_enrolmentnoticereportbulkoutputenabledname?: string;
-  vsi_minimumenrolmentfee_base?: string;
-  vsi_triagepaymentthreshold_base?: string;
+  vsi_minimumenrolmentfee_base?: number;
+  vsi_triagepaymentthreshold_base?: number;
   createdby?: object;
   _createdby_value?: string;
   createdonbehalfby?: object;

@@ -4,11 +4,11 @@ export type SortDir = 'asc' | 'desc';
 
 export type SortKey =
   | 'pin' | 'producer' | 'year' | 'taskStatus' | 'enrolStatus' | 'fee'
-  | 'modifiedBy' | 'sharepoint' | 'core' | 'totalFeesOwed' | 'totalFeesPaid'
+  | 'sharepoint' | 'core' | 'totalFeesOwed' | 'totalFeesPaid'
   | 'enrolmentFee' | 'latePay' | 'regionalOffice' | 'farmingSector'
   | 'bringForward' | 'broughtForward' | 'hasPartners' | 'inCombinedFarm'
   | 'manualReview' | 'enrolNoticeDate' | 'fileReceivedDate' | 'feesPaidDate'
-  | 'modifiedOn' | 'taskApprovedDate';
+  | 'modifiedOn' | 'owner' | 'flagged';
 
 export type ColumnIcon = 'text' | 'number' | 'list' | 'link' | 'user' | 'check' | 'date';
 
@@ -48,6 +48,7 @@ export interface QuickFilterState {
   unverifiedCalc: boolean;
   flagged: boolean;
   partnerships: boolean;
+  fortyFiveDayLetter: boolean;
 }
 
 export interface ViewPayload {

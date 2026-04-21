@@ -59,8 +59,8 @@ export class Office365UsersService {
    * Updates the profile photo of the current user. The size of the photo must be less than 4 MB.
    */
   public static async UpdateMyPhoto(body: string, Content_Type: string): Promise<IOperationResult<void>> {
-    const params: { body: string, Content_Type: string } = { body, Content_Type };
-    const result = await Office365UsersService.client.executeAsync<{ body: string, Content_Type: string }, void>(
+    const params: { body: string, "Content-Type": string } = { body, "Content-Type": Content_Type };
+    const result = await Office365UsersService.client.executeAsync<{ body: string, "Content-Type": string }, void>(
       {
         connectorOperation: {
           tableName: Office365UsersService.dataSourceName,

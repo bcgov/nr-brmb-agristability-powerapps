@@ -110,9 +110,9 @@ export function getSortValue(row: Vsi_participantprogramyears, key: SortKey): st
     case 'taskStatus': return getTaskStatusLabel(row.vsi_taskstatus);
     case 'enrolStatus': return getEnrolmentStatusLabel(row.vsi_enrolmentstatus);
     case 'fee': return Number(row.vsi_calculatedenfee) || 0;
-    case 'modifiedBy': {
-      return (row.vsi_taskstatusapprovername
-        ?? raw['_vsi_taskstatusapprover_value@OData.Community.Display.V1.FormattedValue']
+    case 'owner': {
+      return (row.owneridname
+        ?? raw['_ownerid_value@OData.Community.Display.V1.FormattedValue']
         ?? '') as string;
     }
     case 'totalFeesOwed': return Number(row.vsi_totalfeesowed) || 0;
@@ -120,8 +120,11 @@ export function getSortValue(row: Vsi_participantprogramyears, key: SortKey): st
     case 'enrolmentFee': return Number(row.vsi_enrolmentfee) || 0;
     case 'latePay': return Number(row.vsi_latepaymentfee) || 0;
     case 'core': return row.vsi_participantprogramyearid ?? '';
-    case 'taskApprovedDate': return row.vsi_taskstatusapproveddate ?? '';
     case 'modifiedOn': return row.modifiedon ?? '';
+    case 'flagged': {
+      const v = calculateVariance(row.vsi_calculatedenfee, row.vsi_previousyearcalculatedenfee);
+      return v != null && Math.abs(v) > 20 ? 1 : 0;
+    }
     case 'regionalOffice': return Vsi_participantprogramyearsvsi_enrollmentregionaloffice[row.vsi_enrollmentregionaloffice as keyof typeof Vsi_participantprogramyearsvsi_enrollmentregionaloffice] ?? '';
     case 'farmingSector': return Vsi_participantprogramyearsvsi_farmingsector[row.vsi_farmingsector as keyof typeof Vsi_participantprogramyearsvsi_farmingsector] ?? '';
     default: return '';
