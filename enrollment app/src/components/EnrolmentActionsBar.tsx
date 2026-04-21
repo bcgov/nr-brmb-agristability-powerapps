@@ -1,3 +1,5 @@
+import { FileText, UserCheck, CircleCheck } from 'lucide-react';
+
 type Props = {
   onOpenBulkNotices: () => void;
   onOpenReferToSupervisor: () => void;
@@ -7,14 +9,14 @@ type Props = {
 export function EnrolmentActionsBar({ onOpenBulkNotices, onOpenReferToSupervisor, onOpenApproveCalculatedFees }: Props) {
   return (
     <div className="enrolment-actions">
-      <button className="btn-bulk" onClick={onOpenBulkNotices}>
-        <span className="btn-bulk-icon">&#x1F5B6;</span> Bulk EN Notices
+      <button className="dash-btn-secondary" onClick={onOpenBulkNotices}>
+        <FileText size={15} /> Bulk EN Notices
       </button>
-      <button className="btn-bulk" onClick={onOpenReferToSupervisor}>
-        <span className="btn-bulk-icon">&#x1F464;</span> Refer to Supervisor
+      <button className="dash-btn-secondary" onClick={onOpenReferToSupervisor}>
+        <UserCheck size={15} /> Refer to Supervisor
       </button>
-      <button className="btn-bulk" onClick={onOpenApproveCalculatedFees}>
-        <span className="btn-bulk-icon">&#x2714;</span> Approve Calculated Fees
+      <button className="dash-btn-primary" onClick={onOpenApproveCalculatedFees}>
+        <CircleCheck size={15} /> Approve Calculated Fees
       </button>
     </div>
   );

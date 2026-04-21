@@ -62,11 +62,6 @@ export function BulkNoticesModal({
                   '2024-10-01'
                 );
                 setBulkResult(result);
-                if (!result?.success) {
-                  // Log full result for debugging
-                  // eslint-disable-next-line no-console
-                  console.debug('BulkENFlow result:', result);
-                }
               } catch (err) {
                 setBulkError(err instanceof Error ? err.message : 'Workflow failed');
                 // eslint-disable-next-line no-console

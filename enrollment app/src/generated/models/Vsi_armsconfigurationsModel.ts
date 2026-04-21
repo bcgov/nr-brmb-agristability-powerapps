@@ -30,6 +30,7 @@ export interface Vsi_armsconfigurationsBase {
   "vsi_AddressManagementTeamId@odata.bind": string;
   vsi_armsconfigurationid: string;
   "vsi_ClaimsAdministratorTeamId@odata.bind"?: string;
+  vsi_coreenvironmenturl?: string;
   vsi_defaultadministrativecostsharingfee: number;
   vsi_enrolmentnoticereportbulkoutputenabled: boolean;
   vsi_enrolmentnoticereportpath?: string;

@@ -15,7 +15,7 @@ import { ApproveCalculatedFeesModal } from '../components/ApproveCalculatedFeesM
 import { EnrollmentSearchBar } from '../components/EnrollmentSearchBar';
 import { EnrolmentQuickFilters } from '../components/EnrolmentQuickFilters';
 import { EnrolmentDataTable } from '../components/EnrolmentDataTable';
-import { EnrolmentPagination } from '../components/EnrolmentPagination';
+
 import { EnrolmentActionsBar } from '../components/EnrolmentActionsBar';
 import { Office365UsersService } from '../generated/services/Office365UsersService';
 import { SystemusersService } from '../generated/services/SystemusersService';
@@ -23,7 +23,7 @@ import { getClient } from '@microsoft/power-apps/data';
 import { dataSourcesInfo } from '../../.power/schemas/appschemas/dataSourcesInfo';
 import { resolveAuthenticatedEmail, resolveCurrentSystemUser } from '../utils/currentUser';
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 300;
 
 type ResolvedProfile = {
   id: string;
@@ -50,7 +50,7 @@ function getXrmUserSettings(): XrmUserSettings | undefined {
 }
 
 export function DashboardHomePage() {
-  const { rows, setRows, loading, error, avatarUrls, fetchEnrolments, coreAppId, fetchCoreAppId } = useEnrolmentData();
+  const { rows, setRows, loading, error, avatarUrls, fetchEnrolments, coreAppId, coreBaseUrl, fetchCoreAppId } = useEnrolmentData();
   const [profileLoading, setProfileLoading] = useState(true);
   const [profile, setProfile] = useState<ResolvedProfile | null>(null);
 
@@ -291,10 +291,12 @@ export function DashboardHomePage() {
     unverifiedCalc: false,
     flagged: false,
     partnerships: false,
+    fortyFiveDayLetter: false,
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [taskStatusFilter, setTaskStatusFilter] = useState<Set<string>>(new Set());
   const [enrolStatusFilter, setEnrolStatusFilter] = useState<Set<string>>(new Set());
+  const [yearFilter, setYearFilter] = useState<Set<string>>(new Set());
   const [taskFilterOp, setTaskFilterOp] = useState<FilterOperator>('equals');
   const [enrolFilterOp, setEnrolFilterOp] = useState<FilterOperator>('equals');
   const [advFilterNodes, setAdvFilterNodes] = useState<AdvFilterNode[]>([]);
@@ -321,6 +323,10 @@ export function DashboardHomePage() {
   }, []);
   const setEnrolStatusFilterAndReset = useCallback((next: Set<string>) => {
     setEnrolStatusFilter(next);
+    setCurrentPage(1);
+  }, []);
+  const setYearFilterAndReset = useCallback((next: Set<string>) => {
+    setYearFilter(next);
     setCurrentPage(1);
   }, []);
   const setTaskFilterOpAndReset = useCallback((next: FilterOperator) => {
@@ -391,9 +397,9 @@ export function DashboardHomePage() {
   } = useViews(viewState, viewSetters);
 
   // Sorting & filtering
-  const { filteredRows, taskStatusOptions, enrolStatusOptions } = useSortedAndFilteredRows(
+  const { filteredRows, taskStatusOptions, enrolStatusOptions, yearOptions } = useSortedAndFilteredRows(
     rows, sortKey, sortDir, filters,
-    taskStatusFilter, enrolStatusFilter, taskFilterOp, enrolFilterOp,
+    taskStatusFilter, enrolStatusFilter, yearFilter, taskFilterOp, enrolFilterOp,
     advFilterNodes, advLogicOp,
   );
 
@@ -462,7 +468,7 @@ export function DashboardHomePage() {
         {`Welcome${welcomeName ? ` ${welcomeName}` : ''}`}
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
         <button type="button" onClick={handleRefresh} disabled={loading} style={{ padding: '6px 16px', borderRadius: 4, border: '1px solid #ccc', background: '#f7f7f7', cursor: loading ? 'not-allowed' : 'pointer' }}>
           {loading ? 'Refreshing...' : 'Refresh'}
         </button>
@@ -501,6 +507,12 @@ export function DashboardHomePage() {
             activeAdvancedCount={countActiveNodes(advFilterNodes)}
           />
 
+          <EnrolmentActionsBar
+            onOpenBulkNotices={() => setShowBulkModal(true)}
+            onOpenReferToSupervisor={() => setShowSupervisorModal(true)}
+            onOpenApproveCalculatedFees={() => setShowApproveFeesModal(true)}
+          />
+
           <EnrolmentDataTable
             allRowsCount={rows.length}
             pagedRows={pagedRows}
@@ -524,6 +536,9 @@ export function DashboardHomePage() {
             enrolFilterOp={enrolFilterOp}
             onEnrolStatusFilterChange={setEnrolStatusFilterAndReset}
             onEnrolFilterOperatorChange={setEnrolFilterOpAndReset}
+            yearOptions={yearOptions}
+            yearFilter={yearFilter}
+            onYearFilterChange={setYearFilterAndReset}
             sortKey={sortKey}
             sortDir={sortDir}
             onSort={setSort}
@@ -531,23 +546,66 @@ export function DashboardHomePage() {
             onColumnWidthChange={setColumnWidth}
             avatarUrls={avatarUrls}
             coreAppId={coreAppId}
+            coreBaseUrl={coreBaseUrl}
           />
 
-          <EnrolmentPagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalRecords={searchedRows.length}
-            onFirstPage={() => setCurrentPage(1)}
-            onPrevPage={() => setCurrentPage(previous => previous - 1)}
-            onNextPage={() => setCurrentPage(previous => previous + 1)}
-            onLastPage={() => setCurrentPage(totalPages)}
-          />
-
-          <EnrolmentActionsBar
-            onOpenBulkNotices={() => setShowBulkModal(true)}
-            onOpenReferToSupervisor={() => setShowSupervisorModal(true)}
-            onOpenApproveCalculatedFees={() => setShowApproveFeesModal(true)}
-          />
+          <div className="dash-pagination">
+            <span>
+              {searchedRows.length === 0
+                ? 'Showing 0 of 0 results'
+                : `Showing ${Math.min((currentPage - 1) * PAGE_SIZE + 1, searchedRows.length)}\u2013${Math.min(currentPage * PAGE_SIZE, searchedRows.length)} of ${searchedRows.length} result${searchedRows.length !== 1 ? 's' : ''}`}
+            </span>
+            <div className="dash-pagination-controls">
+              <button
+                type="button"
+                className="dash-page-btn"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                &lsaquo; Previous
+              </button>
+              {(() => {
+                const pages: (number | '...')[] = [];
+                if (totalPages <= 5) {
+                  for (let i = 1; i <= totalPages; i++) pages.push(i);
+                } else {
+                  // Always show first page
+                  pages.push(1);
+                  // Determine window of 3 middle pages centred on currentPage
+                  let start = Math.max(2, currentPage - 1);
+                  let end = Math.min(totalPages - 1, currentPage + 1);
+                  // Shift window so it always shows 3 pages when possible
+                  if (end - start < 2) {
+                    if (start === 2) end = Math.min(totalPages - 1, start + 2);
+                    else start = Math.max(2, end - 2);
+                  }
+                  if (start > 2) pages.push('...');
+                  for (let i = start; i <= end; i++) pages.push(i);
+                  if (end < totalPages - 1) pages.push('...');
+                  // Always show last page
+                  pages.push(totalPages);
+                }
+                return pages.map((p, idx) =>
+                  p === '...'
+                    ? <span key={`dots-${idx}`} className="dash-page-dots">&hellip;</span>
+                    : <button
+                        key={p}
+                        type="button"
+                        className={`dash-page-btn${p === currentPage ? ' active' : ''}`}
+                        onClick={() => setCurrentPage(p)}
+                      >{p}</button>
+                );
+              })()}
+              <button
+                type="button"
+                className="dash-page-btn"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+              >
+                Next &rsaquo;
+              </button>
+            </div>
+          </div>
 
           {showApproveFeesModal && (
             <ApproveCalculatedFeesModal
@@ -564,8 +622,6 @@ export function DashboardHomePage() {
                     ...r,
                     vsi_taskstatus: 865520003,
                     vsi_taskstatusapproveddate: update.approvedDate,
-                    vsi_taskstatusapprovername: update.approverName,
-                    _vsi_taskstatusapprover_value: update.approverId,
                   };
                 }));
                 setSelectedIds(new Set());

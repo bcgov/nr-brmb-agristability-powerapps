@@ -1,5 +1,8 @@
 .sa-wrapper {
   padding: 1.25rem 1.5rem;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -86,7 +89,17 @@
   flex-shrink: 0;
 }
 
+.sa-selected-count {
+  font-size: 0.83rem;
+  color: #1d6ee6;
+  font-weight: 500;
+  margin-right: 0.25rem;
+}
+
 .sa-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   border: 1px solid #d0d6dd;
   background: #fff;
   color: #334155;
@@ -102,6 +115,9 @@
 }
 
 .sa-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   border: none;
   background: #1d6ee6;
   color: #fff;
@@ -150,7 +166,8 @@
 }
 
 .sa-table thead th.sa-th-actions {
-  text-align: right;
+  text-align: center;
+  width: 40px;
 }
 
 .sa-table tbody tr {
@@ -174,7 +191,8 @@
 }
 
 .sa-td-actions {
-  text-align: right;
+  text-align: center;
+  width: 40px;
 }
 
 /* PIN cell */
@@ -250,39 +268,19 @@
 .sa-row-actions {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 0.4rem;
 }
 
-.sa-action-btn {
-  border: 1px solid #d0d6dd;
-  background: #fff;
-  color: #334155;
-  border-radius: 6px;
-  padding: 0.3rem 0.7rem;
-  font-size: 0.78rem;
-  font-weight: 500;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.sa-action-link {
-  text-decoration: none;
+.sa-calc-link {
   display: inline-flex;
   align-items: center;
+  color: #64748b;
+  text-decoration: none;
 }
 
-.sa-action-btn:hover {
-  background: #f7f9fc;
-}
-
-.sa-action-btn.sa-action-ready {
-  border-color: #1d6ee6;
-  color: #1d6ee6;
-}
-
-.sa-action-btn.sa-action-ready:hover {
-  background: #eff5ff;
+.sa-calc-link:hover {
+  color: #334155;
 }
 
 /* Pagination */

@@ -60,7 +60,6 @@ export function ApproveCalculatedFeesModal({
         const updateResult = await Vsi_participantprogramyearsService.update(enrolmentId, {
           vsi_taskstatus: 865520003, // Vsi_participantprogramyearsvsi_taskstatus.Approved
           vsi_taskstatusapproveddate: approvedDate,
-          'vsi_TaskStatusApprover@odata.bind': `/systemusers(${currentUser.systemUserId})`,
         });
         if (!updateResult.success) {
           throw new Error(updateResult.error?.message ?? `Failed to approve ${row.vsi_name ?? enrolmentId}.`);

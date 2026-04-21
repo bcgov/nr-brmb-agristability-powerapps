@@ -137,24 +137,26 @@ export function ColumnHeaderMenu<K extends string = string>({
               </>
             )}
 
-            {view === 'filter' && filterOptions && selectedFilters && onFilterChange && onFilterOperatorChange && (
+            {view === 'filter' && filterOptions && selectedFilters && onFilterChange && (
               <div className="chm-filter-view">
                 <div className="chm-filter-header">
                   <h4>Filter by</h4>
                   <button className="chm-close" onClick={close}>✕</button>
                 </div>
-                <div className="chm-operator-wrapper">
-                  <button className="chm-operator-btn" onClick={() => setOperatorOpen(o => !o)}>
-                    {filterOperator === 'notEquals' ? 'Does not equal' : 'Equals'}
-                    <span className="chm-operator-chevron">&#x25BE;</span>
-                  </button>
-                  {operatorOpen && (
-                    <div className="chm-operator-dropdown">
-                      <button className={`chm-operator-opt${filterOperator === 'equals' ? ' active' : ''}`} onClick={() => { onFilterOperatorChange('equals'); setOperatorOpen(false); }}>Equals</button>
-                      <button className={`chm-operator-opt${filterOperator === 'notEquals' ? ' active' : ''}`} onClick={() => { onFilterOperatorChange('notEquals'); setOperatorOpen(false); }}>Does not equal</button>
-                    </div>
-                  )}
-                </div>
+                {onFilterOperatorChange && (
+                  <div className="chm-operator-wrapper">
+                    <button className="chm-operator-btn" onClick={() => setOperatorOpen(o => !o)}>
+                      {filterOperator === 'notEquals' ? 'Does not equal' : 'Equals'}
+                      <span className="chm-operator-chevron">&#x25BE;</span>
+                    </button>
+                    {operatorOpen && (
+                      <div className="chm-operator-dropdown">
+                        <button className={`chm-operator-opt${filterOperator === 'equals' ? ' active' : ''}`} onClick={() => { onFilterOperatorChange('equals'); setOperatorOpen(false); }}>Equals</button>
+                        <button className={`chm-operator-opt${filterOperator === 'notEquals' ? ' active' : ''}`} onClick={() => { onFilterOperatorChange('notEquals'); setOperatorOpen(false); }}>Does not equal</button>
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div className="chm-values">
                   {filterOptions.map(opt => (
                     <label key={opt} className="chm-value-item">

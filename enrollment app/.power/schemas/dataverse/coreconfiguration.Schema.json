@@ -444,6 +444,14 @@
           "x-ms-read-only": true,
           "maxLength": 160
         },
+        "vsi_coreenvironmenturl": {
+          "type": "string",
+          "title": "Core Environment URL",
+          "x-ms-dataverse-attribute": "vsi_coreenvironmenturl",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vsi_CoreEnvironmentURL",
+          "maxLength": 100
+        },
         "vsi_defaultadministrativecostsharingfee": {
           "type": "string",
           "title": "Default Administrative Cost Sharing Fee",

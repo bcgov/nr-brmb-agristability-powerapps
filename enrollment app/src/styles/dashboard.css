@@ -1,19 +1,24 @@
 /* Enrolment table */
 .enrolment-wrapper {
-  padding: 1rem;
+  padding: 0.5rem 0.75rem;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   text-align: left;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .dashboard-welcome {
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.2rem;
   font-size: 1.1rem;
   font-weight: 600;
   color: #1f2d3d;
 }
 
 .enrolment-wrapper h2 {
-  margin-bottom: 1rem;
+  margin-bottom: 0.35rem;
   font-size: 1.35rem;
   font-weight: 600;
   color: #1a1a1a;
@@ -26,9 +31,16 @@
 }
 .enrolment-table-container {
   overflow-x: auto;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
   border: 1px solid #e4e8ed;
   border-radius: 6px;
   background: #fff;
+}
+
+.enrolment-table-container.is-empty {
+  min-height: 240px;
 }
 .enrolment-table {
   width: 100%;
@@ -196,9 +208,30 @@
 }
 .sp-link:hover { text-decoration: underline; }
 
+.sp-icon-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+.sp-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+.sp-icon-link:hover .sp-icon {
+  opacity: 0.85;
+}
+
 /* Date */
 .cell-date {
   color: #5a6a7e;
+}
+
+/* Flag */
+.cell-flag {
+  text-align: center;
+  width: 32px;
 }
 
 /* Modified-by avatar */
@@ -234,7 +267,7 @@
   display: flex;
   align-items: center;
   gap: 1.25rem;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.35rem;
   font-size: 0.84rem;
   color: #2d3748;
 }
@@ -251,60 +284,99 @@
 }
 
 /* ── Pagination ── */
-.enrolment-pagination {
+.dash-pagination {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
-  font-size: 0.84rem;
-  color: #2d3748;
+  justify-content: space-between;
+  padding: 0.4rem 1rem;
+  border-top: 1px solid #e2e6ec;
+  font-size: 0.83rem;
+  color: #6b7a8d;
 }
-.enrolment-pagination button {
-  padding: 0.3rem 0.7rem;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
+
+.dash-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.dash-page-btn {
+  border: 1px solid #d0d6dd;
   background: #fff;
-  color: #2d3748;
-  font-size: 0.8rem;
+  color: #334155;
+  border-radius: 6px;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.82rem;
+  font-weight: 500;
   cursor: pointer;
+  min-width: 32px;
+  text-align: center;
 }
-.enrolment-pagination button:hover:not(:disabled) {
-  background: #f0f5ff;
-  border-color: #90b0e0;
+
+.dash-page-btn:hover:not(:disabled) {
+  background: #f7f9fc;
 }
-.enrolment-pagination button:disabled {
-  opacity: 0.4;
+
+.dash-page-btn:disabled {
+  color: #b0b8c4;
   cursor: default;
+}
+
+.dash-page-btn.active {
+  background: #1d6ee6;
+  border-color: #1d6ee6;
+  color: #fff;
+}
+
+.dash-page-dots {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.3rem;
+  font-size: 0.82rem;
+  color: #64748b;
+  user-select: none;
 }
 
 
 /* ── Bulk Actions ── */
 .enrolment-actions {
   display: flex;
-  justify-content: flex-start;
+  justify-content: flex-end;
   gap: 0.5rem;
-  margin-top: 0.75rem;
+  margin-bottom: 0.4rem;
 }
 
-.btn-bulk {
+.dash-btn-secondary {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.5rem 1.1rem;
-  border: 1px solid #3b82f6;
-  border-radius: 4px;
-  background: #3b82f6;
-  color: #fff;
-  font-size: 0.85rem;
+  gap: 0.35rem;
+  border: 1px solid #d0d6dd;
+  background: #fff;
+  color: #334155;
+  border-radius: 6px;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.84rem;
   font-weight: 500;
   cursor: pointer;
 }
-.btn-bulk:hover {
-  background: #2563eb;
+.dash-btn-secondary:hover {
+  background: #f7f9fc;
 }
-.btn-bulk-icon {
-  font-size: 1rem;
+.dash-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: none;
+  background: #1d6ee6;
+  color: #fff;
+  border-radius: 6px;
+  padding: 0.4rem 1rem;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.dash-btn-primary:hover {
+  background: #1760c7;
 }
 
 /* ── Modal ── */

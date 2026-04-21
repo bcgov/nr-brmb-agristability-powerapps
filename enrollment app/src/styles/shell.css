@@ -1,6 +1,7 @@
 .app-shell {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background: #f5f6f8;
 }
 
@@ -76,7 +77,12 @@
 .app-shell-content {
   flex: 1;
   min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   padding: 0 0.65rem;
+  box-sizing: border-box;
 }
 
 .page-card {

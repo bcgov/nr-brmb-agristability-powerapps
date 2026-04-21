@@ -1,6 +1,6 @@
 import { resolveCurrentSystemUser } from '../utils/currentUser';
 import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
-import { Filter } from 'lucide-react';
+import { Filter, Calculator, ClipboardList, LogOut, UserPlus, CircleCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { Vsi_participantprogramyears } from '../generated/models/Vsi_participantprogramyearsModel';
 import { Vsi_participantprogramyearsvsi_enrolmentstatus } from '../generated/models/Vsi_participantprogramyearsModel';
@@ -80,6 +80,7 @@ type AssignTarget = {
   queueitemId: string | undefined;
   queueId?: string;
   queueName?: string;
+  bulkRows?: Array<{ itemId: string; queueitemId: string | undefined }>;
 };
 
 function VariancePill({ variance }: { variance: number }) {
@@ -138,10 +139,9 @@ export function SupervisorApprovalPage() {
   const [page, setPage] = useState(1);
   const [assignTarget, setAssignTarget] = useState<AssignTarget | null>(null);
   const [currentUser, setCurrentUser] = useState<{ systemUserId: string; displayName: string } | null>(null);
-  const [pickingRowId, setPickingRowId] = useState<string | null>(null);
-  const [releasingRowId, setReleasingRowId] = useState<string | null>(null);
-  const [approvingRowId, setApprovingRowId] = useState<string | null>(null);
   const [approvingBulk, setApprovingBulk] = useState(false);
+  const [pickingBulk, setPickingBulk] = useState(false);
+  const [releasingBulk, setReleasingBulk] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [columnOrder, setColumnOrder] = useState<SupervisorColumnKey[]>(DEFAULT_COLUMN_ORDER);
   const [colDragIdx, setColDragIdx] = useState<number | null>(null);
@@ -423,7 +423,6 @@ export function SupervisorApprovalPage() {
     return 'Some selected enrolments are assigned to another worker. You can only approve items worked by you or with a blank Worked By value.';
   };
 
-  const approvalBlockedTooltip = 'You cannot approve enrolments being worked on by another user.';
   const bulkApprovalBlockedTooltip = 'One or more selected approvals is being worked on by another user';
 
   const updateQueueItemWorker = async (queueItemId: string, systemUserId: string | null): Promise<void> => {
@@ -441,54 +440,6 @@ export function SupervisorApprovalPage() {
 
     if (!updateResult.success) {
       throw new Error(updateResult.error?.message ?? 'Failed to update queue item worker.');
-    }
-  };
-
-  const handlePick = async (row: SupervisorRowView) => {
-    if (!row.workMeta?.queueitemId || !row.itemId) return;
-    setPickingRowId(row.itemId);
-    setActionError(null);
-    try {
-      const user = await resolveCurrentUser();
-      await updateQueueItemWorker(row.workMeta.queueitemId, user.systemUserId);
-      setQueueWorkByEnrolmentId(prev => ({
-        ...prev,
-        [row.itemId!]: {
-          ...prev[row.itemId!],
-          workedBy: user.displayName,
-          workedOn: new Date().toLocaleDateString(),
-          workedOnRaw: new Date().toISOString(),
-          workerId: user.systemUserId,
-        },
-      }));
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Pick failed');
-    } finally {
-      setPickingRowId(null);
-    }
-  };
-
-  const handleRelease = async (row: SupervisorRowView) => {
-    if (!row.workMeta?.queueitemId || !row.itemId) return;
-    setReleasingRowId(row.itemId);
-    setActionError(null);
-    try {
-      await updateQueueItemWorker(row.workMeta.queueitemId, null);
-
-      setQueueWorkByEnrolmentId(prev => ({
-        ...prev,
-        [row.itemId!]: {
-          ...prev[row.itemId!],
-          workedBy: '—',
-          workedOn: '—',
-          workedOnRaw: undefined,
-          workerId: undefined,
-        },
-      }));
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Release failed');
-    } finally {
-      setReleasingRowId(null);
     }
   };
 
@@ -522,7 +473,6 @@ export function SupervisorApprovalPage() {
   };
 
   const approveRows = async (rows: SupervisorRowView[]) => {
-    const user = await resolveCurrentUser();
     const approvedDate = new Date().toISOString();
 
     for (const row of rows) {
@@ -532,7 +482,6 @@ export function SupervisorApprovalPage() {
       const statusUpdateResult = await Vsi_participantprogramyearsService.update(enrolmentId, {
         vsi_taskstatus: 865520003,
         vsi_taskstatusapproveddate: approvedDate,
-        'vsi_TaskStatusApprover@odata.bind': `/systemusers(${user.systemUserId})`,
       });
       if (!statusUpdateResult.success) {
         throw new Error(statusUpdateResult.error?.message ?? `Failed to set Approved status for ${enrolmentId}.`);
@@ -544,21 +493,6 @@ export function SupervisorApprovalPage() {
     }
 
     removeApprovedRowsFromState(rows);
-  };
-
-  const handleApproveRow = async (row: SupervisorRowView) => {
-    if (!row.itemId) return;
-    setApprovingRowId(row.itemId);
-    setActionError(null);
-    try {
-      const ownershipError = getApprovalOwnershipError([row]);
-      if (ownershipError) throw new Error(ownershipError);
-      await approveRows([row]);
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Approve failed');
-    } finally {
-      setApprovingRowId(null);
-    }
   };
 
   const handleApproveSelected = async () => {
@@ -576,6 +510,75 @@ export function SupervisorApprovalPage() {
     } finally {
       setApprovingBulk(false);
     }
+  };
+
+  const handlePickSelected = async () => {
+    if (selectedIds.size === 0) return;
+    setPickingBulk(true);
+    setActionError(null);
+    try {
+      const user = await resolveCurrentUser();
+      const rowsToPick = allRows.filter(row => row.itemId != null && selectedIds.has(row.itemId) && row.workMeta?.queueitemId);
+      for (const row of rowsToPick) {
+        await updateQueueItemWorker(row.workMeta!.queueitemId!, user.systemUserId);
+        setQueueWorkByEnrolmentId(prev => ({
+          ...prev,
+          [row.itemId!]: {
+            ...prev[row.itemId!],
+            workedBy: user.displayName,
+            workedOn: new Date().toLocaleDateString(),
+            workedOnRaw: new Date().toISOString(),
+            workerId: user.systemUserId,
+          },
+        }));
+      }
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Pick failed');
+    } finally {
+      setPickingBulk(false);
+    }
+  };
+
+  const handleReleaseSelected = async () => {
+    if (selectedIds.size === 0) return;
+    setReleasingBulk(true);
+    setActionError(null);
+    try {
+      const rowsToRelease = allRows.filter(row => row.itemId != null && selectedIds.has(row.itemId) && row.workMeta?.queueitemId);
+      for (const row of rowsToRelease) {
+        await updateQueueItemWorker(row.workMeta!.queueitemId!, null);
+        setQueueWorkByEnrolmentId(prev => ({
+          ...prev,
+          [row.itemId!]: {
+            ...prev[row.itemId!],
+            workedBy: '—',
+            workedOn: '—',
+            workedOnRaw: undefined,
+            workerId: undefined,
+          },
+        }));
+      }
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Release failed');
+    } finally {
+      setReleasingBulk(false);
+    }
+  };
+
+  const handleAssignSelected = () => {
+    if (selectedRows.length === 0) return;
+    const first = selectedRows[0];
+    if (!first.itemId) return;
+    setAssignTarget({
+      enrolmentId: first.itemId,
+      enrolmentName: selectedRows.length === 1 ? (first.item.vsi_name ?? '—') : `${selectedRows.length} enrolments`,
+      queueitemId: first.workMeta?.queueitemId,
+      queueId: first.workMeta?.queueId,
+      queueName: first.workMeta?.queueName,
+      bulkRows: selectedRows.length > 1
+        ? selectedRows.filter(r => r.itemId != null).map(r => ({ itemId: r.itemId!, queueitemId: r.workMeta?.queueitemId }))
+        : undefined,
+    });
   };
 
   const onSort = (key: SupervisorColumnKey, dir: SortDir) => {
@@ -836,7 +839,27 @@ export function SupervisorApprovalPage() {
             <p className="sa-card-subtitle">Items requiring your attention, referred by admin(s)</p>
           </div>
           <div className="sa-bulk-actions">
-            <button type="button" className="sa-btn-secondary">Bulk Actions</button>
+            {selectedCount > 0 && (
+              <span className="sa-selected-count">{selectedCount} selected</span>
+            )}
+            <button
+              type="button"
+              className="sa-btn-secondary"
+              disabled={selectedCount === 0 || pickingBulk}
+              onClick={() => void handlePickSelected()}
+            >{pickingBulk ? 'Picking...' : <><ClipboardList size={15} /> Pick</>}</button>
+            <button
+              type="button"
+              className="sa-btn-secondary"
+              disabled={selectedCount === 0 || releasingBulk}
+              onClick={() => void handleReleaseSelected()}
+            >{releasingBulk ? 'Releasing...' : <><LogOut size={15} /> Release</>}</button>
+            <button
+              type="button"
+              className="sa-btn-secondary"
+              disabled={selectedCount === 0}
+              onClick={handleAssignSelected}
+            ><UserPlus size={15} /> Assign</button>
             <span title={hasBlockedSelectedRows ? bulkApprovalBlockedTooltip : undefined}>
               <button
                 type="button"
@@ -844,9 +867,7 @@ export function SupervisorApprovalPage() {
                 disabled={selectedCount === 0 || approvingBulk || hasBlockedSelectedRows}
                 onClick={() => void handleApproveSelected()}
               >
-                {approvingBulk
-                  ? 'Approving...'
-                  : `Approve Selected${selectedCount > 0 ? ` (${selectedCount})` : ''}`}
+                {approvingBulk ? 'Approving...' : <><CircleCheck size={15} /> Approve</>}
               </button>
             </span>
           </div>
@@ -902,7 +923,7 @@ export function SupervisorApprovalPage() {
                       />
                     );
                   })}
-                  <th className="sa-th-actions">Actions</th>
+                  <th className="sa-th-actions"></th>
                 </tr>
               </thead>
               <tbody>
@@ -983,45 +1004,9 @@ export function SupervisorApprovalPage() {
                       })}
                       <td className="sa-td-actions">
                         <div className="sa-row-actions">
-                          <button
-                            type="button"
-                            className="sa-action-btn"
-                            disabled={!itemId || !workMeta?.queueitemId || pickingRowId === itemId}
-                            onClick={() => void handlePick(row)}
-                          >{pickingRowId === itemId ? '…' : 'Pick'}</button>
-                          <button
-                            type="button"
-                            className="sa-action-btn"
-                            disabled={!itemId || !workMeta?.queueitemId || releasingRowId === itemId}
-                            onClick={() => void handleRelease(row)}
-                          >{releasingRowId === itemId ? '…' : 'Release'}</button>
-                          <button
-                          type="button"
-                          className="sa-action-btn"
-                          disabled={!itemId}
-                          onClick={() => {
-                            if (itemId) setAssignTarget({
-                              enrolmentId: itemId,
-                              enrolmentName: item.vsi_name ?? '—',
-                              queueitemId: workMeta?.queueitemId,
-                              queueId: workMeta?.queueId,
-                              queueName: workMeta?.queueName,
-                            });
-                          }}
-                        >Assign</button>
                           {itemId
-                            ? <Link className="sa-action-btn sa-action-link" to={`/calculation/${itemId}`}>Go to calculation</Link>
-                            : <button type="button" className="sa-action-btn" disabled>Go to calculation</button>}
-                          <span title={!canApproveRow(row) ? approvalBlockedTooltip : undefined}>
-                            <button
-                              type="button"
-                              className="sa-action-btn sa-action-ready"
-                              disabled={!itemId || approvingRowId === itemId || !canApproveRow(row)}
-                              onClick={() => void handleApproveRow(row)}
-                            >
-                              {approvingRowId === itemId ? '...' : 'Approve'}
-                            </button>
-                          </span>
+                            ? <Link to={`/calculation/${itemId}`} title="Go to calculation" className="sa-calc-link"><Calculator size={16} /></Link>
+                            : <span title="Go to calculation"><Calculator size={16} className="sa-action-icon-disabled" /></span>}
                         </div>
                       </td>
                     </tr>
@@ -1082,15 +1067,38 @@ export function SupervisorApprovalPage() {
           queueName={assignTarget.queueName}
           onClose={() => setAssignTarget(null)}
           onAssigned={(workerId, workerName) => {
-            setQueueWorkByEnrolmentId(prev => ({
-              ...prev,
-              [assignTarget.enrolmentId]: {
-                ...prev[assignTarget.enrolmentId],
-                workedBy: workerName,
-                workedOn: new Date().toLocaleDateString(),
-                workerId,
-              },
-            }));
+            const rowsToUpdate = assignTarget.bulkRows ?? [{ itemId: assignTarget.enrolmentId, queueitemId: assignTarget.queueitemId }];
+            setQueueWorkByEnrolmentId(prev => {
+              const next = { ...prev };
+              for (const r of rowsToUpdate) {
+                next[r.itemId] = {
+                  ...next[r.itemId],
+                  workedBy: workerName,
+                  workedOn: new Date().toLocaleDateString(),
+                  workerId,
+                };
+              }
+              return next;
+            });
+            // Apply assignment to remaining queue items (first was handled by the modal)
+            // and update ownerid on all enrolment records
+            void (async () => {
+              try {
+                const remainingRows = assignTarget.bulkRows && assignTarget.bulkRows.length > 1
+                  ? assignTarget.bulkRows.slice(1)
+                  : [];
+                for (const r of remainingRows) {
+                  if (r.queueitemId) await updateQueueItemWorker(r.queueitemId, workerId);
+                }
+                for (const r of rowsToUpdate) {
+                  await Vsi_participantprogramyearsService.update(r.itemId, {
+                    'ownerid@odata.bind': `/systemusers(${workerId})`,
+                  } as unknown as Parameters<typeof Vsi_participantprogramyearsService.update>[1]);
+                }
+              } catch (err) {
+                setActionError(err instanceof Error ? err.message : 'Assign partially failed');
+              }
+            })();
             setAssignTarget(null);
           }}
         />

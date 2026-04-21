@@ -28,6 +28,9 @@ type Props = {
   enrolFilterOp: FilterOperator;
   onEnrolStatusFilterChange: (value: Set<string>) => void;
   onEnrolFilterOperatorChange: (value: FilterOperator) => void;
+  yearOptions: string[];
+  yearFilter: Set<string>;
+  onYearFilterChange: (value: Set<string>) => void;
   sortKey: SortKey | null;
   sortDir: SortDir;
   onSort: (key: SortKey, dir: SortDir) => void;
@@ -35,6 +38,7 @@ type Props = {
   onColumnWidthChange: (key: SortKey) => (width: number | undefined) => void;
   avatarUrls: Record<string, string>;
   coreAppId: string | null;
+  coreBaseUrl: string | null;
 };
 
 export function EnrolmentDataTable({
@@ -60,6 +64,9 @@ export function EnrolmentDataTable({
   enrolFilterOp,
   onEnrolStatusFilterChange,
   onEnrolFilterOperatorChange,
+  yearOptions,
+  yearFilter,
+  onYearFilterChange,
   sortKey,
   sortDir,
   onSort,
@@ -67,9 +74,12 @@ export function EnrolmentDataTable({
   onColumnWidthChange,
   avatarUrls,
   coreAppId,
+  coreBaseUrl,
 }: Props) {
+  const isEmptyState = allRowsCount === 0 || pagedRows.length === 0;
+
   return (
-    <div className="enrolment-table-container">
+    <div className={`enrolment-table-container${isEmptyState ? ' is-empty' : ''}`}>
       <table className="enrolment-table">
         <thead>
           <tr>
@@ -101,6 +111,12 @@ export function EnrolmentDataTable({
                 extra.onFilterOperatorChange = onEnrolFilterOperatorChange;
               }
 
+              if (k === 'year') {
+                extra.filterOptions = yearOptions;
+                extra.selectedFilters = yearFilter;
+                extra.onFilterChange = onYearFilterChange;
+              }
+
               const dragProps = {
                 draggable: true,
                 onDragStart: () => onColDragStart(colIdx),
@@ -111,6 +127,10 @@ export function EnrolmentDataTable({
 
               if (k === 'sharepoint' || k === 'core') {
                 return <th key={k} {...dragProps} style={{ cursor: 'grab' }}>{def.label}</th>;
+              }
+
+              if (k === 'flagged') {
+                return <th key={k} {...dragProps} style={{ cursor: 'grab', width: 28 }}></th>;
               }
 
               return (
@@ -147,7 +167,7 @@ export function EnrolmentDataTable({
                       onChange={() => onToggleSelect(row.vsi_participantprogramyearid)}
                     />
                   </td>
-                  {visibleColumnKeys.map(key => renderCell(key, row, raw, avatarUrls, coreAppId))}
+                  {visibleColumnKeys.map(key => renderCell(key, row, raw, avatarUrls, coreAppId, coreBaseUrl))}
                 </tr>
               );
             })

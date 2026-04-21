@@ -22,6 +22,7 @@ export function EnrolmentQuickFilters({
       <label><input type="checkbox" checked={filters.unverifiedCalc} onChange={() => onToggleFilter('unverifiedCalc')} /> Unverified, EN Calculated</label>
       <label><input type="checkbox" checked={filters.flagged} onChange={() => onToggleFilter('flagged')} /> Flagged files</label>
       <label><input type="checkbox" checked={filters.partnerships} onChange={() => onToggleFilter('partnerships')} /> Partnerships/Combined</label>
+      <label><input type="checkbox" checked={filters.fortyFiveDayLetter} onChange={() => onToggleFilter('fortyFiveDayLetter')} /> 45 day Letter</label>
       <button className="ef-edit-btn" onClick={onOpenEditColumns}>
         <span className="ef-edit-icon">&#x1F5C2;</span> Edit columns
       </button>
