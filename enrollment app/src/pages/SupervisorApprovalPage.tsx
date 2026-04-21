@@ -473,15 +473,13 @@ export function SupervisorApprovalPage() {
   };
 
   const approveRows = async (rows: SupervisorRowView[]) => {
-    const approvedDate = new Date().toISOString();
-
+   
     for (const row of rows) {
       if (!row.itemId) continue;
 
       const enrolmentId = row.itemId;
       const statusUpdateResult = await Vsi_participantprogramyearsService.update(enrolmentId, {
         vsi_taskstatus: 865520003,
-        vsi_taskstatusapproveddate: approvedDate,
       });
       if (!statusUpdateResult.success) {
         throw new Error(statusUpdateResult.error?.message ?? `Failed to set Approved status for ${enrolmentId}.`);

@@ -1371,6 +1371,37 @@
           "x-ms-schema-name": "vsi_previousyearcalculatedenfee_Base",
           "x-ms-read-only": true
         },
+        "vsi_prevyearpartnotverified": {
+          "type": "string",
+          "title": "Prev Year Part not Verified",
+          "x-ms-dataverse-attribute": "vsi_prevyearpartnotverified",
+          "x-ms-dataverse-type": "BooleanType",
+          "x-ms-schema-name": "vsi_PrevYearPartnotVerified",
+          "enum": [
+            "No",
+            "Yes"
+          ],
+          "x-ms-enum-values": [
+            0,
+            1
+          ],
+          "Color": [
+            null,
+            null
+          ],
+          "x-ms-optionsetmetadataid": "451a0e6a-d03d-f111-88b5-7c1e5254c1d5",
+          "x-ms-isGlobal": false,
+          "x-ms-optionsetdisplayname": "Prev Year Part not Verified",
+          "x-ms-optionSetType": "Boolean"
+        },
+        "vsi_prevyearpartnotverifiedname": {
+          "type": "string",
+          "title": "vsi_prevyearpartnotverifiedname",
+          "x-ms-dataverse-attribute": "vsi_prevyearpartnotverifiedname",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "vsi_prevyearpartnotverifiedName",
+          "x-ms-read-only": true
+        },
         "vsi_primaryenrolmenthistory": {
           "type": "string",
           "title": "Primary Enrolment History",
@@ -1801,38 +1832,6 @@
           "x-ms-isGlobal": true,
           "x-ms-optionsetdisplayname": "Enrolment Task Status",
           "x-ms-optionSetType": "Picklist"
-        },
-        "vsi_taskstatusapproveddate": {
-          "type": "string",
-          "title": "Task Status Approved Date",
-          "x-ms-dataverse-attribute": "vsi_taskstatusapproveddate",
-          "x-ms-dataverse-type": "DateTimeType",
-          "x-ms-schema-name": "vsi_TaskStatusApprovedDate"
-        },
-        "vsi_taskstatusapprover": {
-          "type": "string",
-          "title": "Task Status Approver",
-          "x-ms-dataverse-attribute": "vsi_taskstatusapprover",
-          "x-ms-dataverse-type": "LookupType",
-          "x-ms-schema-name": "vsi_TaskStatusApprover"
-        },
-        "vsi_taskstatusapprovername": {
-          "type": "string",
-          "title": "vsi_taskstatusapprovername",
-          "x-ms-dataverse-attribute": "vsi_taskstatusapprovername",
-          "x-ms-dataverse-type": "StringType",
-          "x-ms-schema-name": "vsi_TaskStatusApproverName",
-          "x-ms-read-only": true,
-          "maxLength": 200
-        },
-        "vsi_taskstatusapproveryominame": {
-          "type": "string",
-          "title": "vsi_taskstatusapproveryominame",
-          "x-ms-dataverse-attribute": "vsi_taskstatusapproveryominame",
-          "x-ms-dataverse-type": "StringType",
-          "x-ms-schema-name": "vsi_TaskStatusApproverYomiName",
-          "x-ms-read-only": true,
-          "maxLength": 200
         },
         "vsi_taskstatusname": {
           "type": "string",

@@ -136,7 +136,7 @@ export function EnrolmentDataTable({
               return (
                 <ColumnHeaderMenu
                   key={k}
-                  label={def.label}
+                  label={def?.label || 'N/A'}
                   sortKey={k}
                   currentSortKey={sortKey}
                   currentSortDir={sortDir}

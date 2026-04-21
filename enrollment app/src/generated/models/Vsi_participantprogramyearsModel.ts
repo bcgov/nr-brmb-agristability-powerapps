@@ -130,6 +130,7 @@ export interface Vsi_participantprogramyearsBase {
   vsi_partnershippercents?: string;
   vsi_partnershippins?: string;
   vsi_previousyearcalculatedenfee?: number;
+  vsi_prevyearpartnotverified?: boolean;
   "vsi_PrimaryEnrolmentHistory@odata.bind"?: string;
   "vsi_ProgramYearId@odata.bind": string;
   vsi_programyearmargin1?: number;
@@ -151,8 +152,6 @@ export interface Vsi_participantprogramyearsBase {
   vsi_sendto?: Vsi_participantprogramyearsvsi_sendto;
   vsi_sharepointdocumentfolder?: string;
   vsi_taskstatus?: Vsi_participantprogramyearsvsi_taskstatus;
-  vsi_taskstatusapproveddate?: string;
-  "vsi_TaskStatusApprover@odata.bind"?: string;
   vsi_thirdmonthlateinformationfee?: number;
   vsi_totalfeesowed?: number;
   vsi_totalfeespaid?: number;
@@ -214,6 +213,7 @@ export interface Vsi_participantprogramyears extends Vsi_participantprogramyears
   vsi_participantidname?: string;
   vsi_participantidyominame?: string;
   vsi_previousyearcalculatedenfee_base?: number;
+  vsi_prevyearpartnotverifiedname?: string;
   vsi_primaryenrolmenthistoryname?: string;
   vsi_programyearidname?: string;
   vsi_programyearmargin1_base?: number;
@@ -232,8 +232,6 @@ export interface Vsi_participantprogramyears extends Vsi_participantprogramyears
   vsi_representativeidyominame?: string;
   vsi_secondmonthlateinformationfee_base?: number;
   vsi_sendtoname?: string;
-  vsi_taskstatusapprovername?: string;
-  vsi_taskstatusapproveryominame?: string;
   vsi_taskstatusname?: string;
   vsi_thirdmonthlateinformationfee_base?: number;
   vsi_totalfeesowed_base?: number;
@@ -273,6 +271,4 @@ export interface Vsi_participantprogramyears extends Vsi_participantprogramyears
   _vsi_programyearid_value?: string;
   vsi_representativeid?: object;
   _vsi_representativeid_value?: string;
-  vsi_taskstatusapprover?: object;
-  _vsi_taskstatusapprover_value?: string;
 }
