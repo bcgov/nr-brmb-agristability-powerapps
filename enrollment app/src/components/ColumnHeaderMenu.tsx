@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import type { SortDir, FilterOperator } from '../types/enrollment';
 
 type MenuView = 'main' | 'filter' | 'width';
@@ -45,10 +46,36 @@ export function ColumnHeaderMenu<K extends string = string>({
   onColumnWidthChange,
   dragProps,
 }: ColumnHeaderMenuProps<K>) {
+
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<MenuView>('main');
   const [operatorOpen, setOperatorOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const anchorRef = useRef<HTMLSpanElement>(null);
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
+
+  // Position the menu using the anchor's bounding rect
+  useLayoutEffect(() => {
+    if (open && anchorRef.current && menuRef.current) {
+      const anchorRect = anchorRef.current.getBoundingClientRect();
+      const menu = menuRef.current;
+      const menuHeight = menu.offsetHeight;
+      const menuWidth = menu.offsetWidth;
+      const viewportHeight = window.innerHeight;
+      const viewportWidth = window.innerWidth;
+      let top = anchorRect.bottom + 2;
+      let left = anchorRect.left;
+      // If not enough space below, open upwards
+      if (top + menuHeight > viewportHeight && anchorRect.top - menuHeight > 0) {
+        top = anchorRect.top - menuHeight - 2;
+      }
+      // Clamp left to viewport
+      if (left + menuWidth > viewportWidth) {
+        left = viewportWidth - menuWidth - 8;
+      }
+      setMenuStyle({ position: 'fixed', top, left, zIndex: 1000, minWidth: 200 });
+    }
+  }, [open, view]);
 
   const close = () => { setOpen(false); setView('main'); setOperatorOpen(false); };
 
@@ -71,17 +98,22 @@ export function ColumnHeaderMenu<K extends string = string>({
       onDragOver={dragProps?.onDragOver}
       onDragEnd={dragProps?.onDragEnd}
     >
-      <span className="col-hdr-label" onClick={() => { setOpen(o => !o); setView('main'); }}>
+      <span
+        className="col-hdr-label"
+        ref={anchorRef}
+        onClick={() => { setOpen(o => !o); setView('main'); }}
+        style={{ userSelect: 'none' }}
+      >
         {label}
         {isSorted && <span className="col-hdr-sort-indicator">{currentSortDir === 'asc' ? ' ↑' : ' ↓'}</span>}
         {hasFilter && <span className="col-hdr-filter-indicator" title="Filtered">&#x25BC;</span>}
         <span className="col-hdr-chevron">&#x25BE;</span>
       </span>
 
-      {open && (
+      {open && createPortal(
         <>
           <div className="chm-backdrop" onClick={close} />
-          <div className="chm-panel" ref={menuRef} onClick={e => e.stopPropagation()}>
+          <div className="chm-panel" ref={menuRef} style={menuStyle} onClick={e => e.stopPropagation()}>
             {view === 'main' && (
               <>
                 <button className="chm-item" onClick={() => { onSort(sortKey, 'asc'); close(); }}>
@@ -164,7 +196,8 @@ export function ColumnHeaderMenu<K extends string = string>({
               </div>
             )}
           </div>
-        </>
+        </>,
+        document.body
       )}
     </th>
   );

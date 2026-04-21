@@ -9,41 +9,6 @@ export const Savedqueriescomponentstate = {
   3: 'DeletedUnpublished'
 } as const;
 export type Savedqueriescomponentstate = keyof typeof Savedqueriescomponentstate;
-export const Savedqueriesenablecrosspartition = {
-  0: 'No',
-  1: 'Yes'
-} as const;
-export type Savedqueriesenablecrosspartition = keyof typeof Savedqueriesenablecrosspartition;
-export const Savedqueriesiscustom = {
-  0: 'No',
-  1: 'Yes'
-} as const;
-export type Savedqueriesiscustom = keyof typeof Savedqueriesiscustom;
-export const Savedqueriesisdefault = {
-  0: 'No',
-  1: 'Yes'
-} as const;
-export type Savedqueriesisdefault = keyof typeof Savedqueriesisdefault;
-export const Savedqueriesismanaged = {
-  0: 'Unmanaged',
-  1: 'Managed'
-} as const;
-export type Savedqueriesismanaged = keyof typeof Savedqueriesismanaged;
-export const Savedqueriesisprivate = {
-  0: 'No',
-  1: 'Yes'
-} as const;
-export type Savedqueriesisprivate = keyof typeof Savedqueriesisprivate;
-export const Savedqueriesisquickfindquery = {
-  0: 'No',
-  1: 'Yes'
-} as const;
-export type Savedqueriesisquickfindquery = keyof typeof Savedqueriesisquickfindquery;
-export const Savedqueriesisuserdefined = {
-  0: 'No',
-  1: 'Yes'
-} as const;
-export type Savedqueriesisuserdefined = keyof typeof Savedqueriesisuserdefined;
 export const Savedqueriesstatecode = {
   0: 'Active',
   1: 'Inactive'
@@ -61,18 +26,18 @@ export interface SavedqueriesBase {
   columnsetxml?: string;
   conditionalformatting?: string;
   description?: string;
-  enablecrosspartition?: Savedqueriesenablecrosspartition;
+  enablecrosspartition?: boolean;
   fetchxml?: string;
   introducedversion?: string;
   iscustomizable: string;
-  isdefault: Savedqueriesisdefault;
-  isquickfindquery: Savedqueriesisquickfindquery;
+  isdefault: boolean;
+  isquickfindquery: boolean;
   layoutjson?: string;
   layoutxml?: string;
   name: string;
   offlinesqlquery?: string;
-  queryappusage?: string;
-  querytype: string;
+  queryappusage?: number;
+  querytype: number;
   returnedtypecode: string;
   roledisplayconditionsxml?: string;
   savedqueryid: string;
@@ -88,14 +53,14 @@ export interface Savedqueries extends SavedqueriesBase {
   createdonbehalfbyname?: string;
   createdonbehalfbyyominame?: string;
   enablecrosspartitionname?: string;
-  iscustom: Savedqueriesiscustom;
+  iscustom: boolean;
   iscustomizablename?: string;
   isdefaultname?: string;
-  ismanaged: Savedqueriesismanaged;
+  ismanaged: boolean;
   ismanagedname?: string;
-  isprivate: Savedqueriesisprivate;
+  isprivate: boolean;
   isquickfindqueryname?: string;
-  isuserdefined?: Savedqueriesisuserdefined;
+  isuserdefined?: boolean;
   isuserdefinedname?: string;
   modifiedbyname?: string;
   modifiedbyyominame?: string;
@@ -103,7 +68,7 @@ export interface Savedqueries extends SavedqueriesBase {
   modifiedonbehalfbyname?: string;
   modifiedonbehalfbyyominame?: string;
   organizationidname: string;
-  organizationtaborder?: string;
+  organizationtaborder?: number;
   overwritetime: string;
   queryapi?: string;
   savedqueryidunique: string;
@@ -111,7 +76,7 @@ export interface Savedqueries extends SavedqueriesBase {
   statecodename?: string;
   statuscodename?: string;
   supportingsolutionid?: string;
-  versionnumber?: string;
+  versionnumber?: number;
   createdby?: object;
   _createdby_value?: string;
   createdonbehalfby?: object;

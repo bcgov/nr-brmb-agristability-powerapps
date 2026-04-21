@@ -33,7 +33,7 @@ export interface resourceVisualization {
   // The item's title text
   title?: string;
   // The item's media type (can be used for filtering for a specific file based on a specific type)
-  _type?: string;
+  type?: string;
   // The items media type (can be used for filtering for a specific type of file based on supported IANA Media MIME types)
   mediaType?: string;
   // A URL leading to the preview image for the item
@@ -120,9 +120,9 @@ export interface ScoredEmailAddress {
 
 export interface Phone {
   // The phone number
-  _number?: string;
+  number?: string;
   // The type of phone number. Possible values: home, business, mobile, other, assistant, homeFax, businessFax, otherFax, pager, radio.
-  _type?: string;
+  type?: string;
 }
 
 export interface User {

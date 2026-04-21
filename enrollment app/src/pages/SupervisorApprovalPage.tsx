@@ -7,6 +7,7 @@ import { Vsi_participantprogramyearsvsi_enrolmentstatus } from '../generated/mod
 import { Vsi_participantprogramyearsService } from '../generated/services/Vsi_participantprogramyearsService';
 import { QueueitemsService } from '../generated/services/QueueitemsService';
 import { QueuesService } from '../generated/services/QueuesService';
+import { Office365UsersService } from '../generated/services/Office365UsersService';
 import { ColumnHeaderMenu } from '../components/ColumnHeaderMenu';
 import { calculateVariance, enrolmentStatusClass, formatCurrencyOr, formatVariancePercent, getEnrolmentStatusLabel, getInitials, getTaskStatusLabel, getVarianceClass } from '../utils/helpers';
 import { AssignWorkerModal } from '../components/AssignWorkerModal';

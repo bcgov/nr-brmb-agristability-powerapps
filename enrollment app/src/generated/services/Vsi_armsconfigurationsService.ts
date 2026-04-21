@@ -27,7 +27,7 @@ export class Vsi_armsconfigurationsService {
   public static async update(id: string, changedFields: Partial<Omit<Vsi_armsconfigurationsBase, 'vsi_armsconfigurationid'>>): Promise<IOperationResult<Vsi_armsconfigurations>> {
     const result = await Vsi_armsconfigurationsService.client.updateRecordAsync<Partial<Omit<Vsi_armsconfigurationsBase, 'vsi_armsconfigurationid'>>, Vsi_armsconfigurations>(
       Vsi_armsconfigurationsService.dataSourceName,
-      id.toString(),
+      id,
       changedFields
     );
     return result;
@@ -36,13 +36,13 @@ export class Vsi_armsconfigurationsService {
   public static async delete(id: string): Promise<void> {
     await Vsi_armsconfigurationsService.client.deleteRecordAsync(
       Vsi_armsconfigurationsService.dataSourceName,
-      id.toString());
+      id);
   }
 
   public static async get(id: string, options?: IGetOptions): Promise<IOperationResult<Vsi_armsconfigurations>> {
     const result = await Vsi_armsconfigurationsService.client.retrieveRecordAsync<Vsi_armsconfigurations>(
       Vsi_armsconfigurationsService.dataSourceName,
-      id.toString(),
+      id,
       options
     );
     return result;

@@ -1863,6 +1863,61 @@ export const dataSourcesInfo = {
       }
     }
   },
+  "http_20workflows_5fe39d1efd21a19d13_5f571039b465579741": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "",
+    "dataSourceType": "Connector",
+    "apis": {
+      "BulkENFlow": {
+        "path": "/{connectionId}/powerautomate/automations/direct/workflows/bb9c187d03b84824a69748a31955d94e/triggers/manual/paths/invoke/EnrolmentIds/{EnrolmentIds}/EnrolmentNoticeSentDate/{EnrolmentNoticeSentDate}/EnrolmentFeeDate/{EnrolmentFeeDate}/Merge/{Merge}",
+        "method": "POST",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "EnrolmentIds",
+            "in": "path",
+            "required": true,
+            "type": "array"
+          },
+          {
+            "name": "EnrolmentNoticeSentDate",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "EnrolmentFeeDate",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "Merge",
+            "in": "path",
+            "required": true,
+            "type": "boolean"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "required": false,
+            "type": "integer"
+          }
+        ],
+        "responseInfo": {
+          "default": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  },
   "office365users": {
     "tableId": "",
     "version": "",
