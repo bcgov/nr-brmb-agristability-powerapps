@@ -36,7 +36,7 @@ function normalizeCoreBaseUrl(url: string | null | undefined) {
 
 export function useEnrolmentData() {
   const [rows, setRows] = useState<Vsi_participantprogramyears[]>(() => enrolmentRowsCache || []);
-  const [loading, setLoading] = useState(() => !enrolmentRowsCache);
+  const [loading, setLoading] = useState(() => enrolmentRowsCache === null);
   const [error, setError] = useState<string | null>(null);
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string>>({});
   const [coreAppId, setCoreAppId] = useState<string | null>(() => (coreAppIdLoaded ? coreAppIdCache : null));
@@ -97,7 +97,6 @@ export function useEnrolmentData() {
           'vsi_haspartners',
           'vsi_incombinedfarm',
           'vsi_sharepointdocumentfolder',
-          'vsi_taskstatusapproveddate',
           'modifiedon',
           '_ownerid_value',
           'vsi_enrollmentregionaloffice',
@@ -126,6 +125,7 @@ export function useEnrolmentData() {
         enrolmentRowsCache = allRows;
       }
     } catch (e: unknown) {
+      console.error('Error fetching enrolments:', e);
       if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load enrolments');
     } finally {
       if (!cancelled) setLoading(false);
@@ -134,7 +134,7 @@ export function useEnrolmentData() {
   };
 
   useEffect(() => {
-    if (enrolmentRowsCache) return;
+    if (enrolmentRowsCache !== null) return;
     fetchEnrolments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
