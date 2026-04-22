@@ -30,7 +30,7 @@ export function taskStatusIcon(label: string): React.ReactNode {
     case 'Ready':
       return <span className="ts-icon ts-ready" title="Ready">&#x2714;</span>;
     case 'Approved':
-      return <span className="ts-icon ts-approved" title="Approved">&#x2705;</span>;
+      return <span className="ts-icon ts-approved" title="Approved">&#x2605;</span>;
     default:
       return null;
   }
@@ -87,6 +87,20 @@ export function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/);
   if (parts.length === 1) return parts[0][0].toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+const AVATAR_COLORS = [
+  '#4a6fa5', '#2e7d6b', '#7b4f9e', '#c05621', '#1a6b8a',
+  '#8e3a59', '#3a7d44', '#6b4226', '#5b4fa5', '#a55b2e',
+];
+
+export function getAvatarColor(name: string): string {
+  if (!name) return AVATAR_COLORS[0];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
 
 export function getChoiceOptions(field: string): string[] {

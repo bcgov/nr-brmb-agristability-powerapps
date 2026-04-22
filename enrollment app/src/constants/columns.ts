@@ -58,9 +58,19 @@ export const SORTKEY_TO_FIELD: Record<SortKey, string> = {
   flagged: 'vsi_previousyearcalculatedenfee',
 };
 
-export const FIELD_TO_SORTKEY: Record<string, SortKey> = Object.fromEntries(
-  Object.entries(SORTKEY_TO_FIELD).map(([k, v]) => [v, k as SortKey])
-) as Record<string, SortKey>;
+export const FIELD_TO_SORTKEY: Record<string, SortKey> = {
+  ...Object.fromEntries(
+    Object.entries(SORTKEY_TO_FIELD).map(([k, v]) => [v, k as SortKey])
+  ),
+  // Dataverse layoutxml stores lookup columns using the "name" suffix variant
+  vsi_participantidname: 'producer',
+  vsi_programyearidname: 'year',
+  owneridname: 'owner',
+  // OData _value prefix variants (less common in layoutxml but handle anyway)
+  '_vsi_participantid_value': 'producer',
+  '_vsi_programyearid_value': 'year',
+  '_ownerid_value': 'owner',
+} as Record<string, SortKey>;
 
 export const ACTIVE_VIEW_KEY = 'enrolments-active-view';
 export const USERQUERY_ENTITY = 'vsi_participantprogramyear';

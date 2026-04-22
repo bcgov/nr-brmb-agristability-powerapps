@@ -31,6 +31,9 @@ type Props = {
   yearOptions: string[];
   yearFilter: Set<string>;
   onYearFilterChange: (value: Set<string>) => void;
+  ownerOptions: string[];
+  ownerFilter: Set<string>;
+  onOwnerFilterChange: (value: Set<string>) => void;
   sortKey: SortKey | null;
   sortDir: SortDir;
   onSort: (key: SortKey, dir: SortDir) => void;
@@ -67,6 +70,9 @@ export function EnrolmentDataTable({
   yearOptions,
   yearFilter,
   onYearFilterChange,
+  ownerOptions,
+  ownerFilter,
+  onOwnerFilterChange,
   sortKey,
   sortDir,
   onSort,
@@ -115,6 +121,12 @@ export function EnrolmentDataTable({
                 extra.filterOptions = yearOptions;
                 extra.selectedFilters = yearFilter;
                 extra.onFilterChange = onYearFilterChange;
+              }
+
+              if (k === 'owner') {
+                extra.filterOptions = ownerOptions;
+                extra.selectedFilters = ownerFilter;
+                extra.onFilterChange = onOwnerFilterChange;
               }
 
               const dragProps = {

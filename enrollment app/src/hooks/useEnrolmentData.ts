@@ -181,10 +181,12 @@ export function useSortedAndFilteredRows(
   taskStatusFilter: Set<string>,
   enrolStatusFilter: Set<string>,
   yearFilter: Set<string>,
+  ownerFilter: Set<string>,
   taskFilterOp: FilterOperator,
   enrolFilterOp: FilterOperator,
   advFilterNodes: AdvFilterNode[],
   advLogicOp: LogicOp,
+  currentUserName?: string,
 ) {
   const taskStatusOptions = useMemo(() =>
     Object.values(Vsi_participantprogramyearsvsi_taskstatus) as string[],
@@ -204,6 +206,22 @@ export function useSortedAndFilteredRows(
     }
     return [...seen].sort();
   }, [rows]);
+
+  const ownerOptions = useMemo(() => {
+    const seen = new Set<string>();
+    for (const row of rows) {
+      const raw = row as unknown as Record<string, unknown>;
+      const name = (row.owneridname
+        ?? raw['_ownerid_value@OData.Community.Display.V1.FormattedValue']
+        ?? '') as string;
+      if (name) seen.add(name);
+    }
+    const sorted = [...seen].sort((a, b) => a.localeCompare(b));
+    if (currentUserName && seen.has(currentUserName)) {
+      return [currentUserName, ...sorted.filter(n => n !== currentUserName)];
+    }
+    return sorted;
+  }, [rows, currentUserName]);
 
   const getRowFieldValue = useCallback((row: Vsi_participantprogramyears, field: AdvFilterField): string => {
     const raw = row as unknown as Record<string, unknown>;
@@ -289,6 +307,7 @@ export function useSortedAndFilteredRows(
 
   const isFlaggedByVariance = useCallback((row: Vsi_participantprogramyears): boolean => {
     if (row.vsi_prevyearpartnotverified === true) return true;
+    if (row.vsi_calculatedenfee != null && row.vsi_previousyearcalculatedenfee == null) return true;
     const variance = calculateVariance(row.vsi_calculatedenfee, row.vsi_previousyearcalculatedenfee);
     if (variance == null) return false;
     return Math.abs(variance) > FLAGGED_VARIANCE_THRESHOLD;
@@ -339,6 +358,16 @@ export function useSortedAndFilteredRows(
       });
     }
 
+    if (ownerFilter.size > 0) {
+      result = result.filter(row => {
+        const raw = row as unknown as Record<string, unknown>;
+        const name = (row.owneridname
+          ?? raw['_ownerid_value@OData.Community.Display.V1.FormattedValue']
+          ?? '') as string;
+        return ownerFilter.has(name);
+      });
+    }
+
     const activeAdvNodes = advFilterNodes.filter(isNodeActive);
     if (activeAdvNodes.length > 0) {
       result = result.filter(row => {
@@ -348,7 +377,7 @@ export function useSortedAndFilteredRows(
     }
 
     return result;
-  }, [sortedRows, filters, anyFilter, taskStatusFilter, enrolStatusFilter, yearFilter, taskFilterOp, enrolFilterOp, advFilterNodes, advLogicOp, matchAdvNode, isYesValue, isReadyTaskStatus, isFlaggedByVariance]);
+  }, [sortedRows, filters, anyFilter, taskStatusFilter, enrolStatusFilter, yearFilter, ownerFilter, taskFilterOp, enrolFilterOp, advFilterNodes, advLogicOp, matchAdvNode, isYesValue, isReadyTaskStatus, isFlaggedByVariance]);
 
-  return { filteredRows, taskStatusOptions, enrolStatusOptions, yearOptions };
+  return { filteredRows, taskStatusOptions, enrolStatusOptions, yearOptions, ownerOptions };
 }
