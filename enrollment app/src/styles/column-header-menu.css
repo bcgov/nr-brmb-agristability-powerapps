@@ -73,6 +73,12 @@
 .chm-item:hover {
   background: #f5f5f5;
 }
+.chm-item-clear {
+  color: #1a1a1a;
+}
+.chm-item-clear:hover {
+  background: #f5f5f5;
+}
 .chm-icon {
   display: inline-flex;
   width: 18px;

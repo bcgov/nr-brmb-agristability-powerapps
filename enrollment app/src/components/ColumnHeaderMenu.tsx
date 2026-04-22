@@ -1,5 +1,6 @@
 import { useRef, useState, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { Filter, FilterX } from 'lucide-react';
 import type { SortDir, FilterOperator } from '../types/enrollment';
 
 type MenuView = 'main' | 'filter' | 'width';
@@ -126,8 +127,13 @@ export function ColumnHeaderMenu<K extends string = string>({
                   <>
                     <div className="chm-divider" />
                     <button className="chm-item" onClick={() => setView('filter')}>
-                      <span className="chm-icon">&#x25BD;</span> Filter by
+                      <span className="chm-icon"><Filter size={14} /></span> Filter by
                     </button>
+                    {hasFilter && (
+                      <button className="chm-item chm-item-clear" onClick={() => { onFilterChange!(new Set()); close(); }}>
+                        <span className="chm-icon"><FilterX size={14} /></span> Clear filter
+                      </button>
+                    )}
                   </>
                 )}
                 <div className="chm-divider" />

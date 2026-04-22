@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Flag } from 'lucide-react';
+import sharepointIconUrl from '/icons/sharepoint.svg?url';
 import type { Vsi_participantprogramyears } from '../generated/models/Vsi_participantprogramyearsModel';
 import {
   Vsi_participantprogramyearsvsi_enrollmentregionaloffice,
@@ -8,7 +9,7 @@ import {
 import type { SortKey } from '../types/enrollment';
 import {
   getEnrolmentStatusLabel, getTaskStatusLabel, taskStatusIcon,
-  enrolmentStatusClass, formatCurrency, getInitials,
+  enrolmentStatusClass, formatCurrency, getInitials, getAvatarColor,
   calculateVariance, getVarianceClass, formatVariancePercent,
 } from '../utils/helpers';
 
@@ -24,7 +25,7 @@ export function renderCell(
   coreBaseUrl: string | null,
 ) {
   const resolvedCoreBaseUrl = coreBaseUrl?.trim() || CORE_BASE_URL_FALLBACK;
-  const yesNo = (v: unknown) => v === 1 ? 'Yes' : v === 0 ? 'No' : '';
+  const yesNo = (v: unknown) => (v === 1 || v === true) ? 'Yes' : (v === 0 || v === false) ? 'No' : '';
   const enumLabel = (map: Record<number, string>, v: unknown) =>
     v != null ? map[Number(v)] ?? String(v) : '';
   const fmtDate = (v: unknown) => { if (!v) return ''; try { return new Date(v as string).toLocaleDateString(); } catch { return String(v); } };
@@ -84,7 +85,9 @@ export function renderCell(
     case 'latePay': return <td key={key} className="cell-fee">{formatCurrency(row.vsi_latepaymentfee)}</td>;
     case 'flagged': {
       const variance = calculateVariance(row.vsi_calculatedenfee, row.vsi_previousyearcalculatedenfee);
-      const isFlagged = (variance != null && Math.abs(variance) > 20) || row.vsi_prevyearpartnotverified === true;
+      const isFlagged = (variance != null && Math.abs(variance) > 20)
+        || row.vsi_prevyearpartnotverified === true
+        || (row.vsi_calculatedenfee != null && row.vsi_previousyearcalculatedenfee == null);
       return <td key={key} className="cell-flag">{isFlagged ? <Flag size={14} color="#dc2626" fill="#dc2626" aria-label="Flagged" /> : null}</td>;
     }
     case 'sharepoint':
@@ -93,7 +96,7 @@ export function renderCell(
           {row.vsi_sharepointdocumentfolder
             ? (
               <a href={row.vsi_sharepointdocumentfolder} target="_blank" rel="noopener noreferrer" className="sp-icon-link" title="Open in SharePoint">
-                <img src="/icons/sharepoint.svg" className="sp-icon" alt="SharePoint" aria-hidden="true" />
+                <img src={sharepointIconUrl} className="sp-icon" alt="SharePoint" aria-hidden="true" />
               </a>
             )
             : null}
@@ -108,7 +111,7 @@ export function renderCell(
       const photo = uid ? avatarUrls[uid] : undefined;
       return <td key={key} className="cell-modified-by">{photo
         ? <img className="avatar-circle" src={`data:image/jpeg;base64,${photo}`} alt={name} title={name} />
-        : <span className="avatar-circle" title={name}>{getInitials(name)}</span>}</td>;
+        : <span className="avatar-circle" style={{ background: getAvatarColor(name) }} title={name}>{getInitials(name)}</span>}</td>;
     }
     case 'modifiedOn': return <td key={key}>{fmtDate(row.modifiedon)}</td>;
     case 'regionalOffice': return <td key={key}>{enumLabel(Vsi_participantprogramyearsvsi_enrollmentregionaloffice, row.vsi_enrollmentregionaloffice)}</td>;

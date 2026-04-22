@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type DragEvent } from 'react';
+import { Filter } from 'lucide-react';
 
 import type { SortKey, SortDir, FilterOperator, AdvFilterNode, LogicOp, QuickFilterState } from '../types/enrollment';
 import { DEFAULT_VISIBLE_KEYS } from '../constants/columns';
@@ -297,6 +298,7 @@ export function DashboardHomePage() {
   const [taskStatusFilter, setTaskStatusFilter] = useState<Set<string>>(new Set());
   const [enrolStatusFilter, setEnrolStatusFilter] = useState<Set<string>>(new Set());
   const [yearFilter, setYearFilter] = useState<Set<string>>(new Set());
+  const [ownerFilter, setOwnerFilter] = useState<Set<string>>(new Set());
   const [taskFilterOp, setTaskFilterOp] = useState<FilterOperator>('equals');
   const [enrolFilterOp, setEnrolFilterOp] = useState<FilterOperator>('equals');
   const [advFilterNodes, setAdvFilterNodes] = useState<AdvFilterNode[]>([]);
@@ -327,6 +329,10 @@ export function DashboardHomePage() {
   }, []);
   const setYearFilterAndReset = useCallback((next: Set<string>) => {
     setYearFilter(next);
+    setCurrentPage(1);
+  }, []);
+  const setOwnerFilterAndReset = useCallback((next: Set<string>) => {
+    setOwnerFilter(next);
     setCurrentPage(1);
   }, []);
   const setTaskFilterOpAndReset = useCallback((next: FilterOperator) => {
@@ -372,6 +378,8 @@ export function DashboardHomePage() {
     setEnrolFilterOp: setEnrolFilterOpAndReset,
     setAdvFilterNodes: setAdvFilterNodesAndReset,
     setAdvLogicOp: setAdvLogicOpAndReset,
+    setYearFilter: setYearFilterAndReset,
+    setOwnerFilter: setOwnerFilterAndReset,
   }), [
     setFiltersAndReset,
     setTaskStatusFilterAndReset,
@@ -380,6 +388,8 @@ export function DashboardHomePage() {
     setEnrolFilterOpAndReset,
     setAdvFilterNodesAndReset,
     setAdvLogicOpAndReset,
+    setYearFilterAndReset,
+    setOwnerFilterAndReset,
   ]);
 
   const viewState = useMemo(() => ({
@@ -396,11 +406,32 @@ export function DashboardHomePage() {
     handleDeleteView, handleRenameView, handleResetDefault,
   } = useViews(viewState, viewSetters);
 
+  // Close edit panels whenever a view is applied so they remount with fresh state
+  const closePanels = useCallback(() => {
+    setShowEditColumns(false);
+    setShowEditFilters(false);
+  }, []);
+
+  const handleSelectViewAndClose = useCallback((id: string | null) => {
+    closePanels();
+    handleSelectView(id);
+  }, [closePanels, handleSelectView]);
+
+  const handleResetDefaultAndClose = useCallback(() => {
+    closePanels();
+    handleResetDefault();
+  }, [closePanels, handleResetDefault]);
+
+  const handleDeleteViewAndClose = useCallback((id: string) => {
+    closePanels();
+    handleDeleteView(id);
+  }, [closePanels, handleDeleteView]);
+
   // Sorting & filtering
-  const { filteredRows, taskStatusOptions, enrolStatusOptions, yearOptions } = useSortedAndFilteredRows(
+  const { filteredRows, taskStatusOptions, enrolStatusOptions, yearOptions, ownerOptions } = useSortedAndFilteredRows(
     rows, sortKey, sortDir, filters,
-    taskStatusFilter, enrolStatusFilter, yearFilter, taskFilterOp, enrolFilterOp,
-    advFilterNodes, advLogicOp,
+    taskStatusFilter, enrolStatusFilter, yearFilter, ownerFilter, taskFilterOp, enrolFilterOp,
+    advFilterNodes, advLogicOp, profile?.name ?? undefined,
   );
 
   const searchedRows = useMemo(() => {
@@ -468,8 +499,14 @@ export function DashboardHomePage() {
         {`Welcome${welcomeName ? ` ${welcomeName}` : ''}`}
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
-        <button type="button" onClick={handleRefresh} disabled={loading} style={{ padding: '6px 16px', borderRadius: 4, border: '1px solid #ccc', background: '#f7f7f7', cursor: loading ? 'not-allowed' : 'pointer' }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', marginBottom: 4 }}>
+        <button type="button" className="dash-toolbar-btn" onClick={() => setShowEditColumns(true)}>
+          <span className="ef-edit-icon">&#x1F5C2;</span> Edit columns
+        </button>
+        <button type="button" className="dash-toolbar-btn" onClick={() => setShowEditFilters(true)}>
+          <span className="ef-edit-icon"><Filter size={13} /></span> Edit filters
+        </button>
+        <button type="button" className="dash-toolbar-btn" onClick={handleRefresh} disabled={loading}>
           {loading ? 'Refreshing...' : 'Refresh'}
         </button>
       </div>
@@ -477,11 +514,11 @@ export function DashboardHomePage() {
         views={savedViews}
         activeViewId={activeViewId}
         hasUnsavedChanges={hasUnsavedChanges}
-        onSelectView={handleSelectView}
+        onSelectView={handleSelectViewAndClose}
         onSaveAsNew={handleSaveAsNew}
         onSaveCurrentView={handleSaveCurrentView}
-        onResetDefault={handleResetDefault}
-        onDeleteView={handleDeleteView}
+        onResetDefault={handleResetDefaultAndClose}
+        onDeleteView={handleDeleteViewAndClose}
         onRenameView={handleRenameView}
         viewsLoading={viewsLoading}
       />
@@ -499,14 +536,12 @@ export function DashboardHomePage() {
                 setCurrentPage(1);
               }}
             />
-            <div className="search-row-tools">
-              <button className="ef-edit-btn" onClick={() => setShowEditColumns(true)}>
-                <span className="ef-edit-icon">&#x1F5C2;</span> Edit columns
-              </button>
-              <button className="ef-edit-btn" onClick={() => setShowEditFilters(true)}>
-                <span className="ef-edit-icon">&#x25BD;</span> Edit filters
-              </button>
-            </div>
+            <EnrolmentActionsBar
+              hasSelection={selectedIds.size > 0}
+              onOpenBulkNotices={() => setShowBulkModal(true)}
+              onOpenReferToSupervisor={() => setShowSupervisorModal(true)}
+              onOpenApproveCalculatedFees={() => setShowApproveFeesModal(true)}
+            />
           </div>
 
           <div className="filters-and-actions-row">
@@ -514,11 +549,6 @@ export function DashboardHomePage() {
               filters={filters}
               onToggleFilter={toggleFilter}
               activeAdvancedCount={countActiveNodes(advFilterNodes)}
-            />
-            <EnrolmentActionsBar
-              onOpenBulkNotices={() => setShowBulkModal(true)}
-              onOpenReferToSupervisor={() => setShowSupervisorModal(true)}
-              onOpenApproveCalculatedFees={() => setShowApproveFeesModal(true)}
             />
           </div>
 
@@ -548,6 +578,9 @@ export function DashboardHomePage() {
             yearOptions={yearOptions}
             yearFilter={yearFilter}
             onYearFilterChange={setYearFilterAndReset}
+            ownerOptions={ownerOptions}
+            ownerFilter={ownerFilter}
+            onOwnerFilterChange={setOwnerFilterAndReset}
             sortKey={sortKey}
             sortDir={sortDir}
             onSort={setSort}
@@ -642,6 +675,7 @@ export function DashboardHomePage() {
 
       {showEditColumns && (
         <EditColumnsPanel
+          key={activeViewId ?? 'default'}
           visibleKeys={visibleColumnKeys}
           onApply={(keys) => { setVisibleColumnKeys(keys); setShowEditColumns(false); }}
           onCancel={() => setShowEditColumns(false)}
@@ -649,6 +683,7 @@ export function DashboardHomePage() {
       )}
       {showEditFilters && (
         <EditFiltersPanel
+          key={activeViewId ?? 'default'}
           filterNodes={advFilterNodes}
           logicOp={advLogicOp}
           onApply={(nodes, logic) => {

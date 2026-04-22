@@ -165,15 +165,19 @@
 }
 /* Manual – amber/orange warning */
 .task-manual .ts-icon { background: #fff3e0; color: #e65100; }
-.task-manual { color: #6d4c00; }
+.task-manual { color: #111; }
 
 /* Supervisor – blue search */
 .task-supervisor .ts-icon { background: #e3f2fd; color: #1565c0; }
-.task-supervisor { color: #1565c0; }
+.task-supervisor { color: #111; }
 
 /* Ready – green check */
 .task-ready .ts-icon { background: #e8f5e9; color: #2e7d32; }
-.task-ready { color: #2e7d32; }
+.task-ready { color: #111; }
+
+/* Approved – purple star */
+.task-approved .ts-icon { background: #f3e8ff; color: #7e22ce; font-size: 0.75rem; }
+.task-approved { color: #111; }
 
 /* ── Enrolment status badges ── */
 .enrol-badge {
@@ -245,7 +249,6 @@
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: #4a6fa5;
   color: #fff;
   font-size: 0.6rem;
   font-weight: 600;
@@ -346,6 +349,29 @@
   flex-shrink: 0;
 }
 
+.dash-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 6px 16px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  background: #f7f7f7;
+  color: #333;
+  font-size: 0.84rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.dash-toolbar-btn:hover:not(:disabled) {
+  background: #ebebeb;
+}
+.dash-toolbar-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .dash-btn-secondary {
   display: inline-flex;
   align-items: center;
@@ -360,8 +386,12 @@
   font-family: inherit;
   cursor: pointer;
 }
-.dash-btn-secondary:hover {
+.dash-btn-secondary:hover:not(:disabled) {
   background: #1760c7;
+}
+.dash-btn-secondary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 .dash-btn-primary {
   display: inline-flex;
@@ -377,8 +407,12 @@
   font-family: inherit;
   cursor: pointer;
 }
-.dash-btn-primary:hover {
+.dash-btn-primary:hover:not(:disabled) {
   background: #1760c7;
+}
+.dash-btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 /* ── Modal ── */

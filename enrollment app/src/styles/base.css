@@ -79,8 +79,6 @@
 }
 
 .ts-icon.ts-approved {
-  color: #219653;
-  font-size: 1.2em;
-  vertical-align: middle;
+  /* overridden by dashboard.css */
 }
 

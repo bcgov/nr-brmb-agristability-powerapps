@@ -41,6 +41,8 @@ export function useViews(state: ViewState, setters: {
   setEnrolFilterOp: (op: FilterOperator) => void;
   setAdvFilterNodes: (n: AdvFilterNode[]) => void;
   setAdvLogicOp: (op: LogicOp) => void;
+  setYearFilter: (s: Set<string>) => void;
+  setOwnerFilter: (s: Set<string>) => void;
 }) {
   const [savedViews, setSavedViews] = useState<PersonalView[]>([]);
   const [viewsLoading, setViewsLoading] = useState(true);
@@ -60,10 +62,13 @@ export function useViews(state: ViewState, setters: {
     setters.setFilters({ ...view.filters });
     setters.setTaskStatusFilter(new Set(view.taskStatusFilter));
     setters.setEnrolStatusFilter(new Set(view.enrolStatusFilter));
-    setters.setTaskFilterOp(view.taskFilterOp);
-    setters.setEnrolFilterOp(view.enrolFilterOp);
+    setters.setTaskFilterOp(view.taskFilterOp ?? 'equals');
+    setters.setEnrolFilterOp(view.enrolFilterOp ?? 'equals');
     setters.setAdvFilterNodes(deserializeFilterNodes(view.advFilterNodes as unknown[]));
-    setters.setAdvLogicOp(view.advLogicOp);
+    setters.setAdvLogicOp(view.advLogicOp ?? 'AND');
+    // Reset year/owner filters since they are not part of the saved view payload
+    setters.setYearFilter(new Set());
+    setters.setOwnerFilter(new Set());
   }, [setters, ensureRequiredColumns]);
 
   const captureCurrentSnapshot = useCallback((): ViewPayload => ({
@@ -117,7 +122,7 @@ export function useViews(state: ViewState, setters: {
             filter: `returnedtypecode eq '${USERQUERY_ENTITY}'`,
           }),
           SavedqueriesService.getAll({
-            select: ['savedqueryid', 'name', 'layoutjson', 'layoutxml', 'returnedtypecode', 'querytype'],
+            select: ['savedqueryid', 'name', 'layoutjson', 'layoutxml', 'fetchxml', 'returnedtypecode', 'querytype'],
             filter: `returnedtypecode eq '${USERQUERY_ENTITY}'`,
           }),
         ]);
