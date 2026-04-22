@@ -119,7 +119,6 @@ export function getSortValue(row: Vsi_participantprogramyears, key: SortKey): st
     case 'totalFeesPaid': return Number(row.vsi_totalfeespaid) || 0;
     case 'enrolmentFee': return Number(row.vsi_enrolmentfee) || 0;
     case 'latePay': return Number(row.vsi_latepaymentfee) || 0;
-    case 'core': return row.vsi_participantprogramyearid ?? '';
     case 'modifiedOn': return row.modifiedon ?? '';
     case 'flagged': {
       const v = calculateVariance(row.vsi_calculatedenfee, row.vsi_previousyearcalculatedenfee);

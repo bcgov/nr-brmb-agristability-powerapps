@@ -100,18 +100,24 @@
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  border: 1px solid #d0d6dd;
-  background: #fff;
-  color: #334155;
+  border: none;
+  background: #1d6ee6;
+  color: #fff;
   border-radius: 6px;
   padding: 0.4rem 0.9rem;
   font-size: 0.84rem;
   font-weight: 500;
+  font-family: inherit;
   cursor: pointer;
 }
 
 .sa-btn-secondary:hover {
-  background: #f7f9fc;
+  background: #1760c7;
+}
+
+.sa-btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .sa-btn-primary {
@@ -125,6 +131,7 @@
   padding: 0.4rem 1rem;
   font-size: 0.84rem;
   font-weight: 600;
+  font-family: inherit;
   cursor: pointer;
 }
 

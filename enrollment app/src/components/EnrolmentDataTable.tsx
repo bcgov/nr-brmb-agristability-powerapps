@@ -125,7 +125,7 @@ export function EnrolmentDataTable({
                 className: colDragIdx === colIdx ? 'col-dragging' : undefined,
               };
 
-              if (k === 'sharepoint' || k === 'core') {
+              if (k === 'sharepoint') {
                 return <th key={k} {...dragProps} style={{ cursor: 'grab' }}>{def.label}</th>;
               }
 
