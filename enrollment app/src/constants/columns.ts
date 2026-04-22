@@ -13,7 +13,6 @@ export const ALL_COLUMNS: ColumnDef[] = [
   { key: 'enrolmentFee', label: 'Enrolment Fee', icon: 'number', removable: true },
   { key: 'latePay', label: 'Late Payment Fee', icon: 'number', removable: true },
   { key: 'sharepoint', label: '', icon: 'link', removable: true },
-  { key: 'core', label: '', icon: 'link', removable: true },
   { key: 'owner', label: 'Owner', icon: 'user', removable: true },
   { key: 'modifiedOn', label: 'Modified on', icon: 'date', removable: true },
   { key: 'regionalOffice', label: 'Regional Office', icon: 'list', removable: true },
@@ -29,7 +28,7 @@ export const ALL_COLUMNS: ColumnDef[] = [
 ];
 
 export const DEFAULT_VISIBLE_KEYS: SortKey[] = [
-  'flagged', 'pin', 'producer', 'year', 'taskStatus', 'enrolStatus', 'fee', 'sharepoint', 'core', 'owner', 'modifiedOn',
+  'flagged', 'pin', 'producer', 'year', 'taskStatus', 'enrolStatus', 'fee', 'sharepoint', 'owner', 'modifiedOn',
 ];
 
 export const SORTKEY_TO_FIELD: Record<SortKey, string> = {
@@ -44,7 +43,6 @@ export const SORTKEY_TO_FIELD: Record<SortKey, string> = {
   enrolmentFee: 'vsi_enrolmentfee',
   latePay: 'vsi_latepaymentfee',
   sharepoint: 'vsi_sharepointdocumentfolder',
-  core: 'vsi_participantprogramyearid',
   owner: 'ownerid',
   modifiedOn: 'modifiedon',
   regionalOffice: 'vsi_enrollmentregionaloffice',

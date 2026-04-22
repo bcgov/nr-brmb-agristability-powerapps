@@ -215,8 +215,8 @@
   text-decoration: none;
 }
 .sp-icon {
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   display: block;
 }
 .sp-icon-link:hover .sp-icon {
@@ -341,26 +341,27 @@
 /* ── Bulk Actions ── */
 .enrolment-actions {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
   gap: 0.5rem;
-  margin-bottom: 0.4rem;
+  flex-shrink: 0;
 }
 
 .dash-btn-secondary {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  border: 1px solid #d0d6dd;
-  background: #fff;
-  color: #334155;
+  border: none;
+  background: #1d6ee6;
+  color: #fff;
   border-radius: 6px;
   padding: 0.4rem 0.9rem;
   font-size: 0.84rem;
   font-weight: 500;
+  font-family: inherit;
   cursor: pointer;
 }
 .dash-btn-secondary:hover {
-  background: #f7f9fc;
+  background: #1760c7;
 }
 .dash-btn-primary {
   display: inline-flex;
@@ -373,6 +374,7 @@
   padding: 0.4rem 1rem;
   font-size: 0.84rem;
   font-weight: 600;
+  font-family: inherit;
   cursor: pointer;
 }
 .dash-btn-primary:hover {

@@ -25,6 +25,13 @@ export declare const dataSourcesInfo: {
         dataSourceType: string;
         apis: {};
     };
+    teams: {
+        tableId: string;
+        version: string;
+        primaryKey: string;
+        dataSourceType: string;
+        apis: {};
+    };
     savedqueries: {
         tableId: string;
         version: string;

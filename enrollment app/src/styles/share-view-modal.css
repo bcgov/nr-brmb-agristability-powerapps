@@ -1,0 +1,364 @@
+/* ═══════════════════════════════════════════
+   Share View Modal
+   ═══════════════════════════════════════════ */
+.share-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.share-modal {
+  background: #fff;
+  border-radius: 6px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  width: 660px;
+  max-width: 96vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+}
+
+.share-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem 0.5rem;
+  border-bottom: 1px solid #e4e8ed;
+}
+
+.share-modal-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.share-modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  color: #5a6a7e;
+  padding: 0.25rem 0.4rem;
+  border-radius: 3px;
+}
+
+.share-modal-close:hover {
+  background: #f3f4f6;
+  color: #1a1a1a;
+}
+
+.share-modal-subtitle {
+  font-size: 0.82rem;
+  color: #374151;
+  margin: 0.5rem 1.25rem;
+  line-height: 1.5;
+}
+
+.share-modal-error {
+  margin: 0 1.25rem 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: 4px;
+  color: #dc2626;
+  font-size: 0.82rem;
+}
+
+.share-modal-body {
+  display: flex;
+  flex: 1;
+  overflow: visible;
+  padding: 0.75rem 1.25rem 0;
+  gap: 1rem;
+}
+
+/* Left panel */
+.share-modal-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow: visible;
+  min-width: 0;
+}
+
+.share-field-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.share-search-wrapper {
+  position: relative;
+}
+
+.share-search-input {
+  width: 100%;
+  padding: 0.4rem 2rem 0.4rem 0.6rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 0.88rem;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.share-search-input:focus {
+  border-color: #2b6cb0;
+}
+
+.share-search-icon {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.85rem;
+  color: #9ca3af;
+  pointer-events: none;
+}
+
+.share-search-dropdown {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.share-search-hint {
+  padding: 0.4rem 0.85rem;
+  font-size: 0.78rem;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.share-search-browse {
+  border-bottom: 1px solid #e4e8ed;
+  padding-bottom: 0.4rem;
+  margin-bottom: 0.25rem;
+}
+
+.share-search-result {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.55rem 0.85rem;
+  background: none;
+  border: none;
+  border-bottom: 1px solid #f3f4f6;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+}
+
+.share-search-result:last-child {
+  border-bottom: none;
+}
+
+.share-search-result:hover {
+  background: #f0f4ff;
+}
+
+.share-result-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #2b6cb0;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.82rem;
+  font-weight: 600;
+  flex-shrink: 0;
+  flex-shrink: 0;
+}
+
+.share-result-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.1rem;
+}
+
+.share-result-name {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: #1a1a1a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.share-result-email {
+  font-size: 0.76rem;
+  color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.share-loading,
+.share-empty {
+  font-size: 0.82rem;
+  color: #9ca3af;
+  padding: 0.5rem 0;
+}
+
+.share-principal-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.share-principal-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #4a5568;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.share-principal-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.share-principal-name {
+  font-size: 0.85rem;
+  color: #1a1a1a;
+}
+
+.share-principal-email {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.share-principal-access {
+  font-size: 0.78rem;
+  background: #e4e8ed;
+  color: #374151;
+  padding: 0.1rem 0.5rem;
+  border-radius: 3px;
+}
+
+.share-principal-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  font-size: 0.78rem;
+  padding: 0.15rem 0.3rem;
+  border-radius: 3px;
+}
+
+.share-principal-remove:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+/* Right panel */
+.share-modal-right {
+  width: 220px;
+  flex-shrink: 0;
+  border-left: 1px solid #e4e8ed;
+  padding-left: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.share-permissions-empty {
+  font-size: 0.82rem;
+  color: #9ca3af;
+  text-align: right;
+  margin-top: auto;
+  padding-bottom: 1rem;
+}
+
+.share-permissions-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.share-permissions-user {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.share-permissions-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #374151;
+  margin-top: 0.5rem;
+}
+
+.share-permission-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+}
+
+/* Footer */
+.share-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid #e4e8ed;
+  margin-top: 0.75rem;
+}
+
+.share-btn-share {
+  padding: 0.4rem 1.25rem;
+  background: #2b6cb0;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-family: inherit;
+}
+
+.share-btn-share:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.share-btn-close {
+  padding: 0.4rem 1.25rem;
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-family: inherit;
+}
+
+.share-btn-close:hover {
+  background: #e5e7eb;
+}

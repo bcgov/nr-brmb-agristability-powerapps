@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react';
 import type { PersonalView } from '../types/enrollment';
+import { ShareViewModal } from './ShareViewModal';
+import { ManageViewsModal } from './ManageViewsModal';
 
 export function ViewsMenu({
   views,
@@ -34,6 +36,8 @@ export function ViewsMenu({
   const [search, setSearch] = useState('');
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameText, setRenameText] = useState('');
+  const [sharingView, setSharingView] = useState<PersonalView | null>(null);
+  const [showManageViews, setShowManageViews] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const currentView = views.find(v => v.id === activeViewId);
@@ -56,6 +60,7 @@ export function ViewsMenu({
   };
 
   return (
+    <>
     <div className="vm-wrapper" ref={menuRef}>
       <button className="vm-trigger" onClick={() => setOpen(o => !o)}>
         <span className="vm-title">{displayName}{hasUnsavedChanges ? '*' : ''}</span>
@@ -106,6 +111,7 @@ export function ViewsMenu({
                             <span className="vm-item-name">{v.name}</span>
                           </button>
                           <div className="vm-item-actions">
+                            <button className="vm-item-action" title="Share" onClick={() => { setSharingView(v); setOpen(false); }}>&#x1F4E4;</button>
                             <button className="vm-item-action" title="Rename" onClick={() => { setRenamingId(v.id); setRenameText(v.name); }}>✏</button>
                             <button className="vm-item-action" title="Delete" onClick={() => { onDeleteView(v.id); }}>🗑</button>
                           </div>
@@ -147,6 +153,9 @@ export function ViewsMenu({
                 <button className="vm-action" onClick={() => { onResetDefault(); close(); }}>
                   <span className="vm-action-icon">↩</span> Reset default view
                 </button>
+                <button className="vm-action" onClick={() => { setOpen(false); setShowManageViews(true); }}>
+                  <span className="vm-action-icon">&#x1F4C4;</span> Manage and share views
+                </button>
               </>
             ) : (
               <div className="vm-save-as">
@@ -174,5 +183,20 @@ export function ViewsMenu({
         </>
       )}
     </div>
+    {showManageViews && (
+      <ManageViewsModal
+        views={views}
+        onShare={v => { setShowManageViews(false); setSharingView(v); }}
+        onClose={() => setShowManageViews(false)}
+      />
+    )}
+    {sharingView && (
+      <ShareViewModal
+        viewId={sharingView.id}
+        viewName={sharingView.name}
+        onClose={() => setSharingView(null)}
+      />
+    )}
+  </>
   );
 }

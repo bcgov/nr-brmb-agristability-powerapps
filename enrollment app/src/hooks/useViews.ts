@@ -46,25 +46,14 @@ export function useViews(state: ViewState, setters: {
   const [viewsLoading, setViewsLoading] = useState(true);
   const [activeViewId, setActiveViewId] = useState<string | null>(() => loadActiveViewId());
 
-  const ensureCoreColumn = useCallback((keys: SortKey[]): SortKey[] => {
-    let result = [...keys];
-
-    // Ensure 'core' follows 'sharepoint'
-    if (!result.includes('core')) {
-      const sharepointIndex = result.indexOf('sharepoint');
-      if (sharepointIndex >= 0) result.splice(sharepointIndex + 1, 0, 'core');
-      else result.push('core');
-    }
-
+  const ensureRequiredColumns = useCallback((keys: SortKey[]): SortKey[] => {
     // Ensure 'flagged' is always the first column
-    result = result.filter(k => k !== 'flagged');
-    result.unshift('flagged');
-
-    return result;
+    const without = keys.filter((k): k is Exclude<SortKey, 'flagged'> => k !== 'flagged');
+    return ['flagged', ...without];
   }, []);
 
   const applyView = useCallback((view: ViewPayload) => {
-    setters.setVisibleColumnKeys(ensureCoreColumn(view.visibleColumnKeys));
+    setters.setVisibleColumnKeys(ensureRequiredColumns(view.visibleColumnKeys));
     setters.setColumnWidths({ ...view.columnWidths });
     setters.setSortKey(view.sortKey);
     setters.setSortDir(view.sortDir);
@@ -75,10 +64,10 @@ export function useViews(state: ViewState, setters: {
     setters.setEnrolFilterOp(view.enrolFilterOp);
     setters.setAdvFilterNodes(deserializeFilterNodes(view.advFilterNodes as unknown[]));
     setters.setAdvLogicOp(view.advLogicOp);
-  }, [setters, ensureCoreColumn]);
+  }, [setters, ensureRequiredColumns]);
 
   const captureCurrentSnapshot = useCallback((): ViewPayload => ({
-    visibleColumnKeys: ensureCoreColumn(state.visibleColumnKeys),
+    visibleColumnKeys: ensureRequiredColumns(state.visibleColumnKeys),
     columnWidths: { ...state.columnWidths },
     sortKey: state.sortKey,
     sortDir: state.sortDir,
@@ -89,7 +78,7 @@ export function useViews(state: ViewState, setters: {
     enrolFilterOp: state.enrolFilterOp,
     advFilterNodes: serializeFilterNodes(state.advFilterNodes),
     advLogicOp: state.advLogicOp,
-  }), [state, ensureCoreColumn]);
+  }), [state, ensureRequiredColumns]);
 
   const hasUnsavedChanges = useMemo(() => {
     const current = JSON.stringify(captureCurrentSnapshot());
@@ -97,7 +86,7 @@ export function useViews(state: ViewState, setters: {
       const view = savedViews.find(v => v.id === activeViewId);
       if (!view) return true;
       const savedSnapshot: ViewPayload = {
-        visibleColumnKeys: ensureCoreColumn(view.visibleColumnKeys),
+        visibleColumnKeys: ensureRequiredColumns(view.visibleColumnKeys),
         columnWidths: { ...view.columnWidths },
         sortKey: view.sortKey,
         sortDir: view.sortDir,
@@ -112,7 +101,7 @@ export function useViews(state: ViewState, setters: {
       return current !== JSON.stringify(savedSnapshot);
     }
     return current !== JSON.stringify(DEFAULT_VIEW_SNAPSHOT);
-  }, [captureCurrentSnapshot, activeViewId, savedViews, ensureCoreColumn]);
+  }, [captureCurrentSnapshot, activeViewId, savedViews, ensureRequiredColumns]);
 
   // Load views on mount
   useEffect(() => {

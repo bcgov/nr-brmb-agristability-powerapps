@@ -77,6 +77,10 @@
         "coreconfiguration": {
           "entitySetName": "vsi_armsconfigurations",
           "logicalName": "vsi_armsconfiguration"
+        },
+        "teams": {
+          "entitySetName": "teams",
+          "logicalName": "team"
         }
       },
       "version": "v9.0",

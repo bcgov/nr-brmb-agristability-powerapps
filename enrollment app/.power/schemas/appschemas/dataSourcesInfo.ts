@@ -3572,6 +3572,13 @@ export const dataSourcesInfo = {
     "dataSourceType": "Dataverse",
     "apis": {}
   },
+  "teams": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "teamid",
+    "dataSourceType": "Dataverse",
+    "apis": {}
+  },
   "systemusers": {
     "tableId": "",
     "version": "",

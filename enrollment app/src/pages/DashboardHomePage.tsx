@@ -491,27 +491,36 @@ export function DashboardHomePage() {
 
       {!loading && !error && (
         <>
-          <EnrollmentSearchBar
-            value={searchQuery}
-            onChange={(nextValue) => {
-              setSearchQuery(nextValue);
-              setCurrentPage(1);
-            }}
-          />
+          <div className="search-and-tools-row">
+            <EnrollmentSearchBar
+              value={searchQuery}
+              onChange={(nextValue) => {
+                setSearchQuery(nextValue);
+                setCurrentPage(1);
+              }}
+            />
+            <div className="search-row-tools">
+              <button className="ef-edit-btn" onClick={() => setShowEditColumns(true)}>
+                <span className="ef-edit-icon">&#x1F5C2;</span> Edit columns
+              </button>
+              <button className="ef-edit-btn" onClick={() => setShowEditFilters(true)}>
+                <span className="ef-edit-icon">&#x25BD;</span> Edit filters
+              </button>
+            </div>
+          </div>
 
-          <EnrolmentQuickFilters
-            filters={filters}
-            onToggleFilter={toggleFilter}
-            onOpenEditColumns={() => setShowEditColumns(true)}
-            onOpenEditFilters={() => setShowEditFilters(true)}
-            activeAdvancedCount={countActiveNodes(advFilterNodes)}
-          />
-
-          <EnrolmentActionsBar
-            onOpenBulkNotices={() => setShowBulkModal(true)}
-            onOpenReferToSupervisor={() => setShowSupervisorModal(true)}
-            onOpenApproveCalculatedFees={() => setShowApproveFeesModal(true)}
-          />
+          <div className="filters-and-actions-row">
+            <EnrolmentQuickFilters
+              filters={filters}
+              onToggleFilter={toggleFilter}
+              activeAdvancedCount={countActiveNodes(advFilterNodes)}
+            />
+            <EnrolmentActionsBar
+              onOpenBulkNotices={() => setShowBulkModal(true)}
+              onOpenReferToSupervisor={() => setShowSupervisorModal(true)}
+              onOpenApproveCalculatedFees={() => setShowApproveFeesModal(true)}
+            />
+          </div>
 
           <EnrolmentDataTable
             allRowsCount={rows.length}
