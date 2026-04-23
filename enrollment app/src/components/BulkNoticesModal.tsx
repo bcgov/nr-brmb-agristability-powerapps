@@ -20,7 +20,7 @@ export function BulkNoticesModal({
   const [bulkMergedPdf, setBulkMergedPdf] = useState(true);
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
   const [bulkError, setBulkError] = useState<string | null>(null);
-  const [bulkResult, setBulkResult] = useState<any>(null);
+  const [bulkResult, setBulkResult] = useState<unknown>(null);
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -64,7 +64,6 @@ export function BulkNoticesModal({
                 setBulkResult(result);
               } catch (err) {
                 setBulkError(err instanceof Error ? err.message : 'Workflow failed');
-                // eslint-disable-next-line no-console
                 console.error('BulkENFlow error:', err);
               } finally {
                 setBulkSubmitting(false);
@@ -75,7 +74,7 @@ export function BulkNoticesModal({
           </button>
           <button className="btn-cancel" disabled={bulkSubmitting} onClick={onClose}>Cancel</button>
           {bulkError && <span className="modal-error">{bulkError}</span>}
-          {bulkResult && (
+          {bulkResult !== null && (
             <pre className="modal-api-result" style={{ maxHeight: 200, overflow: 'auto', marginTop: 8, background: '#f8f8f8', padding: 8, borderRadius: 4 }}>
               {JSON.stringify(bulkResult, null, 2)}
             </pre>

@@ -17,11 +17,13 @@ export function ApproveCalculatedFeesModal({
   rows,
   onClose,
   onComplete,
+  onError,
 }: {
   selectedIds: Set<string>;
   rows: Vsi_participantprogramyears[];
   onClose: () => void;
   onComplete: (updates: ApprovedEnrolmentUpdate[]) => void;
+  onError?: (message: string) => void;
 }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +55,7 @@ export function ApproveCalculatedFeesModal({
               await QueueitemsService.delete(qi.queueitemid);
             }
           }
-        } catch (err) {
+        } catch {
           // Ignore if not found, continue
         }
         // Set task status to Approved
@@ -75,7 +77,9 @@ export function ApproveCalculatedFeesModal({
       onComplete(updates);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to approve calculated fees');
+      const msg = err instanceof Error ? err.message : 'Failed to approve calculated fees';
+      setError(msg);
+      onError?.(msg);
     } finally {
       setSubmitting(false);
     }

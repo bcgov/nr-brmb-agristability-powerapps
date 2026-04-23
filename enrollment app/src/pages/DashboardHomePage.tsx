@@ -13,6 +13,8 @@ import { EditFiltersPanel } from '../components/EditFiltersPanel';
 import { BulkNoticesModal } from '../components/BulkNoticesModal';
 import { ReferToSupervisorModal } from '../components/ReferToSupervisorModal';
 import { ApproveCalculatedFeesModal } from '../components/ApproveCalculatedFeesModal';
+import { Toast, nextToastId } from '../components/Toast';
+import type { ToastMessage } from '../components/Toast';
 import { EnrollmentSearchBar } from '../components/EnrollmentSearchBar';
 import { EnrolmentQuickFilters } from '../components/EnrolmentQuickFilters';
 import { EnrolmentDataTable } from '../components/EnrolmentDataTable';
@@ -274,11 +276,7 @@ export function DashboardHomePage() {
       active = false;
     };
   }, []);
-  // Refresh handler for manual reload
-  const handleRefresh = useCallback(() => {
-    if (typeof fetchEnrolments === 'function') fetchEnrolments();
-    if (typeof fetchCoreAppId === 'function') fetchCoreAppId();
-  }, [fetchEnrolments, fetchCoreAppId]);
+  // Refresh handler is defined after useViews so reloadViews is available
 
   // Column & sort state
   const [visibleColumnKeys, setVisibleColumnKeys] = useState<SortKey[]>([...DEFAULT_VISIBLE_KEYS]);
@@ -314,6 +312,14 @@ export function DashboardHomePage() {
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [showSupervisorModal, setShowSupervisorModal] = useState(false);
   const [showApproveFeesModal, setShowApproveFeesModal] = useState(false);
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const addToast = useCallback((message: string, type: ToastMessage['type'] = 'success') => {
+    setToasts(prev => [...prev, { id: nextToastId(), message, type }]);
+  }, []);
+  const dismissToast = useCallback((id: number) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
 
   const setFiltersAndReset = useCallback((next: QuickFilterState) => {
     setFilters(next);
@@ -401,9 +407,9 @@ export function DashboardHomePage() {
     advFilterNodes, advLogicOp]);
 
   const {
-    savedViews, viewsLoading, activeViewId, hasUnsavedChanges,
+    savedViews, viewsLoading, activeViewId, hasUnsavedChanges, saveError,
     handleSelectView, handleSaveAsNew, handleSaveCurrentView,
-    handleDeleteView, handleRenameView, handleResetDefault,
+    handleDeleteView, handleRenameView, handleResetDefault, reloadViews,
   } = useViews(viewState, viewSetters);
 
   // Close edit panels whenever a view is applied so they remount with fresh state
@@ -411,6 +417,13 @@ export function DashboardHomePage() {
     setShowEditColumns(false);
     setShowEditFilters(false);
   }, []);
+
+  // Refresh handler for manual reload
+  const handleRefresh = useCallback(() => {
+    if (typeof fetchEnrolments === 'function') fetchEnrolments();
+    if (typeof fetchCoreAppId === 'function') fetchCoreAppId();
+    reloadViews(false);
+  }, [fetchEnrolments, fetchCoreAppId, reloadViews]);
 
   const handleSelectViewAndClose = useCallback((id: string | null) => {
     closePanels();
@@ -476,6 +489,25 @@ export function DashboardHomePage() {
   };
 
   const toggleFilter = (key: keyof QuickFilterState) => {
+    // When toggling the partnerships filter ON, switch to the matching system view.
+    // When toggling it OFF, reset to the default view.
+    if (key === 'partnerships') {
+      const isCurrentlyOn = filters.partnerships;
+      if (!isCurrentlyOn) {
+        const partnerView = savedViews.find(
+          v => v.source === 'system' && /partnership|combined/i.test(v.name)
+        );
+        if (partnerView) {
+          handleSelectView(partnerView.id);
+          setCurrentPage(1);
+          return; // handleSelectView sets filters via applyView — don't also call setFilters
+        }
+      } else {
+        handleResetDefault();
+        setCurrentPage(1);
+        return;
+      }
+    }
     setFilters(current => ({ ...current, [key]: !current[key] }));
     setCurrentPage(1);
   };
@@ -490,6 +522,7 @@ export function DashboardHomePage() {
     });
 
   return (
+    <>
     <div className="enrolment-wrapper">
       <div
         className="dashboard-welcome"
@@ -522,6 +555,7 @@ export function DashboardHomePage() {
         onRenameView={handleRenameView}
         viewsLoading={viewsLoading}
       />
+      {saveError && <p className="enrolment-error">{saveError}</p>}
 
       {loading && <p className="enrolment-loading">Loading…</p>}
       {error && <p className="enrolment-error">{error}</p>}
@@ -659,7 +693,6 @@ export function DashboardHomePage() {
                 setRows(prev => prev.map(r => {
                   const update = updatesById.get(r.vsi_participantprogramyearid);
                   if (!update) return r;
-
                   return {
                     ...r,
                     vsi_taskstatus: 865520003,
@@ -667,7 +700,9 @@ export function DashboardHomePage() {
                   };
                 }));
                 setSelectedIds(new Set());
+                addToast(`${updates.length} enrolment${updates.length === 1 ? '' : 's'} approved successfully.`);
               }}
+              onError={(msg) => addToast(msg, 'error')}
             />
           )}
         </>
@@ -713,9 +748,13 @@ export function DashboardHomePage() {
                 : r
             ));
             setSelectedIds(new Set());
+            addToast(`${updatedIds.length} enrolment${updatedIds.length === 1 ? '' : 's'} referred to supervisor.`);
           }}
+          onError={(msg) => addToast(msg, 'error')}
         />
       )}
     </div>
+      <Toast toasts={toasts} onDismiss={dismissToast} />
+    </>
   );
 }

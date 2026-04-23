@@ -209,7 +209,6 @@ export function AssignWorkerModal({
       }
     })();
     return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queueId, queueitemId]);
 
   const handleSearch = async () => {

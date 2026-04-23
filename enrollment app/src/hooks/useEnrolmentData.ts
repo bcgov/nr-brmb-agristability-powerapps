@@ -137,7 +137,6 @@ export function useEnrolmentData() {
   useEffect(() => {
     if (enrolmentRowsCache !== null) return;
     fetchEnrolments();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -234,6 +233,8 @@ export function useSortedAndFilteredRows(
           ?? raw['_vsi_participantid_value@OData.Community.Display.V1.FormattedValue']
           ?? '') as string;
       case 'fee': return String(row.vsi_calculatedenfee ?? '');
+      case 'hasPartners': return row.vsi_haspartners === true ? 'Yes' : 'No';
+      case 'inCombinedFarm': return row.vsi_incombinedfarm === true ? 'Yes' : 'No';
     }
   }, []);
 

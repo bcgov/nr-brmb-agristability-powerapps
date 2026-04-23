@@ -11,11 +11,13 @@ export function ReferToSupervisorModal({
   rows,
   onClose,
   onComplete,
+  onError,
 }: {
   selectedIds: Set<string>;
   rows: Vsi_participantprogramyears[];
   onClose: () => void;
   onComplete: (updatedIds: string[]) => void;
+  onError?: (message: string) => void;
 }) {
 
   const [submitting, setSubmitting] = useState(false);
@@ -113,7 +115,9 @@ export function ReferToSupervisorModal({
       onComplete(selectedRows.map(r => r.vsi_participantprogramyearid));
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to refer to supervisor');
+      const msg = err instanceof Error ? err.message : 'Failed to refer to supervisor';
+      setError(msg);
+      onError?.(msg);
     } finally {
       setSubmitting(false);
     }
