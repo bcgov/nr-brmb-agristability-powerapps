@@ -74,6 +74,7 @@ export function ColumnHeaderMenu<K extends string = string>({
       if (left + menuWidth > viewportWidth) {
         left = viewportWidth - menuWidth - 8;
       }
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMenuStyle({ position: 'fixed', top, left, zIndex: 1000, minWidth: 200 });
     }
   }, [open, view]);

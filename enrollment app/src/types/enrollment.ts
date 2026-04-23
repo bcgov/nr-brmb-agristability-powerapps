@@ -21,7 +21,7 @@ export interface ColumnDef {
 
 export type FilterOperator = 'equals' | 'notEquals';
 
-export type AdvFilterField = 'taskStatus' | 'enrolStatus' | 'pin' | 'producer' | 'fee';
+export type AdvFilterField = 'taskStatus' | 'enrolStatus' | 'pin' | 'producer' | 'fee' | 'hasPartners' | 'inCombinedFarm';
 export type AdvFilterOp = 'equals' | 'notEquals' | 'contains' | 'notContains' | 'beginsWith' | 'endsWith';
 export type LogicOp = 'AND' | 'OR';
 

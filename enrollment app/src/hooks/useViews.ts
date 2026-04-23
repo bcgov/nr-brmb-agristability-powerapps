@@ -12,7 +12,7 @@ import type {
 import { DEFAULT_VIEW_SNAPSHOT, USERQUERY_ENTITY, USERQUERY_TYPE } from '../constants/columns';
 import { UserqueriesService } from '../generated/services/UserqueriesService';
 import { SavedqueriesService } from '../generated/services/SavedqueriesService';
-import { generateLayoutXml, userqueryToView, savedqueryToView, loadActiveViewId, saveActiveViewId } from '../utils/viewSerializer';
+import { generateLayoutXml, generateFetchXml, userqueryToView, savedqueryToView, loadActiveViewId, saveActiveViewId, resolveEntityObjectTypeCode, setEntityObjectTypeCode } from '../utils/viewSerializer';
 import { serializeFilterNodes, deserializeFilterNodes } from '../utils/filterTree';
 
 export interface ViewState {
@@ -47,6 +47,7 @@ export function useViews(state: ViewState, setters: {
   const [savedViews, setSavedViews] = useState<PersonalView[]>([]);
   const [viewsLoading, setViewsLoading] = useState(true);
   const [activeViewId, setActiveViewId] = useState<string | null>(() => loadActiveViewId());
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const ensureRequiredColumns = useCallback((keys: SortKey[]): SortKey[] => {
     // Ensure 'flagged' is always the first column
@@ -100,7 +101,7 @@ export function useViews(state: ViewState, setters: {
         enrolStatusFilter: [...view.enrolStatusFilter],
         taskFilterOp: view.taskFilterOp,
         enrolFilterOp: view.enrolFilterOp,
-        advFilterNodes: [...view.advFilterNodes],
+        advFilterNodes: serializeFilterNodes(deserializeFilterNodes(view.advFilterNodes as unknown[])),
         advLogicOp: view.advLogicOp,
       };
       return current !== JSON.stringify(savedSnapshot);
@@ -108,55 +109,76 @@ export function useViews(state: ViewState, setters: {
     return current !== JSON.stringify(DEFAULT_VIEW_SNAPSHOT);
   }, [captureCurrentSnapshot, activeViewId, savedViews, ensureRequiredColumns]);
 
-  // Load views on mount
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        let personal: PersonalView[] = [];
-        let system: PersonalView[] = [];
+  const loadViews = useCallback(async (applyActiveView = false) => {
+    setViewsLoading(true);
+    try {
+      let personal: PersonalView[] = [];
+      let system: PersonalView[] = [];
 
-        const [uqResult, sqResult] = await Promise.allSettled([
-          UserqueriesService.getAll({
-            select: ['userqueryid', 'name', 'layoutjson', 'layoutxml', 'returnedtypecode', 'querytype'],
-            filter: `returnedtypecode eq '${USERQUERY_ENTITY}'`,
-          }),
-          SavedqueriesService.getAll({
-            select: ['savedqueryid', 'name', 'layoutjson', 'layoutxml', 'fetchxml', 'returnedtypecode', 'querytype'],
-            filter: `returnedtypecode eq '${USERQUERY_ENTITY}'`,
-          }),
-        ]);
-        if (cancelled) return;
+      const [uqResult, sqResult] = await Promise.allSettled([
+        UserqueriesService.getAll({
+          select: ['userqueryid', 'name', 'layoutjson', 'layoutxml', 'returnedtypecode', 'querytype'],
+          filter: `returnedtypecode eq '${USERQUERY_ENTITY}'`,
+        }),
+        SavedqueriesService.getAll({
+          select: ['savedqueryid', 'name', 'layoutjson', 'layoutxml', 'fetchxml', 'returnedtypecode', 'querytype'],
+          filter: `returnedtypecode eq '${USERQUERY_ENTITY}'`,
+        }),
+      ]);
 
-        if (uqResult.status === 'fulfilled') {
-          personal = (uqResult.value.data ?? []).map(uq => userqueryToView(uq));
-        } else {
-          console.error('[Views] Failed to load personal views:', uqResult.reason);
+      // Ensure the entity ObjectTypeCode is resolved before we might need it for
+      // layoutxml generation. Does nothing if already resolved from a previous call.
+      await resolveEntityObjectTypeCode();
+
+      if (uqResult.status === 'fulfilled') {
+        personal = (uqResult.value.data ?? []).map(uq => userqueryToView(uq));
+      } else {
+        console.error('[Views] Failed to load personal views:', uqResult.reason);
+      }
+      if (sqResult.status === 'fulfilled') {
+        const allSq = sqResult.value.data ?? [];
+        // Opportunistically extract the integer object type code from the first
+        // record if the SDK returns the raw OData numeric value.
+        if (allSq.length > 0) {
+          const rawCode = (allSq[0] as unknown as Record<string, unknown>)['returnedtypecode'];
+          const num = Number(rawCode);
+          if (!isNaN(num) && num > 0) {
+            setEntityObjectTypeCode(num);
+            console.log('[Views] Extracted ObjectTypeCode from savedquery OData response:', num);
+          }
         }
-        if (sqResult.status === 'fulfilled') {
-          const mainViews = (sqResult.value.data ?? []).filter(sq => String(sq.querytype) === '0');
-          system = mainViews.map(savedqueryToView);
-        } else {
-          console.error('[Views] Failed to load system views:', sqResult.reason);
-        }
+        const mainViews = allSq.filter(sq => String(sq.querytype) === '0');
+        system = mainViews.map(savedqueryToView);
+      } else {
+        console.error('[Views] Failed to load system views:', sqResult.reason);
+      }
 
-        const allViews = [...personal, ...system];
-        setSavedViews(allViews);
+      const allViews = [...personal, ...system];
+      setSavedViews(allViews);
 
+      if (applyActiveView) {
         const lastId = loadActiveViewId();
         if (lastId) {
           const match = allViews.find(v => v.id === lastId);
           if (match) applyView(match);
           else { setActiveViewId(null); saveActiveViewId(null); }
         }
-      } catch (err) {
-        console.error('[Views] Unexpected error loading views:', err);
-      } finally {
-        if (!cancelled) setViewsLoading(false);
       }
-    })();
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
+      return allViews;
+    } catch (err) {
+      console.error('[Views] Unexpected error loading views:', err);
+      return [];
+    } finally {
+      setViewsLoading(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Load views on mount
+  useEffect(() => {
+    loadViews(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSelectView = useCallback((id: string | null) => {
@@ -171,28 +193,62 @@ export function useViews(state: ViewState, setters: {
   }, [savedViews, applyView]);
 
   const handleSaveAsNew = useCallback(async (name: string) => {
+    setSaveError(null);
     const snap = captureCurrentSnapshot();
+    // Only send fields that Dataverse accepts on create.
+    // statecode/statuscode are managed by Dataverse and must NOT be included.
     const payload = {
       name,
       returnedtypecode: USERQUERY_ENTITY,
       querytype: USERQUERY_TYPE,
-      fetchxml: '<fetch><entity name="vsi_participantprogramyear"/></fetch>',
+      fetchxml: generateFetchXml(snap.visibleColumnKeys, snap.advFilterNodes as unknown[]),
       layoutjson: JSON.stringify(snap),
       layoutxml: generateLayoutXml(snap.visibleColumnKeys, snap.columnWidths),
     };
     try {
+      console.log('[Views] Creating new view:', name);
       const result = await UserqueriesService.create(payload as unknown as Parameters<typeof UserqueriesService.create>[0]);
+      console.log('[Views] Create result — success:', result.success, 'data:', result.data, 'error:', result.error);
+
+      // The SDK returns { success: false, error } without throwing on API errors.
+      // Must check result.success explicitly since a failed create does not throw.
+      if (!result.success) {
+        const errMsg = result.error instanceof Error
+          ? result.error.message
+          : (result.error as { message?: string })?.message ?? JSON.stringify(result.error);
+        console.error('[Views] Create failed (non-throwing):', result.error);
+        setSaveError(`Failed to save view: ${errMsg}`);
+        return;
+      }
+
       const created = result.data;
-      if (created) {
-        const newView: PersonalView = { id: created.userqueryid, name, source: 'personal', ...snap };
-        setSavedViews(prev => [...prev, newView]);
-        setActiveViewId(newView.id);
-        saveActiveViewId(newView.id);
+      // Reload views from Dataverse to ensure the new view appears regardless
+      // of whether result.data is populated (SDK typically returns null on create)
+      const allViews = await loadViews(false);
+      const newId = created?.userqueryid;
+      if (newId) {
+        const newView = allViews.find(v => v.id === newId) ?? { id: newId, name, source: 'personal' as const, ...snap };
+        setSavedViews(prev => prev.some(v => v.id === newId) ? prev : [...prev, newView]);
+        setActiveViewId(newId);
+        saveActiveViewId(newId);
+        applyView(newView);
+      } else {
+        // newId not in result — look for the newly named view in the reloaded list
+        const match = allViews.find(v => v.name === name && v.source === 'personal');
+        if (match) {
+          setActiveViewId(match.id);
+          saveActiveViewId(match.id);
+          applyView(match);
+        } else {
+          console.warn('[Views] New view not found after reload — name:', name, 'all personal:', allViews.filter(v => v.source === 'personal').map(v => v.name));
+        }
       }
     } catch (e) {
-      console.error('Failed to create view:', e);
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error('[Views] Failed to create view:', e);
+      setSaveError(`Failed to save view: ${msg}`);
     }
-  }, [captureCurrentSnapshot]);
+  }, [captureCurrentSnapshot, loadViews, applyView]);
 
   const handleSaveCurrentView = useCallback(async () => {
     if (!activeViewId) return;
@@ -203,12 +259,14 @@ export function useViews(state: ViewState, setters: {
       await UserqueriesService.update(activeViewId, {
         layoutjson: JSON.stringify(snap),
         layoutxml: generateLayoutXml(snap.visibleColumnKeys, snap.columnWidths),
+        fetchxml: generateFetchXml(snap.visibleColumnKeys, snap.advFilterNodes as unknown[]),
       });
       setSavedViews(prev => prev.map(v => v.id === activeViewId ? { ...v, ...snap } : v));
+      applyView({ ...view, ...snap });
     } catch (e) {
       console.error('Failed to update view:', e);
     }
-  }, [activeViewId, savedViews, captureCurrentSnapshot]);
+  }, [activeViewId, savedViews, captureCurrentSnapshot, applyView]);
 
   const handleDeleteView = useCallback(async (id: string) => {
     const view = savedViews.find(v => v.id === id);
@@ -249,11 +307,13 @@ export function useViews(state: ViewState, setters: {
     viewsLoading,
     activeViewId,
     hasUnsavedChanges,
+    saveError,
     handleSelectView,
     handleSaveAsNew,
     handleSaveCurrentView,
     handleDeleteView,
     handleRenameView,
     handleResetDefault,
+    reloadViews: loadViews,
   };
 }

@@ -96,6 +96,8 @@ export const ADV_FIELD_LABELS: Record<string, string> = {
   pin: 'PIN',
   producer: 'Producer name',
   fee: 'Calculated fee',
+  hasPartners: 'Has Partners',
+  inCombinedFarm: 'In Combined Farm',
 };
 
 export const ADV_FIELD_OPTIONS: Record<string, 'choice' | 'text'> = {
@@ -104,6 +106,8 @@ export const ADV_FIELD_OPTIONS: Record<string, 'choice' | 'text'> = {
   pin: 'text',
   producer: 'text',
   fee: 'text',
+  hasPartners: 'choice',
+  inCombinedFarm: 'choice',
 };
 
 export const ADV_OP_LABELS: Record<string, string> = {

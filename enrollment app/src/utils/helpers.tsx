@@ -106,6 +106,7 @@ export function getAvatarColor(name: string): string {
 export function getChoiceOptions(field: string): string[] {
   if (field === 'taskStatus') return Object.values(Vsi_participantprogramyearsvsi_taskstatus) as string[];
   if (field === 'enrolStatus') return Object.values(Vsi_participantprogramyearsvsi_enrolmentstatus) as string[];
+  if (field === 'hasPartners' || field === 'inCombinedFarm') return ['Yes', 'No'];
   return [];
 }
 

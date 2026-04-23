@@ -1,5 +1,5 @@
 import { resolveCurrentSystemUser } from '../utils/currentUser';
-import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { Filter, Calculator, ClipboardList, LogOut, UserPlus, CircleCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { Vsi_participantprogramyears } from '../generated/models/Vsi_participantprogramyearsModel';
@@ -11,6 +11,8 @@ import { Office365UsersService } from '../generated/services/Office365UsersServi
 import { ColumnHeaderMenu } from '../components/ColumnHeaderMenu';
 import { calculateVariance, enrolmentStatusClass, formatCurrencyOr, formatVariancePercent, getEnrolmentStatusLabel, getInitials, getTaskStatusLabel, getVarianceClass } from '../utils/helpers';
 import { AssignWorkerModal } from '../components/AssignWorkerModal';
+import { Toast, nextToastId } from '../components/Toast';
+import type { ToastMessage } from '../components/Toast';
 import type { FilterOperator, SortDir } from '../types/enrollment';
 import '../styles/supervisor-approval.css';
 
@@ -143,6 +145,10 @@ export function SupervisorApprovalPage() {
   const [pickingBulk, setPickingBulk] = useState(false);
   const [releasingBulk, setReleasingBulk] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const addToast = (message: string, type: ToastMessage['type'] = 'success') =>
+    setToasts(prev => [...prev, { id: nextToastId(), message, type }]);
+  const dismissToast = (id: number) => setToasts(prev => prev.filter(t => t.id !== id));
   const [columnOrder, setColumnOrder] = useState<SupervisorColumnKey[]>(DEFAULT_COLUMN_ORDER);
   const [colDragIdx, setColDragIdx] = useState<number | null>(null);
   const [sortKey, setSortKey] = useState<SupervisorColumnKey | null>(null);
@@ -503,8 +509,12 @@ export function SupervisorApprovalPage() {
       const ownershipError = getApprovalOwnershipError(rowsToApprove);
       if (ownershipError) throw new Error(ownershipError);
       await approveRows(rowsToApprove);
+      setSelectedIds(new Set());
+      addToast(`${rowsToApprove.length} enrolment${rowsToApprove.length === 1 ? '' : 's'} approved successfully.`);
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Approve selected failed');
+      const msg = err instanceof Error ? err.message : 'Approve selected failed';
+      setActionError(msg);
+      addToast(msg, 'error');
     } finally {
       setApprovingBulk(false);
     }
@@ -530,8 +540,12 @@ export function SupervisorApprovalPage() {
           },
         }));
       }
+      addToast(`${rowsToPick.length} enrolment${rowsToPick.length === 1 ? '' : 's'} picked.`);
+      setSelectedIds(new Set());
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Pick failed');
+      const msg = err instanceof Error ? err.message : 'Pick failed';
+      setActionError(msg);
+      addToast(msg, 'error');
     } finally {
       setPickingBulk(false);
     }
@@ -556,8 +570,12 @@ export function SupervisorApprovalPage() {
           },
         }));
       }
+      addToast(`${rowsToRelease.length} enrolment${rowsToRelease.length === 1 ? '' : 's'} released.`);
+      setSelectedIds(new Set());
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Release failed');
+      const msg = err instanceof Error ? err.message : 'Release failed';
+      setActionError(msg);
+      addToast(msg, 'error');
     } finally {
       setReleasingBulk(false);
     }
@@ -651,7 +669,7 @@ export function SupervisorApprovalPage() {
     });
   }, [items, queueWorkByEnrolmentId]);
 
-  const filterValue = (row: SupervisorRowView, key: SupervisorColumnKey): string => {
+  const filterValue = useCallback((row: SupervisorRowView, key: SupervisorColumnKey): string => {
     switch (key) {
       case 'enrolmentName':
         return row.enrolmentName;
@@ -672,7 +690,7 @@ export function SupervisorApprovalPage() {
       default:
         return '—';
     }
-  };
+  }, []);
 
   const filterOptionsByColumn = useMemo<Record<SupervisorColumnKey, string[]>>(() => {
     const buckets: Record<SupervisorColumnKey, Set<string>> = {
@@ -702,7 +720,7 @@ export function SupervisorApprovalPage() {
       workedBy: [...buckets.workedBy].sort((a, b) => a.localeCompare(b)),
       workedOn: [...buckets.workedOn].sort((a, b) => a.localeCompare(b)),
     };
-  }, [allRows]);
+  }, [allRows, filterValue]);
 
   const filteredAndSortedRows = useMemo(() => {
     const filtered = allRows.filter(row => {
@@ -762,7 +780,7 @@ export function SupervisorApprovalPage() {
     });
 
     return sorted;
-  }, [allRows, columnFilterOps, columnFilters, sortDir, sortKey]);
+  }, [allRows, columnFilterOps, columnFilters, filterValue, sortDir, sortKey]);
 
   const totalPages = Math.max(1, Math.ceil(filteredAndSortedRows.length / PAGE_SIZE));
   const pageRows = filteredAndSortedRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -797,7 +815,7 @@ export function SupervisorApprovalPage() {
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
   };
@@ -1098,9 +1116,13 @@ export function SupervisorApprovalPage() {
               }
             })();
             setAssignTarget(null);
+            setSelectedIds(new Set());
+            const count = assignTarget.bulkRows?.length ?? 1;
+            addToast(`${count} enrolment${count === 1 ? '' : 's'} assigned to ${workerName}.`);
           }}
         />
       )}
+      <Toast toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }
