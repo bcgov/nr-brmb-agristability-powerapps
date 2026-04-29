@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import type { Vsi_participantprogramyears } from '../generated/models/Vsi_participantprogramyearsModel';
 import { Vsi_participantprogramyearsService } from '../generated/services/Vsi_participantprogramyearsService';
 import { calculateVariance, formatCurrencyOr, formatVariancePercent, getTaskStatusLabel } from '../utils/helpers';
 
 export function EnrolmentCalculationPage() {
-  const { enrolmentId } = useParams<{ enrolmentId: string }>();
+  const { enrolmentId, source } = useParams<{ enrolmentId: string; source: string }>();
+  const location = useLocation();
+  const backTo = source === 'supervisor' ? '/supervisor-approval' : '/dashboard-home';
+  const backLabel = source === 'supervisor' ? 'Back to Supervisor Approval' : 'Back to Dashboard';
   const [record, setRecord] = useState<Vsi_participantprogramyears | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -88,8 +92,14 @@ export function EnrolmentCalculationPage() {
       )}
 
       <div className="calc-links">
-        <Link to="/dashboard-home">Back to Dashboard</Link>
-        <Link to="/supervisor-approval">Back to Supervisor Approval</Link>
+        <Link to={backTo}>{backLabel}</Link>
+      </div>
+      <div style={{ marginTop: 16, padding: 8, background: '#f1f5f9', borderRadius: 4, fontSize: 12, fontFamily: 'monospace', wordBreak: 'break-all' }}>
+        <strong>DEBUG</strong><br />
+        pathname: {location.pathname}<br />
+        source param: {source ?? '(undefined)'}<br />
+        enrolmentId param: {enrolmentId ?? '(undefined)'}<br />
+        backTo: {backTo}
       </div>
     </section>
   );

@@ -179,7 +179,11 @@ export function EnrolmentDataTable({
                       onChange={() => onToggleSelect(row.vsi_participantprogramyearid)}
                     />
                   </td>
-                  {visibleColumnKeys.map(key => renderCell(key, row, raw, avatarUrls, coreAppId, coreBaseUrl))}
+                  {visibleColumnKeys.map(key => {
+                    // Always pass _source: 'dashboard' for navigation context
+                    const rowWithSource = { ...row, _source: 'dashboard' };
+                    return renderCell(key, rowWithSource, raw, avatarUrls, coreAppId, coreBaseUrl);
+                  })}
                 </tr>
               );
             })

@@ -46,13 +46,11 @@ export function BulkNoticesModal({
         <div className="modal-footer">
           <button
             className="btn-ok"
-            disabled={bulkSubmitting || selectedIds.size === 0}
+            disabled={bulkSubmitting || selectedIds.size === 0 || bulkResult !== null}
             onClick={async () => {
               setBulkSubmitting(true);
               setBulkError(null);
-              setBulkResult(null);
               try {
-                // Call the HTTP Workflows Bulk EN Flow
                 const enrolmentIds = Array.from(selectedIds);
                 const result = await HTTPWorkflowsService.BulkENFlow(
                   enrolmentIds,
@@ -64,7 +62,6 @@ export function BulkNoticesModal({
                 setBulkResult(result);
               } catch (err) {
                 setBulkError(err instanceof Error ? err.message : 'Workflow failed');
-                console.error('BulkENFlow error:', err);
               } finally {
                 setBulkSubmitting(false);
               }
@@ -72,13 +69,10 @@ export function BulkNoticesModal({
           >
             {bulkSubmitting ? 'Submitting...' : 'OK'}
           </button>
-          <button className="btn-cancel" disabled={bulkSubmitting} onClick={onClose}>Cancel</button>
+          <button className="btn-cancel" disabled={bulkSubmitting} onClick={onClose}>
+            {bulkResult !== null ? 'Close' : 'Cancel'}
+          </button>
           {bulkError && <span className="modal-error">{bulkError}</span>}
-          {bulkResult !== null && (
-            <pre className="modal-api-result" style={{ maxHeight: 200, overflow: 'auto', marginTop: 8, background: '#f8f8f8', padding: 8, borderRadius: 4 }}>
-              {JSON.stringify(bulkResult, null, 2)}
-            </pre>
-          )}
         </div>
         {selectedIds.size > 0 && (
           <div className="modal-selected-list">
