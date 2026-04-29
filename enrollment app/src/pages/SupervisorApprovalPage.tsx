@@ -9,6 +9,7 @@ import { QueueitemsService } from '../generated/services/QueueitemsService';
 import { QueuesService } from '../generated/services/QueuesService';
 import { Office365UsersService } from '../generated/services/Office365UsersService';
 import { ColumnHeaderMenu } from '../components/ColumnHeaderMenu';
+import { renderCell } from '../components/renderCell';
 import { calculateVariance, enrolmentStatusClass, formatCurrencyOr, formatVariancePercent, getEnrolmentStatusLabel, getInitials, getTaskStatusLabel, getVarianceClass } from '../utils/helpers';
 import { AssignWorkerModal } from '../components/AssignWorkerModal';
 import { Toast, nextToastId } from '../components/Toast';
@@ -16,11 +17,21 @@ import type { ToastMessage } from '../components/Toast';
 import type { FilterOperator, SortDir } from '../types/enrollment';
 import '../styles/supervisor-approval.css';
 
+const CORE_APP_ID_FALLBACK = '88c024d9-9fd5-ec11-a7b5-002248ada475';
+const CORE_BASE_URL_FALLBACK = 'https://aff-brmb-crm-dev.crm3.dynamics.com/main.aspx';
+
 const PAGE_SIZE = 20;
 const SUPERVISOR_QUEUE_NAME = 'Supervisor Approval Queue';
 const ENROLMENT_STATUS_FILTER_OPTIONS = Object.values(Vsi_participantprogramyearsvsi_enrolmentstatus)
   .filter((label): label is (typeof Vsi_participantprogramyearsvsi_enrolmentstatus)[keyof typeof Vsi_participantprogramyearsvsi_enrolmentstatus] => typeof label === 'string' && label.length > 0)
   .sort((a, b) => a.localeCompare(b));
+
+// Module-level cache so navigating away and back does not trigger a full reload.
+// Cleared when the user explicitly clicks Refresh.
+let saItemsCache: Vsi_participantprogramyears[] | null = null;
+let saQueueWorkCache: Record<string, QueueWorkMeta> | null = null;
+let saSupervisorQueueIdsCache: Set<string> | null = null;
+let saWorkerAvatarUrlsCache: Record<string, string> | null = null;
 
 type QueueWorkMeta = {
   workedBy: string;
@@ -130,12 +141,12 @@ function isSupervisorApprovalQueueName(name?: string): boolean {
 }
 
 export function SupervisorApprovalPage() {
-  const [items, setItems] = useState<Vsi_participantprogramyears[]>([]);
-  const [queueWorkByEnrolmentId, setQueueWorkByEnrolmentId] = useState<Record<string, QueueWorkMeta>>({});
-  const [supervisorQueueIds, setSupervisorQueueIds] = useState<Set<string>>(new Set());
-  const [workerAvatarUrls, setWorkerAvatarUrls] = useState<Record<string, string>>({});
-  const fetchedQueueIds = useRef<Set<string>>(new Set());
-  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState<Vsi_participantprogramyears[]>(() => saItemsCache ?? []);
+  const [queueWorkByEnrolmentId, setQueueWorkByEnrolmentId] = useState<Record<string, QueueWorkMeta>>(() => saQueueWorkCache ?? {});
+  const [supervisorQueueIds, setSupervisorQueueIds] = useState<Set<string>>(() => saSupervisorQueueIdsCache ?? new Set());
+  const [workerAvatarUrls, setWorkerAvatarUrls] = useState<Record<string, string>>(() => saWorkerAvatarUrlsCache ?? {});
+  const fetchedQueueIds = useRef<Set<string>>(new Set(saItemsCache?.map(i => normalizeGuid(i.vsi_participantprogramyearid)) ?? []));
+  const [loading, setLoading] = useState(saItemsCache === null);
   const [error, setError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
@@ -179,6 +190,9 @@ export function SupervisorApprovalPage() {
 
   useEffect(() => {
     let cancelled = false;
+
+    // Use cached data when navigating back; only re-fetch when Refresh is clicked.
+    if (saItemsCache !== null && refreshCounter === 0) return;
 
     (async () => {
       try {
@@ -301,14 +315,18 @@ export function SupervisorApprovalPage() {
             setError(result.error?.message ?? 'Unable to load supervisor approval items.');
           } else {
             const allowedEnrolmentIds = new Set(Object.keys(queueMap));
-            setItems((result.data ?? []).filter(item => {
+            const filteredItems = (result.data ?? []).filter(item => {
               const id = normalizeGuid(item.vsi_participantprogramyearid);
               return !!id && allowedEnrolmentIds.has(id);
-            }));
+            });
+            setItems(filteredItems);
+            saItemsCache = filteredItems;
           }
 
           setQueueWorkByEnrolmentId(queueMap);
           setSupervisorQueueIds(new Set(supervisorQueueIdSet));
+          saQueueWorkCache = queueMap;
+          saSupervisorQueueIdsCache = new Set(supervisorQueueIdSet);
           if (!queueitemsSuccess) {
             setError(queueitemsErrorMessage ?? 'Unable to load queue work metadata.');
           }
@@ -343,7 +361,11 @@ export function SupervisorApprovalPage() {
         }
       }
       if (!cancelled && entries.length > 0) {
-        setWorkerAvatarUrls(prev => ({ ...prev, ...Object.fromEntries(entries) }));
+        setWorkerAvatarUrls(prev => {
+          const next = { ...prev, ...Object.fromEntries(entries) };
+          saWorkerAvatarUrlsCache = next;
+          return next;
+        });
       }
     })();
     return () => { cancelled = true; };
@@ -842,7 +864,13 @@ export function SupervisorApprovalPage() {
           type="button"
           className="sa-filter-btn"
           disabled={loading}
-          onClick={() => setRefreshCounter(prev => prev + 1)}
+          onClick={() => {
+            saItemsCache = null;
+            saQueueWorkCache = null;
+            saSupervisorQueueIdsCache = null;
+            saWorkerAvatarUrlsCache = null;
+            setRefreshCounter(prev => prev + 1);
+          }}
         >
           {loading ? 'Refreshing...' : 'Refresh'}
         </button>
@@ -950,8 +978,35 @@ export function SupervisorApprovalPage() {
                   const variance = calculateVariance(item.vsi_calculatedenfee, item.vsi_previousyearcalculatedenfee);
                   const workMeta = row.workMeta;
 
+                  // Add _source for navigation context
+                  const rowWithSource = { ...item, _source: 'supervisor' };
+                  // Only render columns that are valid SortKey for renderCell
+                  const SUPPORTED_SORT_KEYS = [
+                    'pin', 'producer', 'year', 'taskStatus', 'enrolStatus', 'fee',
+                    'sharepoint', 'totalFeesOwed', 'totalFeesPaid', 'enrolmentFee',
+                    'latePay', 'regionalOffice', 'farmingSector', 'bringForward',
+                    'broughtForward', 'hasPartners', 'inCombinedFarm', 'manualReview',
+                    'enrolNoticeDate', 'fileReceivedDate', 'feesPaidDate', 'modifiedOn',
+                    'owner', 'flagged',
+                  ];
+                  // Map SupervisorColumnKey to SortKey
+                  const supervisorToSortKey: Record<string, string> = {
+                    enrolmentName: 'pin',
+                    participant: 'producer',
+                    taskStatus: 'taskStatus',
+                    enrolmentStatus: 'enrolStatus',
+                    calculatedFee: 'fee',
+                    enteredQueue: 'bringForward',
+                    workedBy: 'owner',
+                    workedOn: 'modifiedOn',
+                  };
                   return (
-                    <tr key={itemId ?? `${item.vsi_name ?? 'row'}-${index}`}>
+                    <tr key={itemId ?? `${item.vsi_name ?? 'row'}-${index}`}> 
+                      {columnOrder.map(key => {
+                        const sortKey = supervisorToSortKey[key];
+                        if (!SUPPORTED_SORT_KEYS.includes(sortKey)) return null;
+                        return renderCell(sortKey as any, rowWithSource, item as any, workerAvatarUrls, null, null);
+                      })}
                       <td className="sa-td-check">
                         <input
                           type="checkbox"
@@ -965,10 +1020,24 @@ export function SupervisorApprovalPage() {
                       </td>
                       {columnOrder.map(key => {
                         if (key === 'enrolmentName') {
-                          return <td key={key} className="sa-pin">{item.vsi_name ?? '—'}</td>;
+                          return (
+                            <td key={key} className="sa-pin">
+                              {itemId
+                                ? <Link className="cell-pin-link" to={`/enrolment/${itemId}`}>{item.vsi_name ?? '—'}</Link>
+                                : item.vsi_name ?? '—'}
+                            </td>
+                          );
                         }
                         if (key === 'participant') {
-                          return <td key={key}>{row.participantName}</td>;
+                          const participantId = item._vsi_participantid_value;
+                          const href = `${CORE_BASE_URL_FALLBACK}?appid=${encodeURIComponent(CORE_APP_ID_FALLBACK)}&pagetype=entityrecord&etn=account&id=${encodeURIComponent(participantId ?? '')}`;
+                          return (
+                            <td key={key}>
+                              {participantId
+                                ? <a className="cell-pin-link" href={href} target="_blank" rel="noopener noreferrer">{row.participantName}</a>
+                                : row.participantName}
+                            </td>
+                          );
                         }
                         if (key === 'taskStatus') {
                           return (
@@ -990,7 +1059,7 @@ export function SupervisorApprovalPage() {
                             <td key={key}>
                               <span className="sa-fee-cell">
                                 {itemId && hasCalculatedFee
-                                  ? <Link className="sa-fee-amount sa-fee-link" to={`/calculation/${itemId}`}>{formatCurrencyOr(item.vsi_calculatedenfee, '—')}</Link>
+                                  ? <Link className="sa-fee-amount sa-fee-link" to={`/calculation/supervisor/${itemId}`}>{formatCurrencyOr(item.vsi_calculatedenfee, '—')}</Link>
                                   : <span className="sa-fee-amount">{formatCurrencyOr(item.vsi_calculatedenfee, '—')}</span>}
                                 {variance != null ? <VariancePill variance={variance} /> : null}
                               </span>
@@ -1021,7 +1090,7 @@ export function SupervisorApprovalPage() {
                       <td className="sa-td-actions">
                         <div className="sa-row-actions">
                           {itemId
-                            ? <Link to={`/calculation/${itemId}`} title="Go to calculation" className="sa-calc-link"><Calculator size={16} /></Link>
+                            ? <Link to={`/calculation/supervisor/${itemId}`} title="Go to calculation" className="sa-calc-link"><Calculator size={16} /></Link>
                             : <span title="Go to calculation"><Calculator size={16} className="sa-action-icon-disabled" /></span>}
                         </div>
                       </td>

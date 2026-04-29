@@ -101,8 +101,10 @@ const getFormattedLookup = (record: Vsi_participantprogramyears, key: string): s
   return '';
 };
 
+
 export function EnrolmentDetailsPage() {
-  const { enrolmentId } = useParams<{ enrolmentId: string }>();
+  // Read both source and enrolmentId from params
+  const { source = 'dashboard', enrolmentId } = useParams<{ source?: string; enrolmentId: string }>();
   const navigate = useNavigate();
 
   const [record, setRecord] = useState<Vsi_participantprogramyears | null>(null);
@@ -260,25 +262,37 @@ export function EnrolmentDetailsPage() {
     }
   };
 
+
   if (loading) {
     return <section className="details-wrapper"><p className="enrolment-loading">Loading details...</p></section>;
+  }
+
+  // Determine back link and label
+  let backPath = '/dashboard-home';
+  let backLabel = 'Back to Dashboard';
+  if (source === 'supervisor') {
+    backPath = '/supervisor-approval';
+    backLabel = 'Back to Supervisor Approval';
   }
 
   if (error || !record || !formState) {
     return (
       <section className="details-wrapper">
         <p className="enrolment-error">{error ?? 'Enrolment record not found.'}</p>
-        <button type="button" className="details-back-btn" onClick={() => navigate('/dashboard-home')}>Back to dashboard</button>
+        <button type="button" className="details-back-btn" onClick={() => navigate(backPath)}>{backLabel}</button>
+        <div style={{marginTop:8, fontSize:12, color:'#888'}}>Debug: source = <b>{source}</b></div>
       </section>
     );
   }
 
+
   return (
     <section className="details-wrapper">
       <div className="details-title-row">
-        <button type="button" className="details-back-btn" onClick={() => navigate('/dashboard-home')}>Back</button>
+        <button type="button" className="details-back-btn" onClick={() => navigate(backPath)}>{backLabel}</button>
         <h1 className="details-page-title">Enrolment App / Deadlines &amp; Fees</h1>
       </div>
+      <div style={{marginBottom:12, fontSize:12, color:'#888'}}>Debug: source = <b>{source}</b></div>
 
       <div className="details-composite">
         <div className="details-header-band">

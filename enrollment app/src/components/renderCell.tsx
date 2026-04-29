@@ -30,14 +30,17 @@ export function renderCell(
     v != null ? map[Number(v)] ?? String(v) : '';
   const fmtDate = (v: unknown) => { if (!v) return ''; try { return new Date(v as string).toLocaleDateString(); } catch { return String(v); } };
   switch (key) {
-    case 'pin':
+    case 'pin': {
+      // Determine source for navigation: allow row._source override, else default to 'dashboard'
+      const source = (row as any)._source || 'dashboard';
       return (
         <td key={key} className="cell-pin">
           {row.vsi_participantprogramyearid
-            ? <Link className="cell-pin-link" to={`/enrolment/${row.vsi_participantprogramyearid}`}>{row.vsi_name ?? ''}</Link>
+            ? <Link className="cell-pin-link" to={`/enrolment/${source}/${row.vsi_participantprogramyearid}`}>{row.vsi_name ?? ''}</Link>
             : row.vsi_name ?? ''}
         </td>
       );
+    }
     case 'producer': {
       const v = (row.vsi_participantidname ?? raw['_vsi_participantid_value@OData.Community.Display.V1.FormattedValue'] ?? '') as string;
       const participantId = row._vsi_participantid_value;
@@ -72,7 +75,7 @@ export function renderCell(
         <td key={key} className="cell-fee">
           <div className="calculated-fee-cell">
             {row.vsi_participantprogramyearid
-              ? <Link className="calculated-fee-value" to={`/calculation/${row.vsi_participantprogramyearid}`}>{formatCurrency(row.vsi_calculatedenfee)}</Link>
+              ? <Link className="calculated-fee-value" to={`/calculation/dashboard/${row.vsi_participantprogramyearid}`}>{formatCurrency(row.vsi_calculatedenfee)}</Link>
               : <span className="calculated-fee-value">{formatCurrency(row.vsi_calculatedenfee)}</span>}
             {variance != null ? <span className={`variance-pill ${varianceClass}`}>{varianceText}</span> : null}
           </div>
