@@ -9,7 +9,7 @@ import { QueueitemsService } from '../generated/services/QueueitemsService';
 import { QueuesService } from '../generated/services/QueuesService';
 import { Office365UsersService } from '../generated/services/Office365UsersService';
 import { ColumnHeaderMenu } from '../components/ColumnHeaderMenu';
-import { renderCell } from '../components/renderCell';
+
 import { calculateVariance, enrolmentStatusClass, formatCurrencyOr, formatVariancePercent, getEnrolmentStatusLabel, getInitials, getTaskStatusLabel, getVarianceClass } from '../utils/helpers';
 import { AssignWorkerModal } from '../components/AssignWorkerModal';
 import { Toast, nextToastId } from '../components/Toast';
@@ -978,28 +978,7 @@ export function SupervisorApprovalPage() {
                   const variance = calculateVariance(item.vsi_calculatedenfee, item.vsi_previousyearcalculatedenfee);
                   const workMeta = row.workMeta;
 
-                  // Add _source for navigation context
-                  const rowWithSource = { ...item, _source: 'supervisor' };
-                  // Only render columns that are valid SortKey for renderCell
-                  const SUPPORTED_SORT_KEYS = [
-                    'pin', 'producer', 'year', 'taskStatus', 'enrolStatus', 'fee',
-                    'sharepoint', 'totalFeesOwed', 'totalFeesPaid', 'enrolmentFee',
-                    'latePay', 'regionalOffice', 'farmingSector', 'bringForward',
-                    'broughtForward', 'hasPartners', 'inCombinedFarm', 'manualReview',
-                    'enrolNoticeDate', 'fileReceivedDate', 'feesPaidDate', 'modifiedOn',
-                    'owner', 'flagged',
-                  ];
-                  // Map SupervisorColumnKey to SortKey
-                  const supervisorToSortKey: Record<string, string> = {
-                    enrolmentName: 'pin',
-                    participant: 'producer',
-                    taskStatus: 'taskStatus',
-                    enrolmentStatus: 'enrolStatus',
-                    calculatedFee: 'fee',
-                    enteredQueue: 'bringForward',
-                    workedBy: 'owner',
-                    workedOn: 'modifiedOn',
-                  };
+                  // ...existing code...
                   return (
                     <tr key={itemId ?? `${item.vsi_name ?? 'row'}-${index}`}> 
                       <td className="sa-td-check">
