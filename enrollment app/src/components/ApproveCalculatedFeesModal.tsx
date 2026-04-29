@@ -30,8 +30,7 @@ export function ApproveCalculatedFeesModal({
 
   const selectedRows = rows.filter(r => selectedIds.has(r.vsi_participantprogramyearid));
   const notReadyRows = selectedRows.filter(r => r.vsi_taskstatus !== 865520002); // 865520002 = Ready
-  // Use model enum for status comparison
-  // const notReadyRows = selectedRows.filter(r => r.vsi_taskstatus !== Vsi_participantprogramyearsvsi_taskstatus.Ready);
+  const missingFeeRows = selectedRows.filter(r => r.vsi_calculatedenfee == null);
   const noSelection = selectedRows.length === 0;
 
   const handleSubmit = async () => {
@@ -95,8 +94,10 @@ export function ApproveCalculatedFeesModal({
         <div className="modal-body">
           {noSelection ? (
             <div className="no-selection-message">No Enrolments Selected</div>
-          ) : notReadyRows.length > 0 ? (
-            <div className="no-selection-message">Only enrolments with status <b>Ready</b> can be approved. Please adjust your selection.</div>
+          ) : notReadyRows.length > 0 || missingFeeRows.length > 0 ? (
+            <div className="no-selection-message">
+              Only enrolments with status <b>Ready</b> <u>and</u> a calculated fee can be approved. Please adjust your selection.
+            </div>
           ) : (
             <>
               <p>
@@ -120,7 +121,7 @@ export function ApproveCalculatedFeesModal({
         <div className="modal-footer">
           <button
             className="btn-ok"
-            disabled={submitting || noSelection || notReadyRows.length > 0}
+            disabled={submitting || noSelection || notReadyRows.length > 0 || missingFeeRows.length > 0}
             onClick={handleSubmit}
           >
             {submitting ? 'Submitting...' : 'Confirm'}
