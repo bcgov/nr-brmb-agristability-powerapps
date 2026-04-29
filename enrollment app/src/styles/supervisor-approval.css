@@ -268,10 +268,12 @@
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 0.78rem;
+  font-size: 0.95em;
   font-weight: 500;
+  color: #334155;
+  background: none;
+  border-radius: 0;
+  padding: 0;
   white-space: nowrap;
 }
 
@@ -300,26 +302,7 @@
   color: #1a7a3e;
 }
 
-.sa-status-badge.hold {
-  background: #fff1f0;
-  color: #c0392b;
-}
 
-/* Fee cell */
-.sa-fee-cell {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.sa-fee-amount {
-  font-weight: 600;
-  color: #1a2332;
-}
-
-.sa-fee-link {
-  color: #1d4ed8;
-  text-decoration: underline;
 }
 
 .sa-fee-link:hover {
