@@ -10,7 +10,7 @@ import { QueuesService } from '../generated/services/QueuesService';
 import { Office365UsersService } from '../generated/services/Office365UsersService';
 import { ColumnHeaderMenu } from '../components/ColumnHeaderMenu';
 
-import { calculateVariance, enrolmentStatusClass, formatCurrencyOr, formatVariancePercent, getEnrolmentStatusLabel, getInitials, getTaskStatusLabel, getVarianceClass } from '../utils/helpers';
+import { calculateVariance, enrolmentStatusClass, formatCurrencyOr, formatVariancePercent, getEnrolmentStatusLabel, getInitials, getTaskStatusLabel, getVarianceClass, getAvatarColor } from '../utils/helpers';
 import { AssignWorkerModal } from '../components/AssignWorkerModal';
 import { Toast, nextToastId } from '../components/Toast';
 import type { ToastMessage } from '../components/Toast';
@@ -888,28 +888,82 @@ export function SupervisorApprovalPage() {
             )}
             <button
               type="button"
-              className="sa-btn-secondary"
+              className="sa-btn-clear sa-bulk-btn"
               disabled={selectedCount === 0 || pickingBulk}
               onClick={() => void handlePickSelected()}
             >{pickingBulk ? 'Picking...' : <><ClipboardList size={15} /> Pick</>}</button>
             <button
               type="button"
-              className="sa-btn-secondary"
+              className="sa-btn-clear sa-bulk-btn"
               disabled={selectedCount === 0 || releasingBulk}
               onClick={() => void handleReleaseSelected()}
             >{releasingBulk ? 'Releasing...' : <><LogOut size={15} /> Release</>}</button>
             <button
               type="button"
-              className="sa-btn-secondary"
+              className="sa-btn-clear sa-bulk-btn"
               disabled={selectedCount === 0}
               onClick={handleAssignSelected}
             ><UserPlus size={15} /> Assign</button>
+            <button
+              type="button"
+              className="sa-btn-primary sa-bulk-btn"
+              disabled={selectedCount === 0}
+              onClick={async () => {
+                if (!currentUser) {
+                  addToast('User not resolved', 'error');
+                  return;
+                }
+                const selectedRows = allRows.filter(row => row.itemId != null && selectedIds.has(row.itemId));
+                const blockedRows = selectedRows.filter(row => {
+                  const workedBy = row.workedBy?.trim();
+                  return workedBy && workedBy !== '' && workedBy !== currentUser.displayName && workedBy !== '—';
+                });
+                if (blockedRows.length > 0) {
+                  if (blockedRows.length === 1) {
+                    addToast(`${blockedRows[0].enrolmentName} is assigned to ${blockedRows[0].workedBy}. You can only set to Manual items worked by you or with a blank Worked By value.`, 'error');
+                  } else {
+                    addToast('Some selected enrolments are assigned to another worker. You can only set to Manual items worked by you or with a blank Worked By value.', 'error');
+                  }
+                  return;
+                }
+                const rowsToManual = selectedRows;
+                try {
+                  // Update statuses in parallel
+                  await Promise.all(rowsToManual.map(row =>
+                    Promise.all([
+                      Vsi_participantprogramyearsService.update(row.itemId!, {
+                        vsi_taskstatus: 865520000, // Manual
+                        vsi_enrolmentstatus: 865520009 // ToBeReviewed
+                      }),
+                      row.workMeta?.queueitemId ? QueueitemsService.delete(row.workMeta.queueitemId) : Promise.resolve()
+                    ])
+                  ));
+                  removeApprovedRowsFromState(rowsToManual);
+                  setSelectedIds(new Set());
+                  addToast(`${rowsToManual.length} enrolment${rowsToManual.length === 1 ? '' : 's'} set to Manual/To be reviewed and removed from queue.`);
+                } catch (err) {
+                  const msg = err instanceof Error ? err.message : 'Manual action failed';
+                  addToast(msg, 'error');
+                }
+              }}
+            >
+              Manual
+            </button>
             <span title={hasBlockedSelectedRows ? bulkApprovalBlockedTooltip : undefined}>
               <button
                 type="button"
-                className="sa-btn-primary"
-                disabled={selectedCount === 0 || approvingBulk || hasBlockedSelectedRows}
-                onClick={() => void handleApproveSelected()}
+                className="sa-btn-primary sa-bulk-btn"
+                disabled={selectedCount === 0 || approvingBulk}
+                onClick={async () => {
+                  if (selectedCount === 0 || approvingBulk) return;
+                  const rowsToApprove = allRows.filter(row => row.itemId != null && selectedIds.has(row.itemId));
+                  const blockedRows = rowsToApprove.filter(row => !canApproveRow(row));
+                  if (blockedRows.length > 0) {
+                    addToast('Some selected enrolments are assigned to another worker. You can only approve items worked by you or with a blank Worked By value.', 'error');
+                    return;
+                  }
+                  await handleApproveSelected();
+                }}
               >
                 {approvingBulk ? 'Approving...' : <><CircleCheck size={15} /> Approve</>}
               </button>
@@ -1051,8 +1105,16 @@ export function SupervisorApprovalPage() {
                                 : (
                                   <span className="sa-worked-by-content">
                                     {workMeta.workerId && workerAvatarUrls[workMeta.workerId]
-                                      ? <img className="avatar-circle" src={`data:image/jpeg;base64,${workerAvatarUrls[workMeta.workerId]}`} alt={workMeta.workedBy} title={workMeta.workedBy} />
-                                      : <span className="avatar-circle" title={workMeta.workedBy}>{getInitials(workMeta.workedBy)}</span>}
+                                      ? (
+                                        <span className="avatar-circle" title={workMeta.workedBy} style={{ background: '#fff', padding: 0 }}>
+                                          <img src={`data:image/jpeg;base64,${workerAvatarUrls[workMeta.workerId]}`} alt={workMeta.workedBy} style={{ width: '100%', height: '100%', borderRadius: '50%' }} />
+                                        </span>
+                                      )
+                                      : (
+                                        <span className="avatar-circle" title={workMeta.workedBy} style={{ background: getAvatarColor(workMeta.workedBy), color: '#fff', fontWeight: 600 }}>
+                                          {getInitials(workMeta.workedBy)}
+                                        </span>
+                                      )}
                                     <span className="sa-worked-by-name">{workMeta.workedBy}</span>
                                   </span>
                                 )}
