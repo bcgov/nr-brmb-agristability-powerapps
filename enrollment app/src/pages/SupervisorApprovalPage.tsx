@@ -1,6 +1,6 @@
 import { resolveCurrentSystemUser } from '../utils/currentUser';
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
-import { Filter, Calculator, ClipboardList, LogOut, UserPlus, CircleCheck } from 'lucide-react';
+import { Filter, Calculator, ClipboardList, LogOut, UserPlus, CircleCheck, Wrench } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { Vsi_participantprogramyears } from '../generated/models/Vsi_participantprogramyearsModel';
 import { Vsi_participantprogramyearsvsi_enrolmentstatus } from '../generated/models/Vsi_participantprogramyearsModel';
@@ -102,6 +102,8 @@ function VariancePill({ variance }: { variance: number }) {
   return <span className={`variance-pill ${cls}`}>{text}</span>;
 }
 
+import { taskStatusIcon } from '../utils/helpers';
+
 function StatusBadge({ status }: { status?: number }) {
   const label = getTaskStatusLabel(status) || 'Unknown';
   const clsByLabel: Record<string, string> = {
@@ -114,7 +116,8 @@ function StatusBadge({ status }: { status?: number }) {
 
   return (
     <span className={`sa-status-badge ${cls}`}>
-      {label}
+      {taskStatusIcon(label)}
+      <span style={{ marginLeft: 4 }}>{label}</span>
     </span>
   );
 }
@@ -947,7 +950,7 @@ export function SupervisorApprovalPage() {
                 }
               }}
             >
-              Manual
+              <Wrench size={15} style={{ marginRight: 4, marginBottom: -2 }} /> Manual
             </button>
             <span title={hasBlockedSelectedRows ? bulkApprovalBlockedTooltip : undefined}>
               <button
