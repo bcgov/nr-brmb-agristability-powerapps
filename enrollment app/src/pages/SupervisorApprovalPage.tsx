@@ -1002,11 +1002,6 @@ export function SupervisorApprovalPage() {
                   };
                   return (
                     <tr key={itemId ?? `${item.vsi_name ?? 'row'}-${index}`}> 
-                      {columnOrder.map(key => {
-                        const sortKey = supervisorToSortKey[key];
-                        if (!SUPPORTED_SORT_KEYS.includes(sortKey)) return null;
-                        return renderCell(sortKey as any, rowWithSource, item as any, workerAvatarUrls, null, null);
-                      })}
                       <td className="sa-td-check">
                         <input
                           type="checkbox"
@@ -1023,7 +1018,7 @@ export function SupervisorApprovalPage() {
                           return (
                             <td key={key} className="sa-pin">
                               {itemId
-                                ? <Link className="cell-pin-link" to={`/enrolment/${itemId}`}>{item.vsi_name ?? '—'}</Link>
+                                ? <Link className="cell-pin-link" to={`/enrolment/supervisor/${itemId}`}>{item.vsi_name ?? '—'}</Link>
                                 : item.vsi_name ?? '—'}
                             </td>
                           );
