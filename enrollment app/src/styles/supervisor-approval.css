@@ -267,10 +267,10 @@
 .sa-status-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  font-size: 0.95em;
+  gap: 5px;
   font-weight: 500;
-  color: #334155;
+  font-size: 0.82rem;
+  color: #111;
   background: none;
   border-radius: 0;
   padding: 0;
@@ -288,8 +288,21 @@
 }
 
 .sa-status-badge.review {
-  background: #fff7e6;
-  color: #9b6400;
+  background: none;
+  color: #111;
+}
+
+.sa-status-badge .ts-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 0.7rem;
+  line-height: 1;
+  background: #e3f2fd;
+  color: #1565c0;
 }
 
 .sa-status-badge.inprogress {

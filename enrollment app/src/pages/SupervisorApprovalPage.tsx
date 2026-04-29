@@ -12,6 +12,9 @@ import { ColumnHeaderMenu } from '../components/ColumnHeaderMenu';
 
 import { calculateVariance, enrolmentStatusClass, formatCurrencyOr, formatVariancePercent, getEnrolmentStatusLabel, getInitials, getTaskStatusLabel, getVarianceClass, getAvatarColor } from '../utils/helpers';
 import { AssignWorkerModal } from '../components/AssignWorkerModal';
+import { ApprovalErrorModal } from '../components/ApprovalErrorModal';
+import ManualErrorModal from '../components/ManualErrorModal';
+import { ConfirmActionModal } from '../components/ConfirmActionModal';
 import { Toast, nextToastId } from '../components/Toast';
 import type { ToastMessage } from '../components/Toast';
 import type { FilterOperator, SortDir } from '../types/enrollment';
@@ -159,6 +162,10 @@ export function SupervisorApprovalPage() {
   const [pickingBulk, setPickingBulk] = useState(false);
   const [releasingBulk, setReleasingBulk] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [approvalErrorModal, setApprovalErrorModal] = useState<string | null>(null);
+  const [manualErrorModal, setManualErrorModal] = useState<string | null>(null);
+  const [showApproveConfirm, setShowApproveConfirm] = useState(false);
+  const [showManualConfirm, setShowManualConfirm] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const addToast = (message: string, type: ToastMessage['type'] = 'success') =>
     setToasts(prev => [...prev, { id: nextToastId(), message, type }]);
@@ -437,6 +444,8 @@ export function SupervisorApprovalPage() {
   };
 
   const canApproveRow = (row: SupervisorRowView): boolean => {
+    // Must have a calculated fee (not null)
+    if (row.calculatedFeeValue == null) return false;
     const workerId = normalizeGuid(row.workMeta?.workerId);
     if (!workerId) return true;
     if (!currentUser?.systemUserId) return false;
@@ -447,11 +456,17 @@ export function SupervisorApprovalPage() {
     const blockedRows = rows.filter(row => !canApproveRow(row));
     if (blockedRows.length === 0) return null;
 
-    if (blockedRows.length === 1) {
-      return `${blockedRows[0].enrolmentName} is assigned to ${blockedRows[0].workedBy}. You can only approve items worked by you or with a blank Worked By value.`;
+    // Check if any are missing calculated fee
+    const missingFee = blockedRows.find(row => row.calculatedFeeValue == null);
+    if (missingFee) {
+      return `${missingFee.enrolmentName} cannot be approved because it does not have a calculated fee.`;
     }
 
-    return 'Some selected enrolments are assigned to another worker. You can only approve items worked by you or with a blank Worked By value.';
+    if (blockedRows.length === 1) {
+      return `${blockedRows[0].enrolmentName} is assigned to ${blockedRows[0].workedBy}. You can only approve items worked by you or with a blank Worked By value, and only if a calculated fee exists.`;
+    }
+
+    return 'Some selected enrolments are assigned to another worker or do not have a calculated fee. You can only approve items worked by you or with a blank Worked By value, and only if a calculated fee exists.';
   };
 
   const bulkApprovalBlockedTooltip = 'One or more selected approvals is being worked on by another user';
@@ -911,7 +926,74 @@ export function SupervisorApprovalPage() {
               type="button"
               className="sa-btn-primary sa-bulk-btn"
               disabled={selectedCount === 0}
-              onClick={async () => {
+              onClick={() => setShowManualConfirm(true)}
+            >
+              <Wrench size={15} style={{ marginRight: 4, marginBottom: -2 }} /> Manual
+            </button>
+            <span title={hasBlockedSelectedRows ? bulkApprovalBlockedTooltip : undefined}>
+              <button
+                type="button"
+                className="sa-btn-primary sa-bulk-btn"
+                disabled={selectedCount === 0 || approvingBulk}
+                onClick={() => setShowApproveConfirm(true)}
+              >
+                {approvingBulk ? 'Approving...' : <><CircleCheck size={15} /> Approve</>}
+              </button>
+            </span>
+          </div>
+        </div>
+
+        <div className="sa-table-container">
+          {loading && <p className="sa-state-msg loading">Loading queue items…</p>}
+          {error && <p className="sa-state-msg error">Error: {error}</p>}
+          {actionError && (
+            <p className="sa-state-msg error" style={{ cursor: 'pointer' }} onClick={() => setActionError(null)}>
+              Action failed: {actionError} &times;
+            </p>
+          )}
+          {approvalErrorModal && (
+            <ApprovalErrorModal message={approvalErrorModal} onClose={() => setApprovalErrorModal(null)} />
+          )}
+          {manualErrorModal && (
+            <ManualErrorModal message={manualErrorModal} onClose={() => setManualErrorModal(null)} />
+          )}
+          {showApproveConfirm && (
+            <ConfirmActionModal
+              title="Confirm Approve Enrolments"
+              message={`Are you sure you want to approve the selected ${selectedCount} enrolment${selectedCount === 1 ? '' : 's'}?`}
+              enrolments={selectedRows.map(row => ({ id: row.itemId!, name: row.enrolmentName }))}
+              confirmLabel="Approve"
+              cancelLabel="Cancel"
+              loading={approvingBulk}
+              onConfirm={async () => {
+                setShowApproveConfirm(false);
+                const rowsToApprove = allRows.filter(row => row.itemId != null && selectedIds.has(row.itemId));
+                const blockedRows = rowsToApprove.filter(row => !canApproveRow(row));
+                if (blockedRows.length > 0) {
+                  let msg = '';
+                  if (blockedRows.length === 1) {
+                    msg = `${blockedRows[0].enrolmentName} cannot be approved. Only enrolments with status Ready and a calculated fee, assigned to you or with a blank Worked By value, can be approved.`;
+                  } else {
+                    msg = 'Only enrolments with status Ready and a calculated fee, assigned to you or with a blank Worked By value, can be approved. Please adjust your selection.';
+                  }
+                  setApprovalErrorModal(msg);
+                  return;
+                }
+                await handleApproveSelected();
+              }}
+              onCancel={() => setShowApproveConfirm(false)}
+            />
+          )}
+          {showManualConfirm && (
+            <ConfirmActionModal
+              title="Confirm Set to Manual"
+              message={`Are you sure you want to set the selected ${selectedCount} enrolment${selectedCount === 1 ? '' : 's'} to Manual/To be reviewed?`}
+              enrolments={selectedRows.map(row => ({ id: row.itemId!, name: row.enrolmentName }))}
+              confirmLabel="Set to Manual"
+              cancelLabel="Cancel"
+              loading={false}
+              onConfirm={async () => {
+                setShowManualConfirm(false);
                 if (!currentUser) {
                   addToast('User not resolved', 'error');
                   return;
@@ -922,16 +1004,17 @@ export function SupervisorApprovalPage() {
                   return workedBy && workedBy !== '' && workedBy !== currentUser.displayName && workedBy !== '—';
                 });
                 if (blockedRows.length > 0) {
+                  let msg = '';
                   if (blockedRows.length === 1) {
-                    addToast(`${blockedRows[0].enrolmentName} is assigned to ${blockedRows[0].workedBy}. You can only set to Manual items worked by you or with a blank Worked By value.`, 'error');
+                    msg = `${blockedRows[0].enrolmentName} cannot be set to Manual. Only enrolments assigned to you or with a blank Worked By value can be set to Manual.`;
                   } else {
-                    addToast('Some selected enrolments are assigned to another worker. You can only set to Manual items worked by you or with a blank Worked By value.', 'error');
+                    msg = 'Only enrolments assigned to you or with a blank Worked By value can be set to Manual. Please adjust your selection.';
                   }
+                  setManualErrorModal(msg);
                   return;
                 }
                 const rowsToManual = selectedRows;
                 try {
-                  // Update statuses in parallel
                   await Promise.all(rowsToManual.map(row =>
                     Promise.all([
                       Vsi_participantprogramyearsService.update(row.itemId!, {
@@ -949,38 +1032,8 @@ export function SupervisorApprovalPage() {
                   addToast(msg, 'error');
                 }
               }}
-            >
-              <Wrench size={15} style={{ marginRight: 4, marginBottom: -2 }} /> Manual
-            </button>
-            <span title={hasBlockedSelectedRows ? bulkApprovalBlockedTooltip : undefined}>
-              <button
-                type="button"
-                className="sa-btn-primary sa-bulk-btn"
-                disabled={selectedCount === 0 || approvingBulk}
-                onClick={async () => {
-                  if (selectedCount === 0 || approvingBulk) return;
-                  const rowsToApprove = allRows.filter(row => row.itemId != null && selectedIds.has(row.itemId));
-                  const blockedRows = rowsToApprove.filter(row => !canApproveRow(row));
-                  if (blockedRows.length > 0) {
-                    addToast('Some selected enrolments are assigned to another worker. You can only approve items worked by you or with a blank Worked By value.', 'error');
-                    return;
-                  }
-                  await handleApproveSelected();
-                }}
-              >
-                {approvingBulk ? 'Approving...' : <><CircleCheck size={15} /> Approve</>}
-              </button>
-            </span>
-          </div>
-        </div>
-
-        <div className="sa-table-container">
-          {loading && <p className="sa-state-msg loading">Loading queue items…</p>}
-          {error && <p className="sa-state-msg error">Error: {error}</p>}
-          {actionError && (
-            <p className="sa-state-msg error" style={{ cursor: 'pointer' }} onClick={() => setActionError(null)}>
-              Action failed: {actionError} &times;
-            </p>
+              onCancel={() => setShowManualConfirm(false)}
+            />
           )}
           {!loading && !error && items.length === 0 && (
             <p className="sa-state-msg empty">No pending items in the supervisor approval queue.</p>
