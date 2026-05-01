@@ -25,6 +25,27 @@ export declare const dataSourcesInfo: {
         dataSourceType: string;
         apis: {};
     };
+    roles: {
+        tableId: string;
+        version: string;
+        primaryKey: string;
+        dataSourceType: string;
+        apis: {};
+    };
+    systemuserrolescollection: {
+        tableId: string;
+        version: string;
+        primaryKey: string;
+        dataSourceType: string;
+        apis: {};
+    };
+    teammemberships: {
+        tableId: string;
+        version: string;
+        primaryKey: string;
+        dataSourceType: string;
+        apis: {};
+    };
     teams: {
         tableId: string;
         version: string;

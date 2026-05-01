@@ -1,4 +1,5 @@
 import { resolveCurrentSystemUser } from '../utils/currentUser';
+import { patchEnrolmentCache } from '../hooks/useEnrolmentData';
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { Filter, Calculator, ClipboardList, LogOut, UserPlus, CircleCheck, Wrench } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -10,7 +11,7 @@ import { QueuesService } from '../generated/services/QueuesService';
 import { Office365UsersService } from '../generated/services/Office365UsersService';
 import { ColumnHeaderMenu } from '../components/ColumnHeaderMenu';
 
-import { calculateVariance, enrolmentStatusClass, formatCurrencyOr, formatVariancePercent, getEnrolmentStatusLabel, getInitials, getTaskStatusLabel, getVarianceClass, getAvatarColor } from '../utils/helpers';
+import { enrolmentStatusClass, formatCurrencyOr, formatVariancePercent, getEnrolmentStatusLabel, getInitials, getTaskStatusLabel, getVarianceClass, getAvatarColor } from '../utils/helpers';
 import { AssignWorkerModal } from '../components/AssignWorkerModal';
 import { ApprovalErrorModal } from '../components/ApprovalErrorModal';
 import ManualErrorModal from '../components/ManualErrorModal';
@@ -216,6 +217,7 @@ export function SupervisorApprovalPage() {
             'vsi_enrolmentstatus',
             'vsi_calculatedenfee',
             'vsi_previousyearcalculatedenfee',
+            'vsi_variancecalculation',
             'vsi_taskstatus',
             'modifiedon',
           ],
@@ -536,6 +538,10 @@ export function SupervisorApprovalPage() {
       }
     }
 
+    patchEnrolmentCache(rows
+      .filter(r => r.itemId != null)
+      .map(r => ({ id: r.itemId!, fields: { vsi_taskstatus: 865520003 as unknown as import('../generated/models/Vsi_participantprogramyearsModel').Vsi_participantprogramyearsvsi_taskstatus } }))
+    );
     removeApprovedRowsFromState(rows);
   };
 
@@ -1023,7 +1029,14 @@ export function SupervisorApprovalPage() {
                       }),
                       row.workMeta?.queueitemId ? QueueitemsService.delete(row.workMeta.queueitemId) : Promise.resolve()
                     ])
-                  ));
+                  ));  
+                  patchEnrolmentCache(rowsToManual
+                    .filter(r => r.itemId != null)
+                    .map(r => ({ id: r.itemId!, fields: {
+                      vsi_taskstatus: 865520000 as unknown as import('../generated/models/Vsi_participantprogramyearsModel').Vsi_participantprogramyearsvsi_taskstatus,
+                      vsi_enrolmentstatus: 865520009 as unknown as import('../generated/models/Vsi_participantprogramyearsModel').Vsi_participantprogramyearsvsi_enrolmentstatus,
+                    } }))
+                  );
                   removeApprovedRowsFromState(rowsToManual);
                   setSelectedIds(new Set());
                   addToast(`${rowsToManual.length} enrolment${rowsToManual.length === 1 ? '' : 's'} set to Manual/To be reviewed and removed from queue.`);
@@ -1085,7 +1098,7 @@ export function SupervisorApprovalPage() {
                   const item = row.item;
                   const itemId = row.itemId;
                   const hasCalculatedFee = item.vsi_calculatedenfee != null;
-                  const variance = calculateVariance(item.vsi_calculatedenfee, item.vsi_previousyearcalculatedenfee);
+                  const variance = item.vsi_calculatedenfee != null && item.vsi_variancecalculation != null ? item.vsi_variancecalculation * 100 : null;
                   const workMeta = row.workMeta;
 
                   // ...existing code...
@@ -1265,19 +1278,28 @@ export function SupervisorApprovalPage() {
                   ? assignTarget.bulkRows.slice(1)
                   : [];
                 for (const r of remainingRows) {
-                  if (r.queueitemId) await updateQueueItemWorker(r.queueitemId, workerId);
+                  if (r.queueitemId) await QueueitemsService.delete(r.queueitemId);
                 }
                 for (const r of rowsToUpdate) {
                   await Vsi_participantprogramyearsService.update(r.itemId, {
                     'ownerid@odata.bind': `/systemusers(${workerId})`,
+                    vsi_enrolmentstatus: 865520010,
+                    vsi_taskstatus: 865520000,
                   } as unknown as Parameters<typeof Vsi_participantprogramyearsService.update>[1]);
                 }
+                patchEnrolmentCache(rowsToUpdate.map(r => ({ id: r.itemId, fields: {
+                  vsi_taskstatus: 865520000 as unknown as import('../generated/models/Vsi_participantprogramyearsModel').Vsi_participantprogramyearsvsi_taskstatus,
+                  vsi_enrolmentstatus: 865520010 as unknown as import('../generated/models/Vsi_participantprogramyearsModel').Vsi_participantprogramyearsvsi_enrolmentstatus,
+                  '_ownerid_value': workerId,
+                } })));
               } catch (err) {
                 setActionError(err instanceof Error ? err.message : 'Assign partially failed');
               }
             })();
             setAssignTarget(null);
-            setSelectedIds(new Set());
+            // Remove assigned rows from the table, queue work state, and selection — same as Manual/Approve
+            const assignedItemIds = new Set(rowsToUpdate.map(r => r.itemId));
+            removeApprovedRowsFromState(allRows.filter(r => r.itemId != null && assignedItemIds.has(r.itemId)));
             const count = assignTarget.bulkRows?.length ?? 1;
             addToast(`${count} enrolment${count === 1 ? '' : 's'} assigned to ${workerName}.`);
           }}
