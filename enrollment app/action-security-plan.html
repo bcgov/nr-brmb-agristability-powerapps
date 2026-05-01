@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Action Security – Implementation Plan</title>
+<style>
+  @page { size: A4; margin: 20mm 18mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 10.5pt;
+    color: #1a1a2e;
+    line-height: 1.55;
+    margin: 0;
+    padding: 0;
+  }
+  header {
+    border-bottom: 3px solid #1d4ed8;
+    padding-bottom: 10px;
+    margin-bottom: 24px;
+  }
+  header h1 { margin: 0; font-size: 20pt; color: #1d4ed8; }
+  header .subtitle { color: #555; font-size: 9.5pt; margin-top: 4px; }
+
+  h2 {
+    font-size: 13pt;
+    color: #1d4ed8;
+    border-bottom: 1px solid #c7d7f8;
+    padding-bottom: 4px;
+    margin-top: 28px;
+    page-break-after: avoid;
+  }
+  h3 {
+    font-size: 10.5pt;
+    color: #1e3a6e;
+    margin-top: 14px;
+    margin-bottom: 4px;
+    page-break-after: avoid;
+  }
+
+  p { margin: 6px 0; }
+  ul, ol { margin: 6px 0 6px 20px; padding: 0; }
+  li { margin-bottom: 3px; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9.5pt;
+    margin: 10px 0;
+    page-break-inside: avoid;
+  }
+  th {
+    background: #1d4ed8;
+    color: #fff;
+    padding: 6px 8px;
+    text-align: left;
+    font-weight: 600;
+  }
+  td {
+    padding: 5px 8px;
+    border-bottom: 1px solid #e0e7ff;
+    vertical-align: top;
+  }
+  tr:nth-child(even) td { background: #f0f4ff; }
+
+  .badge {
+    display: inline-block;
+    border-radius: 4px;
+    font-size: 8.5pt;
+    font-weight: 700;
+    padding: 1px 6px;
+  }
+  .badge-blue  { background: #dbeafe; color: #1e40af; }
+  .badge-green { background: #dcfce7; color: #166534; }
+  .badge-amber { background: #fef9c3; color: #854d0e; }
+  .badge-red   { background: #fee2e2; color: #991b1b; }
+  .badge-gray  { background: #f1f5f9; color: #475569; }
+
+  .callout {
+    border-left: 4px solid #1d4ed8;
+    background: #eff6ff;
+    padding: 8px 12px;
+    margin: 10px 0;
+    border-radius: 0 4px 4px 0;
+    font-size: 9.5pt;
+  }
+  .callout.warn {
+    border-color: #d97706;
+    background: #fffbeb;
+  }
+
+  .phase-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 28px;
+    page-break-before: auto;
+  }
+  .phase-num {
+    background: #1d4ed8;
+    color: #fff;
+    font-size: 11pt;
+    font-weight: 700;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .phase-title {
+    font-size: 13pt;
+    font-weight: 700;
+    color: #1d4ed8;
+    border-bottom: 1px solid #c7d7f8;
+    flex: 1;
+    padding-bottom: 4px;
+  }
+
+  footer {
+    margin-top: 36px;
+    border-top: 1px solid #c7d7f8;
+    padding-top: 8px;
+    font-size: 8.5pt;
+    color: #888;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  @media print {
+    a { color: inherit; text-decoration: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Agristability Enrollment – Action Security Implementation Plan</h1>
+  <div class="subtitle">
+    Cross-app, Dataverse-native security model &nbsp;|&nbsp; Prepared April 30, 2026
+  </div>
+</header>
+
+<!-- ── EXECUTIVE SUMMARY ── -->
+<h2>Executive Summary</h2>
+<p>
+  The Agristability Enrollment app currently identifies four user types at runtime via Dataverse
+  role and team lookups. This plan describes how to move <strong>action-level security enforcement
+  outside the application layer</strong> into Dataverse itself, so the same rules apply to any
+  app, flow, or API that touches the same data — not just the enrollment Power Apps canvas app.
+</p>
+<p>
+  The recommended approach combines three Dataverse-native mechanisms:
+</p>
+<ol>
+  <li><strong>Security Roles</strong> — restrict which entity rows and columns each user type can read/write.</li>
+  <li><strong>Custom APIs</strong> — server-side entry points for each major action that check caller permissions before executing.</li>
+  <li><strong>Plug-in Steps</strong> — pre-operation enforcement that blocks disallowed direct-OData writes regardless of the calling app.</li>
+</ol>
+
+<div class="callout">
+  <strong>Guiding principle:</strong> No action-level rule should live only in a client app.
+  If a rule can be bypassed by calling OData directly, it is not secure.
+</div>
+
+
+<!-- ── USER TYPES ── -->
+<h2>User Type Reference</h2>
+<table>
+  <thead>
+    <tr>
+      <th>User Type</th>
+      <th>Current Detection Method</th>
+      <th>Badge (in-app)</th>
+      <th>Privilege Level</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>System Administrator</strong></td>
+      <td>Dataverse Security Role: <em>System Administrator</em></td>
+      <td><span class="badge badge-blue">Sys Admin</span></td>
+      <td>Full access – all actions</td>
+    </tr>
+    <tr>
+      <td><strong>Enrolment Admin</strong></td>
+      <td>Dataverse Security Role: <em>Enrolment Admin</em></td>
+      <td><span class="badge badge-green">Enrolment Admin</span></td>
+      <td>High – bulk actions, fee approval, assignment</td>
+    </tr>
+    <tr>
+      <td><strong>Supervisor Approval Queue Member</strong></td>
+      <td>Dataverse Queue membership: <em>Supervisor Approval Queue</em></td>
+      <td><span class="badge badge-amber">Queue Member</span></td>
+      <td>Mid – approve/manual/assign actions</td>
+    </tr>
+    <tr>
+      <td><strong>Verifier Team Member</strong></td>
+      <td>Dataverse Team membership: <em>Verifier Team</em></td>
+      <td><span class="badge badge-gray">Verifier</span></td>
+      <td>Low – read + refer to supervisor</td>
+    </tr>
+  </tbody>
+</table>
+
+
+<!-- ── ACTION MATRIX ── -->
+<h2>Action Permission Matrix</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Action</th>
+      <th>Sys Admin</th>
+      <th>Enrolment Admin</th>
+      <th>Queue Member</th>
+      <th>Verifier</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>View enrolment list</td>
+      <td><span class="badge badge-green">✓</span></td>
+      <td><span class="badge badge-green">✓</span></td>
+      <td><span class="badge badge-green">✓</span></td>
+      <td><span class="badge badge-green">✓</span></td>
+    </tr>
+    <tr>
+      <td>View enrolment details</td>
+      <td><span class="badge badge-green">✓</span></td>
+      <td><span class="badge badge-green">✓</span></td>
+      <td><span class="badge badge-green">✓</span></td>
+      <td><span class="badge badge-green">✓</span></td>
+    </tr>
+    <tr>
+      <td>Refer to Supervisor</td>
+      <td><span class="badge badge-green">✓</span></td>
+      <td><span class="badge badge-green">✓</span></td>
+      <td><span class="badge badge-green">✓</span></td>
+      <td><span class="badge badge-green">✓</span></td>
+    </tr>
+    <tr>
+      <td>Approve Calculated Fees (bulk)</td>
+      <td><span class="badge badge-green">✓</span></td>
+      <td><span class="badge badge-green">✓</span></td>
+      <td><span class="badge badge-red">✗</span></td>
+      <td><span class="badge badge-red">✗</span></td>
+    </tr>
+    <tr>
+      <td>Send Bulk Notices</td>
+      <td><span class="badge badge-green">✓</span></td>
+      <td><span class="badge badge-green">✓</span></td>
+      <td><span class="badge badge-red">✗</span></td>
+      <td><span class="badge badge-red">✗</span></td>
+    </tr>
+    <tr>
+      <td>Assign Worker (supervisor page)</td>
+      <td><span class="badge badge-green">✓</span></td>
+      <td><span class="badge badge-green">✓</span></td>
+      <td><span class="badge badge-green">✓</span></td>
+      <td><span class="badge badge-red">✗</span></td>
+    </tr>
+    <tr>
+      <td>Approve (supervisor page)</td>
+      <td><span class="badge badge-green">✓</span></td>
+      <td><span class="badge badge-green">✓</span></td>
+      <td><span class="badge badge-green">✓</span></td>
+      <td><span class="badge badge-red">✗</span></td>
+    </tr>
+    <tr>
+      <td>Mark Manual (supervisor page)</td>
+      <td><span class="badge badge-green">✓</span></td>
+      <td><span class="badge badge-green">✓</span></td>
+      <td><span class="badge badge-green">✓</span></td>
+      <td><span class="badge badge-red">✗</span></td>
+    </tr>
+    <tr>
+      <td>Edit calculation values</td>
+      <td><span class="badge badge-green">✓</span></td>
+      <td><span class="badge badge-green">✓</span></td>
+      <td><span class="badge badge-red">✗</span></td>
+      <td><span class="badge badge-red">✗</span></td>
+    </tr>
+    <tr>
+      <td>Override enrolment status directly</td>
+      <td><span class="badge badge-green">✓</span></td>
+      <td><span class="badge badge-red">✗</span></td>
+      <td><span class="badge badge-red">✗</span></td>
+      <td><span class="badge badge-red">✗</span></td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="callout warn">
+  <strong>Note:</strong> The matrix above is a starting point. Exact permissions should be
+  reviewed and signed off by the program owner before implementation.
+</div>
+
+
+<!-- ── PHASE 1 ── -->
+<div class="phase-header">
+  <div class="phase-num">1</div>
+  <div class="phase-title">Audit &amp; Document Existing Security Roles</div>
+</div>
+
+<h3>Goal</h3>
+<p>Establish a baseline of what Dataverse security roles and team memberships currently grant.</p>
+
+<h3>Tasks</h3>
+<ol>
+  <li>Export the current <em>System Administrator</em> and <em>Enrolment Admin</em> role privilege lists from Power Platform Admin Center.</li>
+  <li>Document which entities each role has Create/Read/Update/Delete (CRUD) access to — specifically <code>vsi_participantprogramyears</code>, <code>queueitems</code>, <code>queues</code>, <code>systemusers</code>.</li>
+  <li>Confirm that <em>Supervisor Approval Queue</em> and <em>Verifier Team</em> have defined membership processes (who adds/removes members, and how).</li>
+  <li>Identify any privilege gaps or over-provisioning relative to the Action Permission Matrix above.</li>
+</ol>
+
+<h3>Deliverable</h3>
+<p>A spreadsheet mapping each user type to current Dataverse entity privileges, highlighting gaps vs. the target matrix.</p>
+
+
+<!-- ── PHASE 2 ── -->
+<div class="phase-header">
+  <div class="phase-num">2</div>
+  <div class="phase-title">Define &amp; Tighten Dataverse Security Roles</div>
+</div>
+
+<h3>Goal</h3>
+<p>
+  Ensure each role grants <em>only</em> the entity-level access required. This is the first layer
+  of defense and applies to all apps, flows, and direct API calls automatically.
+</p>
+
+<h3>Tasks</h3>
+<ol>
+  <li>
+    <strong>Enrolment Admin role</strong> — Grant Write on
+    <code>vsi_participantprogramyears</code> for the fields it needs
+    (e.g., <code>vsi_taskstatus</code>, <code>vsi_enrolmentstatus</code>, <code>ownerid</code>).
+    Deny direct write on <code>vsi_enrolmentstatus</code> for values that should only be set
+    via Custom API (see Phase 3).
+  </li>
+  <li>
+    <strong>Queue/Verifier roles</strong> — Create dedicated security roles
+    (e.g., <em>Enrolment Verifier</em>, <em>Enrolment Supervisor</em>) with Read-only on the
+    main entity and Write only on the specific fields each action requires.
+  </li>
+  <li>
+    <strong>Field-level security profiles</strong> — Use Dataverse Column Security Profiles to
+    restrict sensitive calculated fields (e.g., <code>vsi_calculatedenfee</code>,
+    <code>vsi_variancecalculation</code>) so Verifiers cannot write them directly.
+  </li>
+  <li>
+    Assign the correct base security role to each Azure AD group that maps to a user type,
+    so membership changes in Azure AD / Entra ID automatically propagate to Dataverse.
+  </li>
+</ol>
+
+<h3>Deliverable</h3>
+<p>Updated security roles published in the target environment, with a before/after privilege diff recorded.</p>
+
+
+<!-- ── PHASE 3 ── -->
+<div class="phase-header">
+  <div class="phase-num">3</div>
+  <div class="phase-title">Create Dataverse Custom APIs for Each Action</div>
+</div>
+
+<h3>Goal</h3>
+<p>
+  Replace direct OData PATCH/DELETE calls in client apps with server-side Custom API calls.
+  Each Custom API owns its own authorization check and business logic, making it reusable by
+  any app (Canvas, Model-driven, Power Automate, external API).
+</p>
+
+<h3>Custom APIs to Create</h3>
+<table>
+  <thead>
+    <tr>
+      <th>API Unique Name</th>
+      <th>Action Covered</th>
+      <th>Minimum Required Role</th>
+      <th>Returns</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>vsi_AssignWorker</code></td>
+      <td>Assign enrolment owner, delete queue item</td>
+      <td>Queue Member</td>
+      <td>Success / error message</td>
+    </tr>
+    <tr>
+      <td><code>vsi_ApproveFees</code></td>
+      <td>Set task status = Approved, stamp approved date</td>
+      <td>Enrolment Admin</td>
+      <td>Success / error message</td>
+    </tr>
+    <tr>
+      <td><code>vsi_ReferToSupervisor</code></td>
+      <td>Set task status = PendingSupervisor, add to queue</td>
+      <td>Verifier (any user)</td>
+      <td>Success / error message</td>
+    </tr>
+    <tr>
+      <td><code>vsi_MarkManual</code></td>
+      <td>Set task status = Manual, set enrolment status = ToBeReviewed</td>
+      <td>Queue Member</td>
+      <td>Success / error message</td>
+    </tr>
+    <tr>
+      <td><code>vsi_SendBulkNotices</code></td>
+      <td>Trigger notice workflow for selected enrolments</td>
+      <td>Enrolment Admin</td>
+      <td>Count sent / errors</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>Each Custom API plug-in should</h3>
+<ol>
+  <li>Retrieve the calling user's security roles and team/queue memberships.</li>
+  <li>Evaluate against the permission matrix — throw <code>InvalidPluginExecutionException</code> with a user-friendly message if unauthorized.</li>
+  <li>Execute the business logic (field updates, queue operations, workflow triggers).</li>
+  <li>Return a structured response (success flag + optional message).</li>
+</ol>
+
+<h3>Implementation Notes</h3>
+<ul>
+  <li>Custom APIs are registered in the Dataverse solution and deployed alongside entity customizations — no separate infrastructure needed.</li>
+  <li>The plug-in assembly can be shared by multiple Custom APIs, with each action as a separate plug-in step class.</li>
+  <li>Custom APIs support both synchronous and async execution; most of these actions should be synchronous.</li>
+  <li>Client apps call them via <code>POST /api/data/v9.2/vsi_AssignWorker</code> (unbound) or bound to a record as needed.</li>
+</ul>
+
+<div class="callout">
+  <strong>Cross-app benefit:</strong> Once deployed, a Model-driven app, a Power Automate flow,
+  or an external integration calling the same Custom API will automatically get the same security
+  enforcement — no duplication of logic.
+</div>
+
+
+<!-- ── PHASE 4 ── -->
+<div class="phase-header">
+  <div class="phase-num">4</div>
+  <div class="phase-title">Plug-in Pre-Operation Guards (Defense in Depth)</div>
+</div>
+
+<h3>Goal</h3>
+<p>
+  Even if a caller bypasses the Custom API and calls OData directly, a pre-operation plug-in
+  on the entity can reject disallowed writes. This is the <em>last line of defense</em>.
+</p>
+
+<h3>Tasks</h3>
+<ol>
+  <li>
+    Register a <strong>pre-operation Update plug-in</strong> on <code>vsi_participantprogramyears</code>.
+    For each write, inspect the target image fields:
+    <ul>
+      <li>If <code>vsi_enrolmentstatus</code> is being changed, verify the caller holds at least
+          the Queue Member role or higher.</li>
+      <li>If calculated fee fields are being changed, verify the caller holds Enrolment Admin
+          or higher.</li>
+      <li>Block and return a descriptive error message for any violation.</li>
+    </ul>
+  </li>
+  <li>
+    Register a <strong>pre-operation Delete plug-in</strong> on <code>queueitems</code> to
+    ensure only authorized users can remove items from the Supervisor Approval Queue.
+  </li>
+</ol>
+
+<h3>Implementation Notes</h3>
+<ul>
+  <li>Pre-operation plug-ins fire in the <em>database transaction</em> — rejection rolls back the entire operation cleanly.</li>
+  <li>Keep the role-check logic in a shared helper class so Custom API plug-ins and guard plug-ins stay in sync.</li>
+  <li>Use the <code>IOrganizationService</code> in the plug-in context to retrieve roles — avoid hard-coding role GUIDs; look them up by name and cache in static state.</li>
+</ul>
+
+
+<!-- ── PHASE 5 ── -->
+<div class="phase-header">
+  <div class="phase-num">5</div>
+  <div class="phase-title">Update Client Apps to Call Custom APIs</div>
+</div>
+
+<h3>Goal</h3>
+<p>Replace direct service calls in the enrollment app (and any other apps) with calls to the new Custom APIs.</p>
+
+<h3>Enrollment App Changes</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Current Call</th>
+      <th>Replace With</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>QueueitemsService.delete()</code> + <code>Vsi_participantprogramyearsService.patch()</code> (assign)</td>
+      <td><code>POST vsi_AssignWorker</code></td>
+    </tr>
+    <tr>
+      <td><code>Vsi_participantprogramyearsService.patch(vsi_taskstatus: Approved)</code></td>
+      <td><code>POST vsi_ApproveFees</code></td>
+    </tr>
+    <tr>
+      <td><code>Vsi_participantprogramyearsService.patch(vsi_taskstatus: PendingSupervisor)</code></td>
+      <td><code>POST vsi_ReferToSupervisor</code></td>
+    </tr>
+    <tr>
+      <td><code>Vsi_participantprogramyearsService.patch(vsi_taskstatus: Manual)</code></td>
+      <td><code>POST vsi_MarkManual</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>UI Behavior</h3>
+<ul>
+  <li>The app should still <em>show or hide</em> action buttons based on the user's resolved role (current behavior), providing a good UX.</li>
+  <li>However, the server will enforce the rule independently — a hidden button is UX, not security.</li>
+  <li>On a <code>403</code> / plug-in error response, display a toast: <em>"You don't have permission to perform this action."</em></li>
+</ul>
+
+
+<!-- ── PHASE 6 ── -->
+<div class="phase-header">
+  <div class="phase-num">6</div>
+  <div class="phase-title">Testing &amp; Validation</div>
+</div>
+
+<h3>Test Scenarios</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Scenario</th>
+      <th>Expected Outcome</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Verifier calls <code>vsi_ApproveFees</code></td>
+      <td>403 / plug-in error; no record change</td>
+    </tr>
+    <tr>
+      <td>Queue Member calls <code>vsi_ApproveFees</code></td>
+      <td>403 / plug-in error; no record change</td>
+    </tr>
+    <tr>
+      <td>Enrolment Admin calls <code>vsi_ApproveFees</code></td>
+      <td>Success; task status updated</td>
+    </tr>
+    <tr>
+      <td>Verifier directly PATCHes <code>vsi_enrolmentstatus</code> via OData</td>
+      <td>Pre-operation plug-in rejects; rollback</td>
+    </tr>
+    <tr>
+      <td>Queue Member calls <code>vsi_AssignWorker</code></td>
+      <td>Success; owner changed, queue item deleted</td>
+    </tr>
+    <tr>
+      <td>Verifier calls <code>vsi_ReferToSupervisor</code></td>
+      <td>Success; task status and queue updated</td>
+    </tr>
+    <tr>
+      <td>Model-driven app calls same Custom API as Canvas app</td>
+      <td>Same enforcement, same result</td>
+    </tr>
+  </tbody>
+</table>
+
+
+<!-- ── PHASE 7 ── -->
+<div class="phase-header">
+  <div class="phase-num">7</div>
+  <div class="phase-title">Deployment &amp; Governance</div>
+</div>
+
+<h3>Solution Packaging</h3>
+<ul>
+  <li>Package all security roles, Custom API registrations, plug-in assembly, and column security profiles in a <strong>single Dataverse managed solution</strong> (e.g., <em>AgristabilityActionSecurity</em>).</li>
+  <li>Managed solution prevents accidental edits in target environments.</li>
+  <li>Deploy via standard ALM pipeline (dev → test → prod).</li>
+</ul>
+
+<h3>Governance Notes</h3>
+<ul>
+  <li>Role assignment changes should go through a change-management process, not ad-hoc admin edits.</li>
+  <li>Queue and team memberships are the source of truth for Queue Member and Verifier access; keep them clean.</li>
+  <li>Any new action added to any app must be added to the Custom API layer <em>first</em> — client apps are downstream consumers.</li>
+  <li>Log Custom API calls using Dataverse audit logging for accountability.</li>
+</ul>
+
+
+<!-- ── EFFORT ESTIMATE ── -->
+<h2>Effort Estimate</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Phase</th>
+      <th>Task</th>
+      <th>Estimated Effort</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>1</td><td>Audit existing roles</td><td>0.5 day</td></tr>
+    <tr><td>2</td><td>Tighten security roles + column security profiles</td><td>1–2 days</td></tr>
+    <tr><td>3</td><td>Custom API development (5 APIs + shared auth helper)</td><td>3–5 days</td></tr>
+    <tr><td>4</td><td>Pre-operation plug-in guards</td><td>1–2 days</td></tr>
+    <tr><td>5</td><td>Update enrollment app to call Custom APIs</td><td>1–2 days</td></tr>
+    <tr><td>6</td><td>Testing &amp; validation</td><td>1–2 days</td></tr>
+    <tr><td>7</td><td>Solution packaging &amp; deployment</td><td>0.5 day</td></tr>
+    <tr><td colspan="2"><strong>Total</strong></td><td><strong>8–14 days</strong></td></tr>
+  </tbody>
+</table>
+
+
+<!-- ── TECHNOLOGY SUMMARY ── -->
+<h2>Technology Summary</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Mechanism</th>
+      <th>Where Enforced</th>
+      <th>Protects Against</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Dataverse Security Roles</td>
+      <td>Dataverse platform (always on)</td>
+      <td>Unauthorized entity access, unauthorized OData reads/writes</td>
+    </tr>
+    <tr>
+      <td>Column Security Profiles</td>
+      <td>Dataverse platform (always on)</td>
+      <td>Unauthorized field reads/writes on sensitive columns</td>
+    </tr>
+    <tr>
+      <td>Custom API + Plug-in</td>
+      <td>Server-side, called explicitly</td>
+      <td>Unauthorized action execution regardless of calling app</td>
+    </tr>
+    <tr>
+      <td>Pre-operation Plug-in Guard</td>
+      <td>Server-side, triggered by any write</td>
+      <td>Direct OData bypass of Custom API</td>
+    </tr>
+    <tr>
+      <td>Client-side Role Check (existing)</td>
+      <td>Browser / Canvas app</td>
+      <td>UX only — hides unauthorized buttons (not a security control)</td>
+    </tr>
+  </tbody>
+</table>
+
+<footer>
+  <span>Agristability Enrollment – Action Security Plan &nbsp;|&nbsp; Confidential</span>
+  <span>April 30, 2026</span>
+</footer>
+
+</body>
+</html>

@@ -1933,6 +1933,14 @@
           "x-ms-schema-name": "vsi_updatedfeesreceivedafternoticesentName",
           "x-ms-read-only": true
         },
+        "vsi_variancecalculation": {
+          "type": "string",
+          "title": "Variance Calculation",
+          "x-ms-dataverse-attribute": "vsi_variancecalculation",
+          "x-ms-dataverse-type": "DecimalType",
+          "x-ms-schema-name": "vsi_VarianceCalculation",
+          "x-ms-read-only": true
+        },
         "vsi_waitingforinformation": {
           "type": "string",
           "title": "Waiting for Information",

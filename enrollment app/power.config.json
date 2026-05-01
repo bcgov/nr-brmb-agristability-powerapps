@@ -81,6 +81,18 @@
         "teams": {
           "entitySetName": "teams",
           "logicalName": "team"
+        },
+        "securityroles": {
+          "entitySetName": "roles",
+          "logicalName": "role"
+        },
+        "teammembership": {
+          "entitySetName": "teammemberships",
+          "logicalName": "teammembership"
+        },
+        "systemuserroles": {
+          "entitySetName": "systemuserrolescollection",
+          "logicalName": "systemuserroles"
         }
       },
       "version": "v9.0",

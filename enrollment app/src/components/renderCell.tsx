@@ -10,7 +10,7 @@ import type { SortKey } from '../types/enrollment';
 import {
   getEnrolmentStatusLabel, getTaskStatusLabel, taskStatusIcon,
   enrolmentStatusClass, formatCurrency, getInitials, getAvatarColor,
-  calculateVariance, getVarianceClass, formatVariancePercent,
+  getVarianceClass, formatVariancePercent,
 } from '../utils/helpers';
 
 const CORE_APP_ID_FALLBACK = '88c024d9-9fd5-ec11-a7b5-002248ada475';
@@ -67,7 +67,7 @@ export function renderCell(
       return <td key={key}><span className={`enrol-badge ${enrolmentStatusClass(l)}`}>{l}</span></td>;
     }
     case 'fee': {
-      const variance = calculateVariance(row.vsi_calculatedenfee, row.vsi_previousyearcalculatedenfee);
+      const variance = row.vsi_calculatedenfee != null && row.vsi_variancecalculation != null ? row.vsi_variancecalculation * 100 : null;
       const varianceClass = getVarianceClass(variance);
       const varianceText = formatVariancePercent(variance);
 
@@ -87,7 +87,7 @@ export function renderCell(
     case 'enrolmentFee': return <td key={key} className="cell-fee">{formatCurrency(row.vsi_enrolmentfee)}</td>;
     case 'latePay': return <td key={key} className="cell-fee">{formatCurrency(row.vsi_latepaymentfee)}</td>;
     case 'flagged': {
-      const variance = calculateVariance(row.vsi_calculatedenfee, row.vsi_previousyearcalculatedenfee);
+      const variance = row.vsi_variancecalculation != null ? row.vsi_variancecalculation * 100 : null;
       const isFlagged = (variance != null && Math.abs(variance) > 20)
         || row.vsi_prevyearpartnotverified === true
         || (row.vsi_calculatedenfee != null && row.vsi_previousyearcalculatedenfee == null);

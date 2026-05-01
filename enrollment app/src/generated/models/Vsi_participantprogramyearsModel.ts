@@ -239,6 +239,7 @@ export interface Vsi_participantprogramyears extends Vsi_participantprogramyears
   vsi_totalfeesowedcalculated_base?: number;
   vsi_totalfeespaid_base?: number;
   vsi_updatedfeesreceivedafternoticesentname?: string;
+  vsi_variancecalculation?: number;
   vsi_waitingforinformationname?: string;
   vsi_waitingforpaymentname?: string;
   createdby?: object;

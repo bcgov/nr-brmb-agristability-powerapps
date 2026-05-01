@@ -22,7 +22,7 @@ import type {
   QuickFilterState,
 } from '../types/enrollment';
 import { ADV_FIELD_OPTIONS } from '../constants/columns';
-import { calculateVariance, getEnrolmentStatusLabel, getTaskStatusLabel, getSortValue } from '../utils/helpers';
+import { getEnrolmentStatusLabel, getTaskStatusLabel, getSortValue } from '../utils/helpers';
 import { isNodeActive } from '../utils/filterTree';
 
 const FLAGGED_VARIANCE_THRESHOLD = 20;
@@ -33,6 +33,20 @@ function normalizeCoreBaseUrl(url: string | null | undefined) {
   return /\/main\.aspx(?:$|[?#])/i.test(trimmed) ? trimmed : `${trimmed.replace(/\/$/, '')}/main.aspx`;
 }
 
+
+// Patch specific records in the in-memory cache by enrolment ID.
+// Called by other pages (e.g. SupervisorApprovalPage) after mutating enrolment fields
+// so the dashboard table reflects the change without a full reload.
+export function patchEnrolmentCache(patches: Array<{ id: string; fields: Partial<Vsi_participantprogramyears> }>) {
+  if (!enrolmentRowsCache) return;
+  const patchMap = new Map(patches.map(p => [p.id.replace(/[{}]/g, '').toLowerCase(), p.fields]));
+  enrolmentRowsCache = enrolmentRowsCache.map(row => {
+    const rowId = row.vsi_participantprogramyearid?.replace(/[{}]/g, '').toLowerCase();
+    if (!rowId) return row;
+    const patch = patchMap.get(rowId);
+    return patch ? { ...row, ...patch } : row;
+  });
+}
 
 export function useEnrolmentData() {
   const [rows, setRows] = useState<Vsi_participantprogramyears[]>(() => enrolmentRowsCache || []);
@@ -108,6 +122,7 @@ export function useEnrolmentData() {
           'vsi_filereceiveddate',
           'vsi_enrolmentfeespaiddate',
           'vsi_prevyearpartnotverified',
+          'vsi_variancecalculation',
         ],
         orderBy: ['vsi_taskstatus desc'],
       };
@@ -309,7 +324,7 @@ export function useSortedAndFilteredRows(
   const isFlaggedByVariance = useCallback((row: Vsi_participantprogramyears): boolean => {
     if (row.vsi_prevyearpartnotverified === true) return true;
     if (row.vsi_calculatedenfee != null && row.vsi_previousyearcalculatedenfee == null) return true;
-    const variance = calculateVariance(row.vsi_calculatedenfee, row.vsi_previousyearcalculatedenfee);
+    const variance = row.vsi_variancecalculation != null ? row.vsi_variancecalculation * 100 : null;
     if (variance == null) return false;
     return Math.abs(variance) > FLAGGED_VARIANCE_THRESHOLD;
   }, []);

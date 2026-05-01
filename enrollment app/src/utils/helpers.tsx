@@ -73,7 +73,7 @@ export function calculateVariance(currentFee: unknown, previousFee: unknown): nu
 
 export function getVarianceClass(variance: number | null): 'neutral' | 'alert' | 'positive' {
   if (variance == null) return 'neutral';
-  if (Math.abs(variance) >= 25) return 'alert';
+  if (Math.abs(variance) >= 20) return 'alert';
   return variance > 0 ? 'positive' : 'neutral';
 }
 
@@ -136,7 +136,7 @@ export function getSortValue(row: Vsi_participantprogramyears, key: SortKey): st
     case 'latePay': return Number(row.vsi_latepaymentfee) || 0;
     case 'modifiedOn': return row.modifiedon ?? '';
     case 'flagged': {
-      const v = calculateVariance(row.vsi_calculatedenfee, row.vsi_previousyearcalculatedenfee);
+      const v = row.vsi_variancecalculation != null ? row.vsi_variancecalculation * 100 : null;
       return v != null && Math.abs(v) > 20 ? 1 : 0;
     }
     case 'regionalOffice': return Vsi_participantprogramyearsvsi_enrollmentregionaloffice[row.vsi_enrollmentregionaloffice as keyof typeof Vsi_participantprogramyearsvsi_enrollmentregionaloffice] ?? '';

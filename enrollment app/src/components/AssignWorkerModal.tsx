@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react';
 import { QueueitemsService } from '../generated/services/QueueitemsService';
 import { SystemusersService } from '../generated/services/SystemusersService';
 import { QueuemembershipsService } from '../generated/services/QueuemembershipsService';
+import { TeamsService } from '../generated/services/TeamsService';
+import { TeammembershipsService } from '../generated/services/TeammembershipsService';
+import { RolesService } from '../generated/services/RolesService';
+import { SystemuserrolescollectionService } from '../generated/services/SystemuserrolescollectionService';
 import { getInitials } from '../utils/helpers';
 
 export interface AssignableUser {
@@ -9,6 +13,7 @@ export interface AssignableUser {
   displayName: string;
   jobTitle?: string;
   mail?: string;
+  group?: string;
 }
 
 function chunkArray<T>(items: T[], size: number): T[][] {
@@ -34,7 +39,6 @@ export function AssignWorkerModal({
   enrolmentName,
   queueitemId,
   queueId,
-  queueName,
   onClose,
   onAssigned,
 }: {
@@ -51,6 +55,13 @@ export function AssignWorkerModal({
   // queueMemberIds: set of systemuserids that belong to the queue when queue scoping is enabled.
   const [queueMemberIds, setQueueMemberIds] = useState<Set<string> | null>(null);
   const [restrictToQueueMembers, setRestrictToQueueMembers] = useState(true);
+  // group ID sets — stored in state so handleSearch can apply badges on search results too
+  const [groupIds, setGroupIds] = useState<{
+    sysAdmin: Set<string>;
+    admin: Set<string>;
+    queue: Set<string>;
+    verifier: Set<string>;
+  }>({ sysAdmin: new Set(), admin: new Set(), queue: new Set(), verifier: new Set() });
   const [selected, setSelected] = useState<AssignableUser | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +76,7 @@ export function AssignWorkerModal({
     for (const idChunk of idChunks) {
       const users = await SystemusersService.getAll({
         select: ['systemuserid', 'fullname', 'jobtitle', 'internalemailaddress', 'domainname', 'isdisabled'],
-        filter: `${buildUserIdOrFilter(idChunk)} and isdisabled eq false`,
+        filter: `${buildUserIdOrFilter(idChunk)} and isdisabled eq false and not startswith(fullname,'#')`,
         orderBy: ['fullname asc'],
         maxPageSize: 500,
       });
@@ -97,12 +108,12 @@ export function AssignWorkerModal({
 
     const filters = term
       ? [
-          `contains(fullname,'${escaped}') and isdisabled eq false${memberConstraint}`,
-          `startswith(fullname,'${escaped}') and isdisabled eq false${memberConstraint}`,
-          `contains(internalemailaddress,'${escaped}') and isdisabled eq false${memberConstraint}`,
-          `contains(domainname,'${escaped}') and isdisabled eq false${memberConstraint}`,
+          `contains(fullname,'${escaped}') and isdisabled eq false and not startswith(fullname,'#')${memberConstraint}`,
+          `startswith(fullname,'${escaped}') and isdisabled eq false and not startswith(fullname,'#')${memberConstraint}`,
+          `contains(internalemailaddress,'${escaped}') and isdisabled eq false and not startswith(fullname,'#')${memberConstraint}`,
+          `contains(domainname,'${escaped}') and isdisabled eq false and not startswith(fullname,'#')${memberConstraint}`,
         ]
-      : [`isdisabled eq false${memberConstraint}`];
+      : [`isdisabled eq false and not startswith(fullname,'#')${memberConstraint}`];
 
     const collected = new Map<string, AssignableUser>();
     const errors: string[] = [];
@@ -172,20 +183,57 @@ export function AssignWorkerModal({
           return;
         }
 
-        const ids = new Set(
+        const queueIds = new Set(
           (memberships.data ?? []).map(m => m.systemuserid).filter((id): id is string => !!id)
         );
         setRestrictToQueueMembers(true);
-        setQueueMemberIds(ids);
+        setQueueMemberIds(queueIds);
 
-        if (ids.size === 0) {
+        // Helper to fetch all userids for a named team
+        const getTeamMemberIds = async (teamName: string): Promise<Set<string>> => {
+          const teamsResp = await TeamsService.getAll({ filter: `name eq '${teamName}'`, maxPageSize: 1 });
+          if (!teamsResp.success || !teamsResp.data || teamsResp.data.length === 0) return new Set();
+          const teamId = teamsResp.data[0].teamid;
+          const membersResp = await TeammembershipsService.getAll({ filter: `teamid eq '${teamId}'`, maxPageSize: 500 });
+          if (!membersResp.success || !membersResp.data) return new Set();
+          return new Set(membersResp.data.map(m => m.systemuserid).filter((id): id is string => !!id));
+        };
+
+        // Helper to fetch all userids that have a named security role.
+        // Dataverse creates a copy of each role per business unit, so there may be
+        // multiple role records with the same name. We fetch ALL of them and union
+        // the assigned users across every BU-scoped copy.
+        const getRoleUserIds = async (roleName: string): Promise<Set<string>> => {
+          const rolesResp = await RolesService.getAll({ filter: `name eq '${roleName}'`, maxPageSize: 500 });
+          if (!rolesResp.success || !rolesResp.data || rolesResp.data.length === 0) return new Set();
+          const userIds = new Set<string>();
+          await Promise.all(rolesResp.data.map(async role => {
+            const userRolesResp = await SystemuserrolescollectionService.getAll({ filter: `roleid eq '${role.roleid}'`, maxPageSize: 500 });
+            if (userRolesResp.success && userRolesResp.data) {
+              userRolesResp.data.forEach(r => { if (r.systemuserid) userIds.add(r.systemuserid); });
+            }
+          }));
+          return userIds;
+        };
+
+        // Fetch Enrolment Admin and Verifiers Team Member team members and merge
+        let adminIds = new Set<string>();
+        let verifierIds = new Set<string>();
+        let sysAdminIds = new Set<string>();
+        try { adminIds = await getTeamMemberIds('Enrolment Admin'); } catch { /* non-fatal */ }
+        try { verifierIds = await getTeamMemberIds('Verifier Team Member'); } catch { /* non-fatal */ }
+        try { sysAdminIds = await getRoleUserIds('System Administrator'); } catch { /* non-fatal */ }
+        setGroupIds({ sysAdmin: sysAdminIds, admin: adminIds, queue: queueIds, verifier: verifierIds });
+
+        const allIds = new Set([...queueIds, ...adminIds, ...verifierIds, ...sysAdminIds]);
+        if (allIds.size === 0) {
           setResults([]);
           return;
         }
 
-        const users = await loadUsersByIds([...ids]);
+        const rawUsers = await loadUsersByIds([...allIds]);
         if (cancelled) return;
-        setResults(users);
+        setResults(applyGroupBadges(rawUsers, sysAdminIds, adminIds, queueIds, verifierIds));
       } catch (err) {
         if (cancelled) return;
         const message = err instanceof Error ? err.message : String(err ?? 'Failed to load queue members');
@@ -211,6 +259,22 @@ export function AssignWorkerModal({
     return () => { cancelled = true; };
   }, [queueId, queueitemId]);
 
+  const applyGroupBadges = (
+    users: AssignableUser[],
+    sysAdmin: Set<string>,
+    admin: Set<string>,
+    queue: Set<string>,
+    verifier: Set<string>
+  ): AssignableUser[] =>
+    users.map(u => ({
+        ...u,
+        group: sysAdmin.has(u.systemUserId) ? 'System Administrator'
+          : admin.has(u.systemUserId) ? 'Enrolment Admin'
+          : queue.has(u.systemUserId) ? 'Supervisor Approval Queue Member'
+          : verifier.has(u.systemUserId) ? 'Verifier Team Member'
+          : undefined,
+      }));
+
   const handleSearch = async () => {
     const term = searchTerm.trim();
     if (!queueId) {
@@ -232,17 +296,17 @@ export function AssignWorkerModal({
         if (restrictToQueueMembers && queueMemberIds) {
           // Clear filter — re-load all queue members.
           const users = await loadUsersByIds([...queueMemberIds]);
-          setResults(users);
+          setResults(applyGroupBadges(users, groupIds.sysAdmin, groupIds.admin, groupIds.queue, groupIds.verifier));
           return;
         }
 
         const users = await searchActiveUsers('', null);
-        setResults(users);
+        setResults(applyGroupBadges(users, groupIds.sysAdmin, groupIds.admin, groupIds.queue, groupIds.verifier));
         return;
       }
 
       const users = await searchActiveUsers(term, restrictToQueueMembers ? queueMemberIds : null);
-      setResults(users);
+      setResults(applyGroupBadges(users, groupIds.sysAdmin, groupIds.admin, groupIds.queue, groupIds.verifier));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Search failed');
     } finally {
@@ -250,27 +314,20 @@ export function AssignWorkerModal({
     }
   };
 
+  // Trigger search automatically as the user types, debounced by 300 ms.
+  useEffect(() => {
+    const timer = setTimeout(() => { void handleSearch(); }, 300);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm]);
+
   const handleAssign = async () => {
     if (!selected || !queueitemId) return;
     setSubmitting(true);
     setError(null);
     try {
-      // workerid is a polymorphic lookup (systemuser or team), so the navigation
-      // property name for OData binding uses the polymorphic variant suffix.
-      let updateResult = await QueueitemsService.update(queueitemId, {
-        'workerid_systemuser@odata.bind': `/systemusers(${selected.systemUserId})`,
-      } as unknown as Parameters<typeof QueueitemsService.update>[1]);
-
-      // Fall back to the model-declared name in case CRM version differs.
-      if (!updateResult.success) {
-        updateResult = await QueueitemsService.update(queueitemId, {
-          'WorkerId@odata.bind': `/systemusers(${selected.systemUserId})`,
-        } as Parameters<typeof QueueitemsService.update>[1]);
-      }
-
-      if (!updateResult.success) {
-        throw new Error(updateResult.error?.message ?? 'Failed to save assignment to queue item.');
-      }
+      // Remove from queue by deleting the queue item
+      await QueueitemsService.delete(queueitemId);
 
       onAssigned(selected.systemUserId, selected.displayName);
       onClose();
@@ -294,12 +351,6 @@ export function AssignWorkerModal({
             Assigning: <strong>{enrolmentName}</strong>
           </p>
 
-          <p className="assign-queue-context">
-            Queue scope: <strong>{queueName || 'Unknown queue'}</strong>
-            {restrictToQueueMembers && queueMemberIds ? ` | Members loaded: ${queueMemberIds.size}` : ''}
-            {!restrictToQueueMembers ? ' | Using active users (queue membership source unavailable)' : ''}
-          </p>
-
           {!queueitemId && (
             <p className="assign-no-queueitem">
               This enrolment has no active queue item. Refer it to the supervisor queue first.
@@ -315,17 +366,8 @@ export function AssignWorkerModal({
                   placeholder={queueId ? (restrictToQueueMembers ? 'Filter queue members by name…' : 'Search active users by name…') : 'Search users by name…'}
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') void handleSearch(); }}
                   autoFocus
                 />
-                <button
-                  type="button"
-                  className="btn-ok assign-search-btn"
-                  onClick={() => void handleSearch()}
-                  disabled={searching || !queueId}
-                >
-                  {searching ? '…' : 'Search'}
-                </button>
               </div>
 
               {hasSearched && !searching && results.length === 0 && (
@@ -344,7 +386,10 @@ export function AssignWorkerModal({
                     >
                       <span className="avatar-circle">{getInitials(u.displayName)}</span>
                       <span className="assign-result-info">
-                        <span className="assign-result-name">{u.displayName}</span>
+                        <span className="assign-result-name">
+                          {u.displayName}
+                          {u.group && <span className="assign-group-badge">{u.group}</span>}
+                        </span>
                         {(u.jobTitle || u.mail) && (
                           <span className="assign-result-sub">{u.jobTitle ?? u.mail}</span>
                         )}
