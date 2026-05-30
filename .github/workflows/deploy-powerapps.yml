@@ -1,39 +1,39 @@
-name: Deploy Power Apps code app
+# name: Deploy Power Apps code app
 
-on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+# on:
+#   push:
+#     branches:
+#       - main
+#   workflow_dispatch:
 
-jobs:
-  deploy:
-    name: Build and push
-    runs-on: self-hosted
+# jobs:
+#   deploy:
+#     name: Build and push
+#     runs-on: self-hosted
 
-    defaults:
-      run:
-        working-directory: enrollment app
+#     defaults:
+#       run:
+#         working-directory: enrollment app
 
-    env:
-      CI: "true"
+#     env:
+#       CI: "true"
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: enrollment app/package-lock.json
+#       - name: Setup Node
+#         uses: actions/setup-node@v4
+#         with:
+#           node-version: 22
+#           cache: npm
+#           cache-dependency-path: enrollment app/package-lock.json
 
-      - name: Install dependencies
-        run: npm ci
+#       - name: Install dependencies
+#         run: npm ci
 
-      - name: Build
-        run: npm run build
+#       - name: Build
+#         run: npm run build
 
-      - name: Push to Power Apps
-        run: npx power-apps push --non-interactive
+#       - name: Push to Power Apps
+#         run: npx power-apps push --non-interactive
