@@ -5,15 +5,19 @@
 
 // Models
 export * as AccountsModel from './models/AccountsModel';
+export * as ApproveEnrolmentModel from './models/ApproveEnrolmentModel';
 export * as CommonModels from './models/CommonModels';
+export * as CompleteENCalculationModel from './models/CompleteENCalculationModel';
 export * as FARMSAPIModel from './models/FARMSAPIModel';
 export * as Generate45DayLetterModel from './models/Generate45DayLetterModel';
 export * as GenerateBulkEnrolmentNoticesModel from './models/GenerateBulkEnrolmentNoticesModel';
 export * as MicrosoftDataverseModel from './models/MicrosoftDataverseModel';
 export * as Office365UsersModel from './models/Office365UsersModel';
+export * as ProcessEnrolmentActionModel from './models/ProcessEnrolmentActionModel';
 export * as QueueitemsModel from './models/QueueitemsModel';
 export * as QueuemembershipsModel from './models/QueuemembershipsModel';
 export * as QueuesModel from './models/QueuesModel';
+export * as ReferToSupervisorModel from './models/ReferToSupervisorModel';
 export * as RolesModel from './models/RolesModel';
 export * as SavedqueriesModel from './models/SavedqueriesModel';
 export * as SystemuserrolescollectionModel from './models/SystemuserrolescollectionModel';
@@ -28,14 +32,18 @@ export * as Vsi_programyearsModel from './models/Vsi_programyearsModel';
 
 // Services
 export * from './services/AccountsService';
+export * from './services/ApproveEnrolmentService';
+export * from './services/CompleteENCalculationService';
 export * from './services/FARMSAPIService';
 export * from './services/Generate45DayLetterService';
 export * from './services/GenerateBulkEnrolmentNoticesService';
 export * from './services/MicrosoftDataverseService';
 export * from './services/Office365UsersService';
+export * from './services/ProcessEnrolmentActionService';
 export * from './services/QueueitemsService';
 export * from './services/QueuemembershipsService';
 export * from './services/QueuesService';
+export * from './services/ReferToSupervisorService';
 export * from './services/RolesService';
 export * from './services/SavedqueriesService';
 export * from './services/SystemuserrolescollectionService';

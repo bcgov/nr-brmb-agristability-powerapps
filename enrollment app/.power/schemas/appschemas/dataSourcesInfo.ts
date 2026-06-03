@@ -873,7 +873,8 @@ export const dataSourcesInfo = {
             "name": "$top",
             "in": "query",
             "required": false,
-            "type": "integer"
+            "type": "integer",
+            "format": "int32"
           },
           {
             "name": "$skiptoken",
@@ -1027,7 +1028,8 @@ export const dataSourcesInfo = {
             "name": "$top",
             "in": "query",
             "required": false,
-            "type": "integer"
+            "type": "integer",
+            "format": "int32"
           },
           {
             "name": "$skiptoken",
@@ -2608,7 +2610,8 @@ export const dataSourcesInfo = {
             "name": "item",
             "in": "body",
             "required": true,
-            "type": "object"
+            "type": "string",
+            "format": "binary"
           },
           {
             "name": "x-ms-file-name",
@@ -2670,7 +2673,8 @@ export const dataSourcesInfo = {
             "name": "item",
             "in": "body",
             "required": true,
-            "type": "object"
+            "type": "string",
+            "format": "binary"
           },
           {
             "name": "x-ms-file-name",
@@ -3634,35 +3638,6 @@ export const dataSourcesInfo = {
     "primaryKey": "",
     "dataSourceType": "Connector",
     "apis": {
-      "GetEnrolmentNoticeWorkflowCalculation": {
-        "path": "/{connectionId}/calculations/enrolment-notice-workflow",
-        "method": "GET",
-        "parameters": [
-          {
-            "name": "connectionId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "participantPin",
-            "in": "query",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "programYear",
-            "in": "query",
-            "required": true,
-            "type": "integer"
-          }
-        ],
-        "responseInfo": {
-          "default": {
-            "type": "object"
-          }
-        }
-      },
       "GetAllCodetables": {
         "path": "/{connectionId}/codeTables",
         "method": "GET",
@@ -4140,7 +4115,8 @@ export const dataSourcesInfo = {
             "name": "body",
             "in": "body",
             "required": false,
-            "type": "object"
+            "type": "string",
+            "format": "binary"
           }
         ],
         "responseInfo": {
@@ -4175,7 +4151,8 @@ export const dataSourcesInfo = {
             "name": "body",
             "in": "body",
             "required": false,
-            "type": "object"
+            "type": "string",
+            "format": "binary"
           }
         ],
         "responseInfo": {
@@ -4210,7 +4187,8 @@ export const dataSourcesInfo = {
             "name": "body",
             "in": "body",
             "required": false,
-            "type": "object"
+            "type": "string",
+            "format": "binary"
           }
         ],
         "responseInfo": {
@@ -4291,7 +4269,8 @@ export const dataSourcesInfo = {
             "name": "body",
             "in": "body",
             "required": false,
-            "type": "object"
+            "type": "string",
+            "format": "binary"
           }
         ],
         "responseInfo": {
@@ -5452,6 +5431,86 @@ export const dataSourcesInfo = {
       }
     }
   },
+  "approveenrolment": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "",
+    "dataSourceType": "Connector",
+    "apis": {
+      "Run": {
+        "path": "/{connectionId}/triggers/manual/run",
+        "method": "POST",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "input",
+            "in": "body",
+            "required": true,
+            "type": "object"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          },
+          "default": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  },
+  "completeencalculation": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "",
+    "dataSourceType": "Connector",
+    "apis": {
+      "Run": {
+        "path": "/{connectionId}/triggers/manual/run",
+        "method": "POST",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "input",
+            "in": "body",
+            "required": true,
+            "type": "object"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          },
+          "default": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  },
   "generate45dayletter": {
     "tableId": "",
     "version": "",
@@ -5493,6 +5552,86 @@ export const dataSourcesInfo = {
     }
   },
   "generatebulkenrolmentnotices": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "",
+    "dataSourceType": "Connector",
+    "apis": {
+      "Run": {
+        "path": "/{connectionId}/triggers/manual/run",
+        "method": "POST",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "input",
+            "in": "body",
+            "required": true,
+            "type": "object"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          },
+          "default": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  },
+  "processenrolmentaction": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "",
+    "dataSourceType": "Connector",
+    "apis": {
+      "Run": {
+        "path": "/{connectionId}/triggers/manual/run",
+        "method": "POST",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "input",
+            "in": "body",
+            "required": true,
+            "type": "object"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          },
+          "default": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  },
+  "refertosupervisor": {
     "tableId": "",
     "version": "",
     "primaryKey": "",
@@ -5598,7 +5737,8 @@ export const dataSourcesInfo = {
             "name": "body",
             "in": "body",
             "required": true,
-            "type": "object"
+            "type": "string",
+            "format": "binary"
           },
           {
             "name": "Content-Type",
@@ -5905,7 +6045,8 @@ export const dataSourcesInfo = {
             "name": "top",
             "in": "query",
             "required": false,
-            "type": "integer"
+            "type": "integer",
+            "format": "int32"
           }
         ],
         "responseInfo": {
@@ -5952,7 +6093,8 @@ export const dataSourcesInfo = {
             "name": "top",
             "in": "query",
             "required": false,
-            "type": "integer"
+            "type": "integer",
+            "format": "int32"
           },
           {
             "name": "isSearchTermRequired",
@@ -6095,7 +6237,8 @@ export const dataSourcesInfo = {
             "name": "$top",
             "in": "query",
             "required": false,
-            "type": "integer"
+            "type": "integer",
+            "format": "int32"
           }
         ],
         "responseInfo": {
@@ -6195,7 +6338,8 @@ export const dataSourcesInfo = {
             "name": "Body",
             "in": "body",
             "required": false,
-            "type": "object"
+            "type": "string",
+            "format": "binary"
           },
           {
             "name": "ContentType",

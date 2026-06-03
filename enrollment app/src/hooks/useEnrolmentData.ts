@@ -43,6 +43,10 @@ export { normalizeCoreBaseUrl };
 // Patch specific records in the in-memory cache by enrolment ID.
 // Called by other pages (e.g. SupervisorApprovalPage) after mutating enrolment fields
 // so the dashboard table reflects the change without a full reload.
+export function clearEnrolmentCache(): void {
+  enrolmentRowsCache = null;
+}
+
 export function patchEnrolmentCache(patches: Array<{ id: string; fields: Partial<Vsi_participantprogramyears> }>) {
   if (!enrolmentRowsCache) return;
   const patchMap = new Map(patches.map(p => [p.id.replace(/[{}]/g, '').toLowerCase(), p.fields]));
