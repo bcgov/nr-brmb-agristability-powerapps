@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { resolveCurrentSystemUser, checkHasDataverseSystemAdminRole, checkIsSupervisorQueueMember, checkIsEnrolmentAdminTeamMember, checkIsVerifierTeamMember } from '../utils/currentUser';
 
 export type AppRole = 'SystemAdmin' | 'Supervisor' | 'ENAdmin' | 'Verifier';
 
@@ -30,12 +31,52 @@ const RoleContext = createContext<RoleContextValue | null>(null);
 
 export function RoleProvider({ children }: { children: ReactNode }) {
   const [activeRole, setActiveRoleState] = useState<AppRole>(readStoredRole);
+  const [validating, setValidating] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const user = await resolveCurrentSystemUser();
+        const initialRole = readStoredRole();
+        let valid = false;
+        let fallback: AppRole = 'Verifier';
+
+        if (initialRole === 'SystemAdmin') {
+          valid = await checkHasDataverseSystemAdminRole(user.systemUserId);
+          fallback = 'ENAdmin';
+        } else if (initialRole === 'Supervisor') {
+          valid = await checkIsSupervisorQueueMember(user.systemUserId);
+          fallback = 'ENAdmin';
+        } else if (initialRole === 'ENAdmin') {
+          valid = await checkIsEnrolmentAdminTeamMember(user.systemUserId);
+          fallback = 'Verifier';
+        } else if (initialRole === 'Verifier') {
+          valid = await checkIsVerifierTeamMember(user.systemUserId);
+          fallback = 'Verifier';
+        }
+
+        if (!valid) {
+          try { sessionStorage.setItem(STORAGE_KEY, fallback); } catch { /* ignore */ }
+          setActiveRoleState(fallback);
+        }
+      } catch {
+        // Cannot verify — fall back to Verifier to be safe
+        try { sessionStorage.setItem(STORAGE_KEY, 'Verifier'); } catch { /* ignore */ }
+        setActiveRoleState('Verifier');
+      } finally {
+        setValidating(false);
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const setActiveRole = (role: AppRole) => {
     try { sessionStorage.setItem(STORAGE_KEY, role); } catch { /* ignore */ }
     setActiveRoleState(role);
     window.location.reload();
   };
+
+  if (validating) return null;
 
   return (
     <RoleContext.Provider value={{ activeRole, setActiveRole }}>
