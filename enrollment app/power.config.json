@@ -69,6 +69,54 @@
       "authenticationType": "ServicePrincipalOauth",
       "sharedConnectionId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps/connections/b05319f6f3244385ac9d9959391a2970",
       "dataSets": {}
+    },
+    "5c7de17b-7dce-4c39-ab9a-bbe54daf6fba": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
+      "displayName": "Logic flows",
+      "dataSources": [
+        "refertosupervisor"
+      ],
+      "workflowDetails": {
+        "workflowEntityId": "88604369-c95e-f111-a826-7c1e5254cc04",
+        "workflowDisplayName": "Refer To Supervisor",
+        "workflowName": "dd07b3ca-e3fb-0e25-d293-a836fd06f355"
+      }
+    },
+    "f4cbde1c-f39e-4251-8ae1-45505bbe78ba": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
+      "displayName": "Logic flows",
+      "dataSources": [
+        "approveenrolment"
+      ],
+      "workflowDetails": {
+        "workflowEntityId": "36e27ea1-d65e-f111-a826-7c1e5254c5ff",
+        "workflowDisplayName": "Approve Enrolment",
+        "workflowName": "853b30ce-cc79-4dc6-0bbd-4f30e9115e09"
+      }
+    },
+    "e572896a-862b-4929-bce4-df199f6f3859": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
+      "displayName": "Logic flows",
+      "dataSources": [
+        "completeencalculation"
+      ],
+      "workflowDetails": {
+        "workflowEntityId": "5c0a7dff-dc5e-f111-a826-7c1e5254cc04",
+        "workflowDisplayName": "Complete EN Calculation",
+        "workflowName": "1c63a06d-33ff-3910-6ae9-d7116ceccd6d"
+      }
+    },
+    "933ca746-6029-4dff-bf7e-741a70c5bf3c": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
+      "displayName": "Logic flows",
+      "dataSources": [
+        "processenrolmentaction"
+      ],
+      "workflowDetails": {
+        "workflowEntityId": "eb6d48ce-df5e-f111-a826-7c1e5254cc04",
+        "workflowDisplayName": "Process Enrolment Action",
+        "workflowName": "8689572a-0028-59a4-6c76-579622dddbfb"
+      }
     }
   },
   "databaseReferences": {

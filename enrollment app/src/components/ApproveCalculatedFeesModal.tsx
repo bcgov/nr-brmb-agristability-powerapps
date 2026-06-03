@@ -1,9 +1,7 @@
 
 import { useState } from 'react';
 import type { Vsi_participantprogramyears } from '../generated/models/Vsi_participantprogramyearsModel';
-import { QueueitemsService } from '../generated/services/QueueitemsService';
-import { Vsi_participantprogramyearsService } from '../generated/services/Vsi_participantprogramyearsService';
-import { resolveCurrentSystemUser } from '../utils/currentUser';
+import { ProcessEnrolmentActionService } from '../generated/services/ProcessEnrolmentActionService';
 
 type ApprovedEnrolmentUpdate = {
   id: string;
@@ -39,44 +37,26 @@ export function ApproveCalculatedFeesModal({
     setSubmitting(true);
     setError(null);
     try {
-      const resolvedUser = await resolveCurrentSystemUser();
       const approvedDate = new Date().toISOString();
-      const updates: ApprovedEnrolmentUpdate[] = [];
-
-      const rowsToProcess = selectedRows;
-
-      for (const row of rowsToProcess) {
-        const enrolmentId = row.vsi_participantprogramyearid;
-        // Remove all queueitems for this enrolment
-        try {
-          const queueitemResult = await QueueitemsService.getAll({
-            filter: `objectid_vsi_participantprogramyear/vsi_participantprogramyearid eq '${enrolmentId}' and statecode eq 0`,
-            select: ['queueitemid'],
-          });
-          if (queueitemResult.data) {
-            for (const qi of queueitemResult.data) {
-              await QueueitemsService.delete(qi.queueitemid);
-            }
-          }
-        } catch {
-          // Ignore if not found, continue
-        }
-        // Set task status to Approved
-        const updateResult = await Vsi_participantprogramyearsService.update(enrolmentId, {
-          vsi_taskstatus: 865520003, // Vsi_participantprogramyearsvsi_taskstatus.Approved
-
-        });
-        if (!updateResult.success) {
-          throw new Error(updateResult.error?.message ?? `Failed to approve ${row.vsi_name ?? enrolmentId}.`);
-        }
-
-        updates.push({
-          id: enrolmentId,
-          approverId: resolvedUser.systemUserId,
-          approverName: resolvedUser.displayName,
-          approvedDate,
-        });
+      const result = await ProcessEnrolmentActionService.Run({
+        text: selectedRows.map(r => r.vsi_participantprogramyearid).join(','),
+        text_1: 'approve',
+        text_2: '',
+      });
+      if (!result.success) {
+        const msg = (result.error as { message?: string } | undefined)?.message ?? 'Failed to approve calculated fees';
+        throw new Error(msg);
       }
+      const flowMessage = result.data?.message;
+      if (flowMessage && flowMessage.toLowerCase() !== 'success') {
+        throw new Error(flowMessage);
+      }
+      const updates: ApprovedEnrolmentUpdate[] = selectedRows.map(row => ({
+        id: row.vsi_participantprogramyearid,
+        approverId: '',
+        approverName: '',
+        approvedDate,
+      }));
       onComplete(updates);
       onClose();
     } catch (err) {

@@ -1,5 +1,5 @@
 import { resolveCurrentSystemUser } from '../utils/currentUser';
-import { patchEnrolmentCache } from '../hooks/useEnrolmentData';
+import { patchEnrolmentCache, clearEnrolmentCache } from '../hooks/useEnrolmentData';
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { Filter, Calculator, ClipboardList, LogOut, UserPlus, CircleCheck, Wrench, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -7,6 +7,7 @@ import { useRole } from '../context/RoleContext';
 import type { Vsi_participantprogramyears } from '../generated/models/Vsi_participantprogramyearsModel';
 import { Vsi_participantprogramyearsvsi_enrolmentstatus } from '../generated/models/Vsi_participantprogramyearsModel';
 import { Vsi_participantprogramyearsService } from '../generated/services/Vsi_participantprogramyearsService';
+import { ProcessEnrolmentActionService } from '../generated/services/ProcessEnrolmentActionService';
 import { QueueitemsService } from '../generated/services/QueueitemsService';
 import { QueuemembershipsService } from '../generated/services/QueuemembershipsService';
 import { QueuesService } from '../generated/services/QueuesService';
@@ -578,30 +579,17 @@ export function SupervisorApprovalPage() {
   };
 
   const approveRows = async (rows: SupervisorRowView[]) => {
-   
-    for (const row of rows) {
-      if (!row.itemId) continue;
+    const ids = rows.filter(r => r.itemId).map(r => r.itemId!);
+    if (ids.length === 0) return;
 
-      const enrolmentId = row.itemId;
-      const statusUpdateResult = await Vsi_participantprogramyearsService.update(enrolmentId, {
-        vsi_taskstatus: 865520003,
-      });
-      if (!statusUpdateResult.success) {
-        throw new Error(statusUpdateResult.error?.message ?? `Failed to set Approved status for ${enrolmentId}.`);
-      }
-
-      // Remove all active queue items for this enrolment (including any supervisor queue items)
-      try {
-        const allQueueItems = await QueueitemsService.getAll({
-          filter: `objectid_vsi_participantprogramyear/vsi_participantprogramyearid eq '${enrolmentId}' and statecode eq 0`,
-          select: ['queueitemid'],
-        });
-        for (const qi of allQueueItems.data ?? []) {
-          await QueueitemsService.delete(qi.queueitemid);
-        }
-      } catch {
-        // ignore queue cleanup errors
-      }
+    const result = await ProcessEnrolmentActionService.Run({ text: ids.join(','), text_1: 'approve', text_2: '' });
+    if (!result.success) {
+      const msg = (result.error as { message?: string } | undefined)?.message ?? 'Failed to approve enrolments';
+      throw new Error(msg);
+    }
+    const flowMessage = result.data?.message;
+    if (flowMessage && flowMessage.toLowerCase() !== 'success') {
+      throw new Error(flowMessage);
     }
 
     patchEnrolmentCache(rows
@@ -1138,15 +1126,19 @@ export function SupervisorApprovalPage() {
                 }
                 const rowsToManual = selectedRows;
                 try {
-                  await Promise.all(rowsToManual.map(row =>
-                    Promise.all([
-                      Vsi_participantprogramyearsService.update(row.itemId!, {
-                        vsi_taskstatus: 865520000, // Manual
-                        vsi_enrolmentstatus: 865520009 // ToBeReviewed
-                      }),
-                      row.workMeta?.queueitemId ? QueueitemsService.delete(row.workMeta.queueitemId) : Promise.resolve()
-                    ])
-                  ));  
+                  const manualResult = await ProcessEnrolmentActionService.Run({
+                    text: rowsToManual.filter(r => r.itemId).map(r => r.itemId!).join(','),
+                    text_1: 'manual',
+                    text_2: '',
+                  });
+                  if (!manualResult.success) {
+                    const msg = (manualResult.error as { message?: string } | undefined)?.message ?? 'Manual action failed';
+                    throw new Error(msg);
+                  }
+                  const manualFlowMessage = manualResult.data?.message;
+                  if (manualFlowMessage && manualFlowMessage.toLowerCase() !== 'success') {
+                    throw new Error(manualFlowMessage);
+                  }
                   patchEnrolmentCache(rowsToManual
                     .filter(r => r.itemId != null)
                     .map(r => ({ id: r.itemId!, fields: {
@@ -1420,18 +1412,18 @@ export function SupervisorApprovalPage() {
             // and update ownerid on all enrolment records
             void (async () => {
               try {
-                const remainingRows = assignTarget.bulkRows && assignTarget.bulkRows.length > 1
-                  ? assignTarget.bulkRows.slice(1)
-                  : [];
-                for (const r of remainingRows) {
-                  if (r.queueitemId) await QueueitemsService.delete(r.queueitemId);
+                const assignResult = await ProcessEnrolmentActionService.Run({
+                  text: rowsToUpdate.map(r => r.itemId).join(','),
+                  text_1: 'assign',
+                  text_2: workerId,
+                });
+                if (!assignResult.success) {
+                  const msg = (assignResult.error as { message?: string } | undefined)?.message ?? 'Assign partially failed';
+                  throw new Error(msg);
                 }
-                for (const r of rowsToUpdate) {
-                  await Vsi_participantprogramyearsService.update(r.itemId, {
-                    'ownerid@odata.bind': `/systemusers(${workerId})`,
-                    vsi_enrolmentstatus: 865520009,
-                    vsi_taskstatus: 865520000,
-                  } as unknown as Parameters<typeof Vsi_participantprogramyearsService.update>[1]);
+                const assignFlowMessage = assignResult.data?.message;
+                if (assignFlowMessage && assignFlowMessage.toLowerCase() !== 'success') {
+                  throw new Error(assignFlowMessage);
                 }
                 patchEnrolmentCache(rowsToUpdate.map(r => ({ id: r.itemId, fields: {
                   vsi_taskstatus: 865520000 as unknown as import('../generated/models/Vsi_participantprogramyearsModel').Vsi_participantprogramyearsvsi_taskstatus,
@@ -1448,6 +1440,13 @@ export function SupervisorApprovalPage() {
             removeApprovedRowsFromState(allRows.filter(r => r.itemId != null && assignedItemIds.has(r.itemId)));
             const count = assignTarget.bulkRows?.length ?? 1;
             addToast(`${count} enrolment${count === 1 ? '' : 's'} assigned to ${workerName}.`);
+            // Refresh supervisor screen and invalidate dashboard cache
+            clearEnrolmentCache();
+            saItemsCache = null;
+            saQueueWorkCache = null;
+            saSupervisorQueueIdsCache = null;
+            saWorkerAvatarUrlsCache = null;
+            setRefreshCounter(prev => prev + 1);
           }}
         />
       )}

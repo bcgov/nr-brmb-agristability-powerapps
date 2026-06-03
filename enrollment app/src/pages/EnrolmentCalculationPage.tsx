@@ -11,6 +11,7 @@ import { removeSaItemsFromCache } from './SupervisorApprovalPage';
 import { useRole } from '../context/RoleContext';
 import type { Vsi_participantprogramyears } from '../generated/models/Vsi_participantprogramyearsModel';
 import { MicrosoftDataverseService } from '../generated/services/MicrosoftDataverseService';
+import { ProcessEnrolmentActionService } from '../generated/services/ProcessEnrolmentActionService';
 import { QueueitemsService } from '../generated/services/QueueitemsService';
 import { Vsi_armsconfigurationsService } from '../generated/services/Vsi_armsconfigurationsService';
 import { Vsi_participantprogramyearsService } from '../generated/services/Vsi_participantprogramyearsService';
@@ -115,6 +116,7 @@ type XrmWebApiHost = {
   Xrm?: {
     WebApi?: {
       retrieveRecord?: (entityType: string, id: string, options?: string) => Promise<Record<string, unknown>>;
+      updateRecord?: (entityType: string, id: string, data: Record<string, unknown>) => Promise<{ entityType: string; id: string }>;
     };
   };
 };
@@ -469,24 +471,6 @@ function CalculationOption({ checked, label }: { checked: boolean; label: string
       <span className={`calc-benefit-radio-visual${checked ? ' calc-benefit-radio-visual-checked' : ''}`} aria-hidden="true" />
       <span>{label}</span>
     </label>
-  );
-}
-
-function ReadOnlyYesNoField({ label, value }: { label: string; value: boolean | null }) {
-  return (
-    <div className="calc-readonly-toggle-row" aria-label={label}>
-      <span className="calc-readonly-toggle-label">{label}</span>
-      <span className="calc-readonly-toggle-options" aria-hidden="true">
-        <span className="calc-readonly-radio-option">
-          <span className={`calc-readonly-radio${value === true ? ' calc-readonly-radio-checked' : ''}`} />
-          <span>Yes</span>
-        </span>
-        <span className="calc-readonly-radio-option">
-          <span className={`calc-readonly-radio${value === false ? ' calc-readonly-radio-checked' : ''}`} />
-          <span>No</span>
-        </span>
-      </span>
-    </div>
   );
 }
 
@@ -1030,8 +1014,13 @@ export function EnrolmentCalculationPage() {
       const pauseDate = record.vsi_fortyfivedaypausedate;
       const startDate = record.vsi_fortyfivedayletterstartdate;
       if (!pauseDate || !startDate) throw new Error('Cannot resume: pause date or start date is missing.');
-      const pausedDays = Math.floor((Date.now() - new Date(pauseDate).getTime()) / (1000 * 60 * 60 * 24));
-      const newStartDate = new Date(new Date(startDate).getTime() + pausedDays * 24 * 60 * 60 * 1000).toISOString();
+      // Calculate how many days had elapsed at the moment the counter was paused,
+      // then anchor the new start date that many days before now.  This preserves
+      // the frozen elapsed count exactly, regardless of how long the pause lasted.
+      const elapsedAtPause = Math.floor(
+        (new Date(pauseDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24),
+      );
+      const newStartDate = new Date(Date.now() - elapsedAtPause * 24 * 60 * 60 * 1000).toISOString();
       const resumeResult = await Vsi_participantprogramyearsService.update(enrolmentId, {
         vsi_fortyfivedaycounterpaused: false,
         vsi_fortyfivedayletterstartdate: newStartDate,
@@ -1057,12 +1046,14 @@ export function EnrolmentCalculationPage() {
     setCompleting(true);
     setError(null);
     try {
-      const result = await Vsi_participantprogramyearsService.update(enrolmentId, {
-        vsi_taskstatus: 865520002, // Ready
-        vsi_enrolmentstatus: 865520006, // VerifiedENCalculalted
-      });
+      const result = await ProcessEnrolmentActionService.Run({ text: enrolmentId, text_1: 'complete', text_2: '' });
       if (!result.success) {
-        throw new Error(result.error?.message ?? `Failed to complete ${enrolmentId}.`);
+        const msg = (result.error as { message?: string } | undefined)?.message ?? `Failed to complete ${enrolmentId}.`;
+        throw new Error(msg);
+      }
+      const flowMessage = result.data?.message;
+      if (flowMessage && flowMessage.toLowerCase() !== 'success') {
+        throw new Error(flowMessage);
       }
       const completedFields: Partial<Vsi_participantprogramyears> = {
         vsi_taskstatus: 865520002 as unknown as Vsi_participantprogramyears['vsi_taskstatus'],
@@ -1108,24 +1099,14 @@ export function EnrolmentCalculationPage() {
         return;
       }
 
-      const statusUpdateResult = await Vsi_participantprogramyearsService.update(enrolmentId, {
-        vsi_taskstatus: 865520003,
-      });
-      if (!statusUpdateResult.success) {
-        throw new Error(statusUpdateResult.error?.message ?? `Failed to set Approved status for ${enrolmentId}.`);
+      const result = await ProcessEnrolmentActionService.Run({ text: enrolmentId, text_1: 'approve', text_2: '' });
+      if (!result.success) {
+        const msg = (result.error as { message?: string } | undefined)?.message ?? 'Failed to approve enrolment';
+        throw new Error(msg);
       }
-
-      // Remove all active queue items for this enrolment (including supervisor queue)
-      try {
-        const allQueueItems = await QueueitemsService.getAll({
-          filter: `objectid_vsi_participantprogramyear/vsi_participantprogramyearid eq '${enrolmentId}' and statecode eq 0`,
-          select: ['queueitemid'],
-        });
-        for (const qi of allQueueItems.data ?? []) {
-          await QueueitemsService.delete(qi.queueitemid);
-        }
-      } catch {
-        // ignore queue cleanup errors
+      const flowMessage = result.data?.message;
+      if (flowMessage && flowMessage.toLowerCase() !== 'success') {
+        throw new Error(flowMessage);
       }
 
       const approvedFields: Partial<Vsi_participantprogramyears> = {
@@ -1153,6 +1134,15 @@ export function EnrolmentCalculationPage() {
           <div className="details-meta-strip">
             <div className="details-info-card">
               <div className="details-info-stats-row">
+                <div className="details-info-stat">
+                  <span className="details-info-value">
+                    <span>
+                      {record?.vsi_isnewparticipant != null ? (record.vsi_isnewparticipant ? 'Yes' : 'No') : (loading ? '...' : '—')}
+                    </span>
+                  </span>
+                  <span className="details-info-label">NPP</span>
+                </div>
+                <div className="details-info-stat-divider" />
                 <div className="details-info-stat">
                   <span className="details-info-value">{taskStatusLabel || (loading ? '...' : '—')}</span>
                   <span className="details-info-label">Task Status</span>
@@ -1185,12 +1175,6 @@ export function EnrolmentCalculationPage() {
           ? <a className="details-participant-name" href={participantHref} target="_blank" rel="noopener noreferrer">{participantName || (loading ? 'Loading...' : '-')}</a>
           : <span className="details-participant-name">{participantName || (loading ? 'Loading...' : '-')}</span>
         }
-        {(record || loading) && (
-          <ReadOnlyYesNoField
-            label="Is this a New Participant?"
-            value={record ? record.vsi_isnewparticipant === true : null}
-          />
-        )}
       </div>
 
       <div className="calc-toolbar">
@@ -1596,7 +1580,7 @@ export function EnrolmentCalculationPage() {
           onConfirm={() => void handleCompleteConfirm()}
           onCancel={() => setShowCompleteConfirm(false)}
         />
-      )}
+      )}   
     </section>
   );
 }
