@@ -7,6 +7,7 @@ type FarmsApiResult<T = unknown> = IOperationResult<T>;
 
 const FARMS_API_DATA_SOURCE_NAME = 'farms_20api_5fe39d1efd21a19d13_5f571039b465579741';
 const GET_ENROLMENT_NOTICE_WORKFLOW_CALCULATION = 'GetEnrolmentNoticeWorkflowCalculation';
+const GET_ENROLMENT_PARTNERS = 'GetEnrolmentPartners';
 
 function ensureFarmsApiMetadata() {
   const sources = dataSourcesInfo as Record<string, { apis?: Record<string, unknown> } | undefined>;
@@ -16,6 +17,20 @@ function ensureFarmsApiMetadata() {
   farmsDataSource.apis ??= {};
   farmsDataSource.apis[GET_ENROLMENT_NOTICE_WORKFLOW_CALCULATION] ??= {
     path: '/{connectionId}/calculations/enrolment-notice-workflow',
+    method: 'GET',
+    parameters: [
+      { name: 'connectionId', in: 'path', required: true, type: 'string' },
+      { name: 'participantPin', in: 'query', required: true, type: 'string' },
+      { name: 'programYear', in: 'query', required: true, type: 'integer' },
+    ],
+    responseInfo: {
+      default: {
+        type: 'object',
+      },
+    },
+  };
+  farmsDataSource.apis[GET_ENROLMENT_PARTNERS] ??= {
+    path: '/{connectionId}/calculations/enrolment-partners',
     method: 'GET',
     parameters: [
       { name: 'connectionId', in: 'path', required: true, type: 'string' },
@@ -74,6 +89,19 @@ export const farmsApi = {
       connectorOperation: {
         tableName: FARMS_API_DATA_SOURCE_NAME,
         operationName: GET_ENROLMENT_NOTICE_WORKFLOW_CALCULATION,
+        parameters: {
+          participantPin,
+          programYear,
+        },
+      },
+    })
+  ),
+
+  getEnrolmentPartners: <T = unknown>(participantPin: string, programYear: number) => (
+    farmsApiClient.executeAsync<{ participantPin: string; programYear: number }, T>({
+      connectorOperation: {
+        tableName: FARMS_API_DATA_SOURCE_NAME,
+        operationName: GET_ENROLMENT_PARTNERS,
         parameters: {
           participantPin,
           programYear,
