@@ -679,6 +679,45 @@ button:focus-visible {
   font-weight: 700;
 }
 
+.calc-combined-farm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.calc-combined-farm h3 {
+  margin: 0;
+  color: #1f2937;
+  font-size: 0.9rem;
+  line-height: 1.2;
+}
+
+.calc-combined-farm-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #111827;
+  font-size: 0.74rem;
+}
+
+.calc-combined-farm-table th,
+.calc-combined-farm-table td {
+  border: 2px solid #ffffff;
+  padding: 0.24rem 0.35rem;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.calc-combined-farm-table th {
+  background: #6699cc;
+  color: #ffffff;
+  font-weight: 800;
+}
+
+.calc-combined-farm-table td {
+  background: #d9d9d9;
+  font-weight: 700;
+}
+
 .calc-partner-list {
   display: flex;
   flex-direction: column;
@@ -744,6 +783,13 @@ button:focus-visible {
 
 .calc-partner-details div {
   min-width: 0;
+}
+
+.calc-partner-detail-row {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem 0.75rem;
 }
 
 .calc-partner-details dt {

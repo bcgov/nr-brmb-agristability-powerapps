@@ -15,10 +15,9 @@ import { ProcessEnrolmentActionService } from '../generated/services/ProcessEnro
 import { QueueitemsService } from '../generated/services/QueueitemsService';
 import { Vsi_armsconfigurationsService } from '../generated/services/Vsi_armsconfigurationsService';
 import { Vsi_participantprogramyearsService } from '../generated/services/Vsi_participantprogramyearsService';
-import { Vsi_programyearsService } from '../generated/services/Vsi_programyearsService';
 import { farmsApi } from '../services/farmsApi';
 import { resolveCurrentSystemUser } from '../utils/currentUser';
-import { formatCurrencyOr, getAvatarColor, getEnrolmentStatusLabel, getInitials, getTaskStatusLabel } from '../utils/helpers';
+import { formatCurrencyOr, getAvatarColor, getInitials, getTaskStatusLabel } from '../utils/helpers';
 
 const DATAVERSE_ORG_URL = 'https://aff-brmb-crm-dev.crm3.dynamics.com/';
 const CORE_APP_ID_FALLBACK = '88c024d9-9fd5-ec11-a7b5-002248ada475';
@@ -26,25 +25,6 @@ const CORE_BASE_URL_FALLBACK = 'https://aff-brmb-crm-dev.crm3.dynamics.com/main.
 const BENEFIT_MARGIN_COUNT = 5;
 const APPROVABLE_STATUSES = new Set([865520005, 865520006]);
 const APPROVABLE_TASK_STATUSES = new Set([865520000, 865520001, 865520002]);
-const PARTNER_ENROLMENT_SELECT = [
-  'vsi_name',
-  '_vsi_participantid_value',
-  '_vsi_programyearid_value',
-  'vsi_participantidname',
-  'vsi_participantprogramyearid',
-  'vsi_enrolmentstatus',
-  'vsi_enrolmentfee',
-  'vsi_calculatedenfee',
-  'vsi_sharepointdocumentfolder',
-  'vsi_haspartners',
-  'vsi_partnershipnames',
-  'vsi_partnershippins',
-  'vsi_partnershippercents',
-  'vsi_incombinedfarm',
-  'vsi_combinedfarmpins',
-  'vsi_combinedfarmpercents',
-  'new_combinedfarmname',
-];
 
 type CurrentUser = {
   systemUserId: string;
@@ -106,10 +86,41 @@ type EnrolmentWorkflowCalculation = {
 };
 
 type PartnerComparisonRow = {
-  pin: string;
-  name: string;
-  percent: string;
-  enrolment?: Vsi_participantprogramyears;
+  operation: string;
+  partnerParticipantPin: string;
+  partnerPercent: string;
+  firstName: string;
+  lastName: string;
+  partnershipName: string;
+  enrolmentFee: unknown;
+};
+
+type CombinedFarmSummary = {
+  participantPin: string;
+  combinedFarmNumber: string;
+  scenarioNumber: string;
+};
+
+type EnrolmentPartnerRsrc = {
+  scenarioNumber?: number | string | null;
+  operationSchedule?: string | null;
+  operationPartnershipPin?: number | string | null;
+  partnerPercent?: number | string | null;
+  partnerParticipantPin?: number | string | null;
+  partnerEnrolmentFee?: number | string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  partnershipName?: string | null;
+  dynamicProperties?: Partial<EnrolmentPartnerRsrc>;
+};
+
+type EnrolmentPartnerListRsrc = {
+  participantPin?: number | string | null;
+  scenarioNumber?: number | string | null;
+  inCombinedFarm?: boolean | number | string | null;
+  combinedFarmNumber?: number | string | null;
+  enrolmentPartnerList?: EnrolmentPartnerRsrc[] | null;
+  dynamicProperties?: Partial<EnrolmentPartnerListRsrc>;
 };
 
 type XrmWebApiHost = {
@@ -135,10 +146,6 @@ const getStringField = (record: unknown, field: string): string => {
 
   return '';
 };
-
-function normalizeGuid(value?: string | null): string {
-  return (value ?? '').replace(/[{}]/g, '').trim().toLowerCase();
-}
 
 function normalizeUrlBase(value: string): string {
   return value.replace(/\/+$/, '');
@@ -229,24 +236,6 @@ function formatCurrencyBlank(value: unknown): string {
   return formatCurrencyOr(value, '');
 }
 
-function formatPercentText(value: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) return '';
-  if (trimmed.includes('%')) return trimmed;
-  const numberValue = Number(trimmed);
-  if (!Number.isFinite(numberValue)) return `${trimmed}%`;
-  const percentValue = numberValue > 0 && numberValue <= 1 ? numberValue * 100 : numberValue;
-  return `${percentValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}%`;
-}
-
-function escapeODataString(value: string): string {
-  return value.replace(/'/g, "''");
-}
-
-function getCalculationHref(id: string, routeSource: string | undefined): string {
-  return `#/calculation/${routeSource || 'dashboard'}/${id}`;
-}
-
 function buildFarmsScenarioUrl(baseUrl: string, pinValue: string, scenarioProgramYear: number | null): string {
   if (!baseUrl || !pinValue || !scenarioProgramYear) return '';
   const params = new URLSearchParams({
@@ -257,142 +246,92 @@ function buildFarmsScenarioUrl(baseUrl: string, pinValue: string, scenarioProgra
   return `${baseUrl}/farm800.do?${params.toString()}`;
 }
 
-function parsePinList(value?: string | null): string[] {
-  return (value?.match(/\d+/g) ?? []).map(pinValue => pinValue.trim()).filter(Boolean);
+function formatTextBlank(value: unknown): string {
+  if (value == null) return '';
+  return String(value).trim();
 }
 
-function splitSummaryList(value: string | null | undefined, expectedCount: number): string[] {
-  const trimmed = value?.trim();
-  if (!trimmed) return [];
-
-  const preferred = trimmed
-    .split(/\r?\n|;|\|/)
-    .map(item => item.trim())
-    .filter(Boolean);
-  if (preferred.length === expectedCount) return preferred;
-
-  const commaSeparated = trimmed
-    .split(',')
-    .map(item => item.trim())
-    .filter(Boolean);
-  if (commaSeparated.length === expectedCount) return commaSeparated;
-
-  return preferred.length > 1 ? preferred : [trimmed];
+function getNumberValue(value: unknown): number {
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) ? numberValue : Number.NEGATIVE_INFINITY;
 }
 
-function parsePercentList(value: string | null | undefined, expectedCount: number): string[] {
-  const matches = value?.match(/\d+(?:\.\d+)?%?/g) ?? [];
-  if (matches.length) return matches.map(formatPercentText);
-  return splitSummaryList(value, expectedCount).map(formatPercentText);
+function formatPartnerPercentValue(value: unknown): string {
+  if (value == null || value === '') return '';
+  const text = String(value).trim();
+  const hasPercentSign = text.includes('%');
+  const normalized = text.replace('%', '').trim();
+  const numberValue = Number(normalized);
+  if (!Number.isFinite(numberValue)) return text;
+  const percentValue = !hasPercentSign && numberValue > 0 && numberValue <= 1
+    ? numberValue * 100
+    : numberValue;
+  return `${percentValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}%`;
 }
 
-function getPartnerSummaries(record: Vsi_participantprogramyears | null): PartnerComparisonRow[] {
-  const pins = parsePinList(record?.vsi_partnershippins);
-  const names = splitSummaryList(record?.vsi_partnershipnames, pins.length);
-  const percents = parsePercentList(record?.vsi_partnershippercents, pins.length);
-
-  return pins.map((pinValue, index) => ({
-    pin: pinValue,
-    name: names[index] ?? '',
-    percent: percents[index] ?? '',
-  }));
+function getBooleanFieldValue(value: unknown): boolean {
+  return value === true || value === 1 || value === '1' || String(value).toLowerCase() === 'true';
 }
 
-async function findProgramYearId(year: number): Promise<string | null> {
-  const safeYear = escapeODataString(String(year));
-  const result = await Vsi_programyearsService.getAll({
-    maxPageSize: 1,
-    top: 1,
-    select: ['vsi_programyearid', 'vsi_year'],
-    filter: `vsi_year eq '${safeYear}'`,
-  });
-  return result.data?.[0]?.vsi_programyearid ?? null;
+function mergeDynamicProperties<T extends { dynamicProperties?: Partial<T> }>(value: T): T {
+  return value.dynamicProperties ? { ...value, ...value.dynamicProperties } : value;
 }
 
-async function findPartnerEnrolment(pinValue: string, programYearId: string): Promise<Vsi_participantprogramyears | null> {
-  const safePin = escapeODataString(pinValue);
-  const safeProgramYearId = escapeODataString(normalizeGuid(programYearId));
-
-  const exact = await Vsi_participantprogramyearsService.getAll({
-    maxPageSize: 1,
-    top: 1,
-    select: PARTNER_ENROLMENT_SELECT,
-    filter: `_vsi_programyearid_value eq '${safeProgramYearId}' and vsi_name eq '${safePin}'`,
-  });
-  if (exact.data?.[0]) return exact.data[0];
-
-  const containsPin = await Vsi_participantprogramyearsService.getAll({
-    maxPageSize: 1,
-    top: 1,
-    select: PARTNER_ENROLMENT_SELECT,
-    filter: `_vsi_programyearid_value eq '${safeProgramYearId}' and contains(vsi_name,'${safePin}')`,
-  });
-  return containsPin.data?.[0] ?? null;
+function getEnrolmentPartnerListResponse(response: unknown): EnrolmentPartnerListRsrc | null {
+  if (!response || typeof response !== 'object') return null;
+  return mergeDynamicProperties(response as EnrolmentPartnerListRsrc);
 }
 
-function getListRecordRows(result: unknown): Vsi_participantprogramyears[] {
-  if (!result || typeof result !== 'object') return [];
-  const data = result as Record<string, unknown>;
-  const dynamicProperties = data.dynamicProperties;
-  const dynamicValue = dynamicProperties && typeof dynamicProperties === 'object'
-    ? (dynamicProperties as Record<string, unknown>).value
-    : undefined;
-  const rows = Array.isArray(data.value) ? data.value : dynamicValue;
-
-  return Array.isArray(rows)
-    ? rows
-      .filter((row): row is Record<string, unknown> => !!row && typeof row === 'object')
-      .map((row) => ({ ...row, ...(row.dynamicProperties as Record<string, unknown> | undefined) }) as unknown as Vsi_participantprogramyears)
-    : [];
+function getEnrolmentPartnerRows(response: unknown): EnrolmentPartnerRsrc[] {
+  const listResponse = getEnrolmentPartnerListResponse(response);
+  return (listResponse?.enrolmentPartnerList ?? [])
+    .filter((row): row is EnrolmentPartnerRsrc => !!row && typeof row === 'object')
+    .map(mergeDynamicProperties);
 }
 
-function escapeFetchXmlValue(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+function getPartnerRowsFromResponse(response: unknown): PartnerComparisonRow[] {
+  const rows = getEnrolmentPartnerRows(response)
+    .map(row => ({
+      scenarioNumber: getNumberValue(row.scenarioNumber),
+      operation: formatTextBlank(row.operationSchedule),
+      operationPartnershipPin: formatTextBlank(row.operationPartnershipPin),
+      partnerParticipantPin: formatTextBlank(row.partnerParticipantPin),
+      partnerPercent: formatPartnerPercentValue(row.partnerPercent),
+      firstName: formatTextBlank(row.firstName),
+      lastName: formatTextBlank(row.lastName),
+      partnershipName: formatTextBlank(row.partnershipName),
+      enrolmentFee: row.partnerEnrolmentFee,
+    }))
+    .filter(row => row.partnerParticipantPin || row.firstName || row.lastName || row.partnershipName);
+
+  const latestByPartner = new Map<string, typeof rows[number]>();
+  for (const row of rows) {
+    const key = [
+      row.operation,
+      row.operationPartnershipPin,
+      row.partnerParticipantPin,
+      row.firstName,
+      row.lastName,
+      row.partnershipName,
+    ].join('|');
+    const existing = latestByPartner.get(key);
+    if (!existing || row.scenarioNumber > existing.scenarioNumber) {
+      latestByPartner.set(key, row);
+    }
+  }
+
+  return [...latestByPartner.values()].map(({ scenarioNumber: _scenarioNumber, operationPartnershipPin: _operationPartnershipPin, ...row }) => row);
 }
 
-async function findPartnerSourceEnrolment(pinValue: string, programYear: number): Promise<Vsi_participantprogramyears | null> {
-  const fetchXml = [
-    '<fetch top="10">',
-    '  <entity name="vsi_participantprogramyear">',
-    '    <attribute name="vsi_participantprogramyearid" />',
-    '    <attribute name="vsi_name" />',
-    '    <attribute name="vsi_haspartners" />',
-    '    <attribute name="vsi_partnershippins" />',
-    '    <attribute name="vsi_partnershipnames" />',
-    '    <attribute name="vsi_partnershippercents" />',
-    '    <attribute name="vsi_enrolmentstatus" />',
-    '    <attribute name="vsi_enrolmentfee" />',
-    '    <filter type="and">',
-    `      <condition attribute="vsi_name" operator="like" value="%${escapeFetchXmlValue(String(programYear))}%" />`,
-    `      <condition attribute="vsi_name" operator="like" value="%${escapeFetchXmlValue(pinValue)}%" />`,
-    '      <condition attribute="vsi_haspartners" operator="eq" value="1" />',
-    '      <condition attribute="vsi_partnershippins" operator="not-null" />',
-    '    </filter>',
-    '  </entity>',
-    '</fetch>',
-  ].join('');
+function getCombinedFarmSummaryFromResponse(response: unknown): CombinedFarmSummary | null {
+  const listResponse = getEnrolmentPartnerListResponse(response);
+  if (!listResponse || !getBooleanFieldValue(listResponse.inCombinedFarm)) return null;
 
-  const result = await MicrosoftDataverseService.ListRecordsWithOrganization(
-    DATAVERSE_ORG_URL,
-    'vsi_participantprogramyears',
-    '',
-    'application/json',
-    false,
-    false,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    fetchXml,
-    10,
-  );
-
-  const rows = getListRecordRows(result.data);
-  return rows[0] ?? null;
+  return {
+    participantPin: formatTextBlank(listResponse.participantPin),
+    combinedFarmNumber: formatTextBlank(listResponse.combinedFarmNumber),
+    scenarioNumber: formatTextBlank(listResponse.scenarioNumber),
+  };
 }
 
 function getFarmsWorkflowErrorMessage(error: unknown): string {
@@ -476,30 +415,36 @@ function CalculationOption({ checked, label }: { checked: boolean; label: string
 
 function PartnerViewPanel({
   rows,
+  combinedFarm,
   loading,
   error,
   farmsLegacyBaseUrl,
   farmsScenarioProgramYear,
-  routeSource,
   open,
   pinned,
   onToggleOpen,
   onTogglePinned,
 }: {
   rows: PartnerComparisonRow[];
+  combinedFarm: CombinedFarmSummary | null;
   loading: boolean;
   error: string | null;
   farmsLegacyBaseUrl: string;
   farmsScenarioProgramYear: number | null;
-  routeSource?: string;
   open: boolean;
   pinned: boolean;
   onToggleOpen: () => void;
   onTogglePinned: () => void;
 }) {
   const visibleRows = rows.filter((row): row is PartnerComparisonRow => (
-    !!row && typeof row.pin === 'string' && row.pin.trim().length > 0
+    !!row && (
+      row.partnerParticipantPin.length > 0
+      || row.firstName.length > 0
+      || row.lastName.length > 0
+      || row.partnershipName.length > 0
+    )
   ));
+  const hasCombinedFarm = !!combinedFarm;
 
   if (!open) {
     return (
@@ -534,31 +479,42 @@ function PartnerViewPanel({
 
       {loading && <p className="calc-panel-state">Loading partners...</p>}
       {error && <p className="calc-panel-state calc-panel-state-error">{error}</p>}
-      {!loading && !error && !visibleRows.length && <p className="calc-panel-state">No partner data found.</p>}
+      {!loading && !error && !visibleRows.length && !hasCombinedFarm && <p className="calc-panel-state">No partner data found.</p>}
+      {!loading && !error && combinedFarm && (
+        <div className="calc-combined-farm">
+          <h3>Combined farm</h3>
+          <table className="calc-combined-farm-table">
+            <thead>
+              <tr>
+                <th scope="col">PIN</th>
+                <th scope="col">Combined Farm Number</th>
+                <th scope="col">Scenario</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>{combinedFarm.participantPin || '-'}</td>
+                <td>{combinedFarm.combinedFarmNumber || '-'}</td>
+                <td>{combinedFarm.scenarioNumber || '-'}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
       {!loading && !error && visibleRows.length > 0 && (
         <div className="calc-partner-list">
           {visibleRows.map(row => {
-            const enrolment = row.enrolment;
-            const name = row.name || enrolment?.vsi_participantidname || '';
-            const status = enrolment ? getEnrolmentStatusLabel(enrolment.vsi_enrolmentstatus) : '';
-            const farmsUrl = buildFarmsScenarioUrl(farmsLegacyBaseUrl, row.pin, farmsScenarioProgramYear);
+            const displayName = [row.firstName, row.lastName].filter(Boolean).join(' ') || row.partnershipName;
+            const farmsUrl = buildFarmsScenarioUrl(farmsLegacyBaseUrl, row.partnerParticipantPin, farmsScenarioProgramYear);
             return (
-              <div className="calc-partner-card" key={row.pin}>
+              <div className="calc-partner-card" key={`${row.operation}-${row.partnerParticipantPin}-${row.firstName}-${row.lastName}`}>
                 <div className="calc-partner-card-top">
                   <div>
-                    <div className="calc-partner-name">{name || '-'}</div>
-                    <div className="calc-partner-pin">
-                      {enrolment?.vsi_participantprogramyearid ? (
-                        <a href={getCalculationHref(enrolment.vsi_participantprogramyearid, routeSource)} target="_blank" rel="noopener noreferrer">
-                          PIN {row.pin}
-                        </a>
-                      ) : (
-                        <span>PIN {row.pin}</span>
-                      )}
-                    </div>
+                    <div className="calc-partner-name">{displayName || '-'}</div>
+                    <div className="calc-partner-pin">PIN {row.partnerParticipantPin || '-'}</div>
                   </div>
                   {farmsUrl ? (
-                    <a className="calc-partner-farms-link" href={farmsUrl} target="_blank" rel="noopener noreferrer" title="Open FARMS scenario" aria-label={`Open FARMS scenario for PIN ${row.pin}`}>
+                    <a className="calc-partner-farms-link" href={farmsUrl} target="_blank" rel="noopener noreferrer" title="Open FARMS scenario" aria-label={`Open FARMS scenario for PIN ${row.partnerParticipantPin}`}>
                       <ExternalLink size={15} aria-hidden="true" />
                     </a>
                   ) : (
@@ -569,19 +525,31 @@ function PartnerViewPanel({
                 </div>
                 <dl className="calc-partner-details">
                   <div>
-                    <dt>Fee</dt>
-                    <dd>{formatCurrencyBlank(enrolment?.vsi_enrolmentfee)}</dd>
+                    <dt>Operation</dt>
+                    <dd>{row.operation || '-'}</dd>
                   </div>
                   <div>
-                    <dt>EN Status</dt>
-                    <dd>{status}</dd>
+                    <dt>Partnership Percent</dt>
+                    <dd>{row.partnerPercent || '-'}</dd>
                   </div>
-                  {row.percent && (
+                  <div>
+                    <dt>Enrolment Fee</dt>
+                    <dd>{formatCurrencyBlank(row.enrolmentFee)}</dd>
+                  </div>
+                  <div className="calc-partner-detail-row">
                     <div>
-                      <dt>Percent</dt>
-                      <dd>{row.percent}</dd>
+                      <dt>First Name</dt>
+                      <dd>{row.firstName || '-'}</dd>
                     </div>
-                  )}
+                    <div>
+                      <dt>Last Name</dt>
+                      <dd>{row.lastName || '-'}</dd>
+                    </div>
+                  </div>
+                  <div>
+                    <dt>Partnership Name</dt>
+                    <dd>{row.partnershipName || '-'}</dd>
+                  </div>
                 </dl>
               </div>
             );
@@ -641,6 +609,7 @@ export function EnrolmentCalculationPage() {
   const [counterActionLoading, setCounterActionLoading] = useState(false);
   const [counterActionError, setCounterActionError] = useState<string | null>(null);
   const [partnerRows, setPartnerRows] = useState<PartnerComparisonRow[]>([]);
+  const [combinedFarmSummary, setCombinedFarmSummary] = useState<CombinedFarmSummary | null>(null);
   const [partnerRowsLoading, setPartnerRowsLoading] = useState(false);
   const [partnerRowsError, setPartnerRowsError] = useState<string | null>(null);
   const [partnerPanelOpen, setPartnerPanelOpen] = useState(true);
@@ -814,7 +783,6 @@ export function EnrolmentCalculationPage() {
   const sharePointFolderUrl = record?.vsi_sharepointdocumentfolder;
   const programYear = useMemo(() => getProgramYear(record), [record]);
   const farmsScenarioProgramYear = programYear ? programYear - 2 : null;
-  const currentProgramYearId = record?._vsi_programyearid_value ?? null;
   const farmsScenarioUrl = useMemo(() => {
     return buildFarmsScenarioUrl(farmsLegacyBaseUrl, participantPin, farmsScenarioProgramYear);
   }, [farmsLegacyBaseUrl, participantPin, farmsScenarioProgramYear]);
@@ -858,8 +826,9 @@ export function EnrolmentCalculationPage() {
   }, [participantPin, farmsScenarioProgramYear]);
 
   useEffect(() => {
-    if (!participantPin || !programYear || !farmsScenarioProgramYear) {
+    if (!participantPin || !farmsScenarioProgramYear) {
       setPartnerRows([]);
+      setCombinedFarmSummary(null);
       setPartnerRowsError(null);
       setPartnerRowsLoading(false);
       return;
@@ -867,49 +836,36 @@ export function EnrolmentCalculationPage() {
 
     let cancelled = false;
     setPartnerRows([]);
+    setCombinedFarmSummary(null);
     setPartnerRowsError(null);
     setPartnerRowsLoading(true);
 
-    (async () => {
-      try {
-        const displayProgramYearId = currentProgramYearId
-          ? normalizeGuid(currentProgramYearId)
-          : await findProgramYearId(programYear);
+    farmsApi.getEnrolmentPartners<EnrolmentPartnerListRsrc>(
+      participantPin,
+      farmsScenarioProgramYear,
+    )
+      .then((result) => {
         if (cancelled) return;
-        if (!displayProgramYearId) {
-          setPartnerRowsError(`Unable to load partner data because enrolment year ${programYear} was not found.`);
-          setPartnerRows([]);
-          return;
+        if (!result.success) {
+          throw new Error(result.error?.message ?? 'Unable to load FARMS enrolment partners.');
         }
-
-        const sourceEnrolment = await findPartnerSourceEnrolment(participantPin, farmsScenarioProgramYear);
-        if (cancelled) return;
-        if (!sourceEnrolment) {
-          setPartnerRows([]);
-          return;
-        }
-
-        const summaries = getPartnerSummaries(sourceEnrolment);
-        setPartnerRows(summaries);
-
-        const rows = await Promise.all(summaries.map(async (summary) => ({
-          ...summary,
-          enrolment: await findPartnerEnrolment(summary.pin, displayProgramYearId) ?? undefined,
-        })));
-        if (!cancelled) setPartnerRows(rows);
-      } catch (err) {
+        setPartnerRows(getPartnerRowsFromResponse(result.data));
+        setCombinedFarmSummary(getCombinedFarmSummaryFromResponse(result.data));
+      })
+      .catch((err) => {
         if (cancelled) return;
         setPartnerRows([]);
-        setPartnerRowsError(err instanceof Error ? err.message : 'Unable to load partner enrolment rows.');
-      } finally {
+        setCombinedFarmSummary(null);
+        setPartnerRowsError(err instanceof Error ? err.message : 'Unable to load FARMS enrolment partners.');
+      })
+      .finally(() => {
         if (!cancelled) setPartnerRowsLoading(false);
-      }
-    })();
+      });
 
     return () => {
       cancelled = true;
     };
-  }, [participantPin, programYear, farmsScenarioProgramYear, currentProgramYearId, refreshKey]);
+  }, [participantPin, farmsScenarioProgramYear]);
 
   const participantName = useMemo(() => {
     if (!record) return '';
@@ -1517,11 +1473,11 @@ export function EnrolmentCalculationPage() {
 
           <PartnerViewPanel
             rows={partnerRows}
+            combinedFarm={combinedFarmSummary}
             loading={partnerRowsLoading}
             error={partnerRowsError}
             farmsLegacyBaseUrl={farmsLegacyBaseUrl}
             farmsScenarioProgramYear={farmsScenarioProgramYear}
-            routeSource={source}
             open={partnerPanelOpen}
             pinned={partnerPanelPinned}
             onToggleOpen={() => setPartnerPanelOpen(prev => !prev)}
@@ -1580,7 +1536,7 @@ export function EnrolmentCalculationPage() {
           onConfirm={() => void handleCompleteConfirm()}
           onCancel={() => setShowCompleteConfirm(false)}
         />
-      )}   
+      )}
     </section>
   );
 }
