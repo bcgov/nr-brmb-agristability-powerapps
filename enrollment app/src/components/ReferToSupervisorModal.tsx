@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import type { Vsi_participantprogramyears } from '../generated/models/Vsi_participantprogramyearsModel';
 import { ProcessEnrolmentActionService } from '../generated/services/ProcessEnrolmentActionService';
-import { resolveCurrentSystemUser } from '../utils/currentUser';
 
 export function ReferToSupervisorModal({
   selectedIds,
@@ -45,11 +44,10 @@ export function ReferToSupervisorModal({
         return;
       }
 
-      const currentUser = await resolveCurrentSystemUser();
       const result = await ProcessEnrolmentActionService.Run({
         text: rowsToProcess.map(r => r.vsi_participantprogramyearid).join(','),
         text_1: 'refer',
-        text_2: currentUser.systemUserId,
+        text_2: '',
       });
 
       if (!result.success) {

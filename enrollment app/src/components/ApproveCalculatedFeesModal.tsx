@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import type { Vsi_participantprogramyears } from '../generated/models/Vsi_participantprogramyearsModel';
 import { ProcessEnrolmentActionService } from '../generated/services/ProcessEnrolmentActionService';
-import { resolveCurrentSystemUser } from '../utils/currentUser';
 
 type ApprovedEnrolmentUpdate = {
   id: string;
@@ -39,11 +38,10 @@ export function ApproveCalculatedFeesModal({
     setError(null);
     try {
       const approvedDate = new Date().toISOString();
-      const currentUser = await resolveCurrentSystemUser();
       const result = await ProcessEnrolmentActionService.Run({
         text: selectedRows.map(r => r.vsi_participantprogramyearid).join(','),
         text_1: 'approve',
-        text_2: currentUser.systemUserId,
+        text_2: '',
       });
       if (!result.success) {
         const msg = (result.error as { message?: string } | undefined)?.message ?? 'Failed to approve calculated fees';

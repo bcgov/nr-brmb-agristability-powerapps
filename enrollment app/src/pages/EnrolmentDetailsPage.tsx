@@ -12,8 +12,6 @@ import { Vsi_participantprogramyearsService } from '../generated/services/Vsi_pa
 import { Vsi_armsconfigurationsService } from '../generated/services/Vsi_armsconfigurationsService';
 import { formatEnrolmentStatusDisplay, getAvatarColor, getInitials, getTaskStatusLabel } from '../utils/helpers';
 import { getCoreConfig, normalizeCoreBaseUrl } from '../hooks/useEnrolmentData';
-import { useRole } from '../context/RoleContext';
-import { Toast, type ToastMessage, nextToastId } from '../components/Toast';
 
 const CORE_APP_ID_FALLBACK = '88c024d9-9fd5-ec11-a7b5-002248ada475';
 const CORE_BASE_URL_FALLBACK = 'https://aff-brmb-crm-dev.crm3.dynamics.com/main.aspx';
@@ -24,8 +22,7 @@ type DateField =
   | 'vsi_lateenrolmentnoticesentdate'
   | 'vsi_enrolmentfeespaiddate'
   | 'vsi_enrolmentfeesnonpenaltyduedate'
-  | 'vsi_enrolmentfeesfinaldeadlinedate'
-  | 'vsi_lateenrolmentfeesfinaldeadlinedate';
+  | 'vsi_enrolmentfeesfinaldeadlinedate';
 
 type DetailFormState = {
   enrolmentStatus: EnrolmentStatusValue;
@@ -36,7 +33,6 @@ type DetailFormState = {
   vsi_enrolmentfeespaiddate: string;
   vsi_enrolmentfeesnonpenaltyduedate: string;
   vsi_enrolmentfeesfinaldeadlinedate: string;
-  vsi_lateenrolmentfeesfinaldeadlinedate: string;
 };
 
 const DATE_FIELDS: DateField[] = [
@@ -46,7 +42,6 @@ const DATE_FIELDS: DateField[] = [
   'vsi_enrolmentfeespaiddate',
   'vsi_enrolmentfeesnonpenaltyduedate',
   'vsi_enrolmentfeesfinaldeadlinedate',
-  'vsi_lateenrolmentfeesfinaldeadlinedate',
 ];
 
 const DETAIL_SELECT = [
@@ -68,7 +63,6 @@ const DETAIL_SELECT = [
   'vsi_enrolmentfeespaiddate',
   'vsi_enrolmentfeesnonpenaltyduedate',
   'vsi_enrolmentfeesfinaldeadlinedate',
-  'vsi_lateenrolmentfeesfinaldeadlinedate',
   'vsi_administrativecostsharingfee',
   'vsi_latepaymentfee',
   'vsi_adjustedlateenrolmentfee',
@@ -112,7 +106,6 @@ const initialFormFromRecord = (record: Vsi_participantprogramyears): DetailFormS
   vsi_enrolmentfeespaiddate: toDateInputValue(record.vsi_enrolmentfeespaiddate),
   vsi_enrolmentfeesnonpenaltyduedate: toDateInputValue(record.vsi_enrolmentfeesnonpenaltyduedate),
   vsi_enrolmentfeesfinaldeadlinedate: toDateInputValue(record.vsi_enrolmentfeesfinaldeadlinedate),
-  vsi_lateenrolmentfeesfinaldeadlinedate: toDateInputValue(record.vsi_lateenrolmentfeesfinaldeadlinedate),
 });
 
 const getFormattedLookup = (record: Vsi_participantprogramyears, key: string): string => {
@@ -127,8 +120,6 @@ export function EnrolmentDetailsPage() {
   // Read both source and enrolmentId from params
   const { source = 'dashboard', enrolmentId } = useParams<{ source?: string; enrolmentId: string }>();
   const navigate = useNavigate();
-  const { activeRole } = useRole();
-  const canEdit = activeRole === 'SystemAdmin' || activeRole === 'Supervisor';
 
   const [record, setRecord] = useState<Vsi_participantprogramyears | null>(null);
   const [formState, setFormState] = useState<DetailFormState | null>(null);
@@ -138,16 +129,6 @@ export function EnrolmentDetailsPage() {
   const [saveNotice, setSaveNotice] = useState<string | null>(null);
   const [coreAppId, setCoreAppId] = useState<string | null>(() => getCoreConfig().coreAppId);
   const [coreBaseUrl, setCoreBaseUrl] = useState<string | null>(() => getCoreConfig().coreBaseUrl);
-  const [lateNoticeModal, setLateNoticeModal] = useState<
-    | { type: 'error'; message: string }
-    | { type: 'confirm' }
-    | null
-  >(null);
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
-  const addToast = (message: string, type: ToastMessage['type']) => {
-    setToasts(prev => [...prev, { id: nextToastId(), message, type }]);
-  };
-  const dismissToast = (id: number) => setToasts(prev => prev.filter(t => t.id !== id));
 
   useEffect(() => {
     if (coreAppId !== null) return;
@@ -264,36 +245,7 @@ export function EnrolmentDetailsPage() {
     setFormState(prev => (prev ? { ...prev, enrolmentStatus: nextValue } : prev));
   };
 
-  const handleSave = () => {
-    if (!record || !formState || !baseline) return;
-
-    const lateNoticeDateChanged =
-      baseline.vsi_lateenrolmentnoticesentdate !== formState.vsi_lateenrolmentnoticesentdate &&
-      !!formState.vsi_lateenrolmentnoticesentdate;
-
-    if (lateNoticeDateChanged) {
-      if (!formState.vsi_lateenrolmentfeesfinaldeadlinedate) {
-        setLateNoticeModal({
-          type: 'error',
-          message: 'Late enrolment fees final deadline date must be filled in before saving the Late Enrolment Notice Sent Date.',
-        });
-        return;
-      }
-      if (formState.vsi_lateenrolmentfeesfinaldeadlinedate <= formState.vsi_lateenrolmentnoticesentdate) {
-        setLateNoticeModal({
-          type: 'error',
-          message: 'Late enrolment fees final deadline date must be after the Late Enrolment Notice Sent Date.',
-        });
-        return;
-      }
-      setLateNoticeModal({ type: 'confirm' });
-      return;
-    }
-
-    void executeSave();
-  };
-
-  const executeSave = async (onSuccess?: () => void) => {
+  const handleSave = async () => {
     if (!record || !formState) return;
 
     const changedFields: Partial<Omit<Vsi_participantprogramyearsBase, 'vsi_participantprogramyearid'>> = {};
@@ -323,8 +275,8 @@ export function EnrolmentDetailsPage() {
     for (const field of DATE_FIELDS) {
       const existingValue = toDateInputValue(record[field]);
       const nextValue = formState[field];
-      if (existingValue !== nextValue) {
-        changedFields[field] = nextValue || null as unknown as string;
+      if (existingValue !== nextValue && nextValue) {
+        changedFields[field] = nextValue;
       }
     }
 
@@ -348,7 +300,6 @@ export function EnrolmentDetailsPage() {
       setRecord(updated);
       setFormState(initialFormFromRecord(updated));
       setSaveNotice('Changes saved.');
-      onSuccess?.();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Unable to save changes.');
     } finally {
@@ -520,7 +471,7 @@ export function EnrolmentDetailsPage() {
                 value={formState.enrolmentStatus}
                 onChange={onStatusChange}
                 className="details-select"
-                disabled={saving || !canEdit}
+                disabled={saving}
               >
                 {statusOptions.map(option => (
                   <option key={option.value} value={option.value}>{option.label}</option>
@@ -546,13 +497,8 @@ export function EnrolmentDetailsPage() {
                 className="details-date"
                 value={formState.vsi_enrolmentnoticesentdate}
                 onChange={updateDateField('vsi_enrolmentnoticesentdate')}
-                disabled={saving || !canEdit}
+                disabled={saving}
               />
-            </div>
-
-            <div className="details-field">
-              <span className="details-label">Total Fees Paid</span>
-              <strong className="details-money">{formatCad(record.vsi_totalfeespaid)}</strong>
             </div>
 
             <div className="details-field">
@@ -563,11 +509,21 @@ export function EnrolmentDetailsPage() {
                 className="details-date"
                 value={formState.vsi_programyearoptoutdate}
                 onChange={updateDateField('vsi_programyearoptoutdate')}
-                disabled={saving || !canEdit}
+                disabled={saving}
               />
             </div>
 
             <div className="details-field">
+              <span className="details-label">Total Fees Paid</span>
+              <strong className="details-money">{formatCad(record.vsi_totalfeespaid)}</strong>
+            </div>
+
+            <div className="details-field">
+              <span className="details-label">Manual Review</span>
+              <strong className="details-value-strong">{yesNoText(record.vsi_manualreview)}</strong>
+            </div>
+
+            <div className="details-field" style={{ gridColumn: 3 }}>
               <label htmlFor="late-notice-date" className="details-label">Late Enrolment Notice Sent Date</label>
               <input
                 id="late-notice-date"
@@ -575,7 +531,7 @@ export function EnrolmentDetailsPage() {
                 className="details-date"
                 value={formState.vsi_lateenrolmentnoticesentdate}
                 onChange={updateDateField('vsi_lateenrolmentnoticesentdate')}
-                disabled={saving || !canEdit}
+                disabled={saving}
               />
             </div>
           </div>
@@ -598,7 +554,7 @@ export function EnrolmentDetailsPage() {
                 className="details-date"
                 value={formState.vsi_enrolmentfeespaiddate}
                 onChange={updateDateField('vsi_enrolmentfeespaiddate')}
-                disabled={saving || !canEdit}
+                disabled={saving}
               />
             </div>
 
@@ -610,7 +566,7 @@ export function EnrolmentDetailsPage() {
                 className="details-date"
                 value={formState.vsi_enrolmentfeesnonpenaltyduedate}
                 onChange={updateDateField('vsi_enrolmentfeesnonpenaltyduedate')}
-                disabled={saving || !canEdit}
+                disabled={saving}
               />
             </div>
 
@@ -622,7 +578,7 @@ export function EnrolmentDetailsPage() {
                 className="details-date"
                 value={formState.vsi_enrolmentfeesfinaldeadlinedate}
                 onChange={updateDateField('vsi_enrolmentfeesfinaldeadlinedate')}
-                disabled={saving || !canEdit}
+                disabled={saving}
               />
             </div>
 
@@ -640,18 +596,6 @@ export function EnrolmentDetailsPage() {
               <span className="details-label">Adjusted late enrolment fee</span>
               <strong className="details-money">{formatCad(record.vsi_adjustedlateenrolmentfee)}</strong>
             </div>
-
-            <div className="details-field">
-              <label htmlFor="late-enrol-fees-final-deadline-date" className="details-label">Late enrolment fees final deadline date</label>
-              <input
-                id="late-enrol-fees-final-deadline-date"
-                type="date"
-                className="details-date"
-                value={formState.vsi_lateenrolmentfeesfinaldeadlinedate}
-                onChange={updateDateField('vsi_lateenrolmentfeesfinaldeadlinedate')}
-                disabled={saving || !canEdit}
-              />
-            </div>
           </div>
 
           <div className="details-field details-fee-modified">
@@ -663,43 +607,10 @@ export function EnrolmentDetailsPage() {
 
       <div className="details-actions">
         {saveNotice ? <span className="details-save-notice">{saveNotice}</span> : null}
-        <button type="button" className="details-save-btn" onClick={handleSave} disabled={saving || !hasChanges || !canEdit}>
+        <button type="button" className="details-save-btn" onClick={handleSave} disabled={saving || !hasChanges}>
           {saving ? 'Saving...' : 'Save Changes'}
         </button>
       </div>
-
-      {lateNoticeModal && (
-        <div className="modal-overlay" onClick={() => setLateNoticeModal(null)}>
-          <div className="modal-box" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>{lateNoticeModal.type === 'error' ? 'Validation Error' : 'Generate Late Enrolment Notice'}</h3>
-              <button className="modal-close" onClick={() => setLateNoticeModal(null)}>&times;</button>
-            </div>
-            <div className="modal-body">
-              <div className="no-selection-message">
-                {lateNoticeModal.type === 'error'
-                  ? lateNoticeModal.message
-                  : 'Saving this date will trigger generation of the Late Enrolment Notice, which will be placed in the participant\'s SharePoint folder. Do you want to continue?'}
-              </div>
-            </div>
-            <div className="modal-footer">
-              {lateNoticeModal.type === 'confirm' && (
-                <button
-                  className="btn-ok"
-                  onClick={() => { setLateNoticeModal(null); void executeSave(() => addToast('Save complete. File will be in SharePoint folder momentarily.', 'success')); }}
-                >
-                  Confirm
-                </button>
-              )}
-              <button className="btn-cancel" onClick={() => setLateNoticeModal(null)}>
-                {lateNoticeModal.type === 'error' ? 'OK' : 'Cancel'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <Toast toasts={toasts} onDismiss={dismissToast} />
     </section>
   );
 }

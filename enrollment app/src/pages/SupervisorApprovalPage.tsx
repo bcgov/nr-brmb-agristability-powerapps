@@ -582,8 +582,7 @@ export function SupervisorApprovalPage() {
     const ids = rows.filter(r => r.itemId).map(r => r.itemId!);
     if (ids.length === 0) return;
 
-    const user = await resolveCurrentUser();
-    const result = await ProcessEnrolmentActionService.Run({ text: ids.join(','), text_1: 'approve', text_2: user.systemUserId });
+    const result = await ProcessEnrolmentActionService.Run({ text: ids.join(','), text_1: 'approve', text_2: '' });
     if (!result.success) {
       const msg = (result.error as { message?: string } | undefined)?.message ?? 'Failed to approve enrolments';
       throw new Error(msg);
@@ -598,12 +597,6 @@ export function SupervisorApprovalPage() {
       .map(r => ({ id: r.itemId!, fields: { vsi_taskstatus: 865520003 as unknown as import('../generated/models/Vsi_participantprogramyearsModel').Vsi_participantprogramyearsvsi_taskstatus } }))
     );
     removeApprovedRowsFromState(rows);
-    clearEnrolmentCache();
-    saItemsCache = null;
-    saQueueWorkCache = null;
-    saSupervisorQueueIdsCache = null;
-    saWorkerAvatarUrlsCache = null;
-    setRefreshCounter(prev => prev + 1);
   };
 
   const handleApproveSelected = async () => {
@@ -1133,11 +1126,10 @@ export function SupervisorApprovalPage() {
                 }
                 const rowsToManual = selectedRows;
                 try {
-                  const manualUser = await resolveCurrentUser();
                   const manualResult = await ProcessEnrolmentActionService.Run({
                     text: rowsToManual.filter(r => r.itemId).map(r => r.itemId!).join(','),
                     text_1: 'manual',
-                    text_2: manualUser.systemUserId,
+                    text_2: '',
                   });
                   if (!manualResult.success) {
                     const msg = (manualResult.error as { message?: string } | undefined)?.message ?? 'Manual action failed';
@@ -1157,12 +1149,6 @@ export function SupervisorApprovalPage() {
                   removeApprovedRowsFromState(rowsToManual);
                   setSelectedIds(new Set());
                   addToast(`${rowsToManual.length} enrolment${rowsToManual.length === 1 ? '' : 's'} set to Manual/To be reviewed and removed from queue.`);
-                  clearEnrolmentCache();
-                  saItemsCache = null;
-                  saQueueWorkCache = null;
-                  saSupervisorQueueIdsCache = null;
-                  saWorkerAvatarUrlsCache = null;
-                  setRefreshCounter(prev => prev + 1);
                 } catch (err) {
                   const msg = err instanceof Error ? err.message : 'Manual action failed';
                   addToast(msg, 'error');

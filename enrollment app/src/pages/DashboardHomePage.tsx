@@ -5,7 +5,7 @@ import { Columns2, Filter, FilterX, Info, RefreshCw } from 'lucide-react';
 import type { SortKey, SortDir, FilterOperator, AdvFilterNode, LogicOp, QuickFilterState } from '../types/enrollment';
 import { DEFAULT_VISIBLE_KEYS } from '../constants/columns';
 import { countActiveNodes } from '../utils/filterTree';
-import { useEnrolmentData, useSortedAndFilteredRows, clearEnrolmentCache } from '../hooks/useEnrolmentData';
+import { useEnrolmentData, useSortedAndFilteredRows } from '../hooks/useEnrolmentData';
 import { useRole } from '../context/RoleContext';
 import { resolveCurrentSystemUser } from '../utils/currentUser';
 import { clearSaCache } from './SupervisorApprovalPage';
@@ -638,9 +638,6 @@ export function DashboardHomePage() {
                 }));
                 setSelectedIds(new Set());
                 addToast(`${updates.length} enrolment${updates.length === 1 ? '' : 's'} approved successfully.`);
-                clearSaCache();
-                clearEnrolmentCache();
-                void fetchEnrolments();
               }}
               onError={(msg) => addToast(msg, 'error')}
             />
@@ -715,8 +712,6 @@ export function DashboardHomePage() {
             ));
             setSelectedIds(new Set());
             clearSaCache();
-            clearEnrolmentCache();
-            void fetchEnrolments();
             addToast(`${updatedIds.length} enrolment${updatedIds.length === 1 ? '' : 's'} referred to supervisor.`);
           }}
           onError={(msg) => addToast(msg, 'error')}
