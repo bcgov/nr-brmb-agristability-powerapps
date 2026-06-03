@@ -6,8 +6,8 @@ import { ApprovalErrorModal } from '../components/ApprovalErrorModal';
 import { Send45DayLetterModal } from '../components/Send45DayLetterModal';
 import { ConfirmActionModal } from '../components/ConfirmActionModal';
 import { ReferToSupervisorModal } from '../components/ReferToSupervisorModal';
-import { getCoreConfig, normalizeCoreBaseUrl, patchEnrolmentCache } from '../hooks/useEnrolmentData';
-import { removeSaItemsFromCache } from './SupervisorApprovalPage';
+import { getCoreConfig, normalizeCoreBaseUrl, patchEnrolmentCache, clearEnrolmentCache } from '../hooks/useEnrolmentData';
+import { removeSaItemsFromCache, clearSaCache } from './SupervisorApprovalPage';
 import { useRole } from '../context/RoleContext';
 import type { Vsi_participantprogramyears } from '../generated/models/Vsi_participantprogramyearsModel';
 import { MicrosoftDataverseService } from '../generated/services/MicrosoftDataverseService';
@@ -1002,7 +1002,8 @@ export function EnrolmentCalculationPage() {
     setCompleting(true);
     setError(null);
     try {
-      const result = await ProcessEnrolmentActionService.Run({ text: enrolmentId, text_1: 'complete', text_2: '' });
+      const currentUser = await resolveCurrentSystemUser();
+      const result = await ProcessEnrolmentActionService.Run({ text: enrolmentId, text_1: 'complete', text_2: currentUser.systemUserId });
       if (!result.success) {
         const msg = (result.error as { message?: string } | undefined)?.message ?? `Failed to complete ${enrolmentId}.`;
         throw new Error(msg);
@@ -1019,6 +1020,8 @@ export function EnrolmentCalculationPage() {
       setRecord(prev => prev ? { ...prev, ...completedFields } : prev);
       setShowCompleteConfirm(false);
       setRefreshKey(prev => prev + 1);
+      clearEnrolmentCache();
+      clearSaCache();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Complete failed.');
     } finally {
@@ -1055,7 +1058,8 @@ export function EnrolmentCalculationPage() {
         return;
       }
 
-      const result = await ProcessEnrolmentActionService.Run({ text: enrolmentId, text_1: 'approve', text_2: '' });
+      const currentUser = await resolveCurrentSystemUser();
+      const result = await ProcessEnrolmentActionService.Run({ text: enrolmentId, text_1: 'approve', text_2: currentUser.systemUserId });
       if (!result.success) {
         const msg = (result.error as { message?: string } | undefined)?.message ?? 'Failed to approve enrolment';
         throw new Error(msg);
@@ -1073,6 +1077,8 @@ export function EnrolmentCalculationPage() {
       setRecord(prev => prev ? { ...prev, ...approvedFields } : prev);
       setShowApproveConfirm(false);
       setRefreshKey(prev => prev + 1);
+      clearEnrolmentCache();
+      clearSaCache();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Approve failed.');
     } finally {
