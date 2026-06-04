@@ -336,119 +336,139 @@ export async function resolveCurrentSystemUser(): Promise<ResolvedCurrentUser> {
   throw new Error(`Could not determine the authenticated system user. Attempts: ${attempts.join(', ')}`);
 }
 
-export async function checkIsVerifierTeamMember(systemUserId: string): Promise<boolean> {
-  try {
-    const normalizedUserId = normalizeGuid(systemUserId);
-    if (!isGuid(normalizedUserId)) return false;
+/**
+ * Resolves the current user's systemuserid for role validation.
+ * Tries the Xrm context first (no network), then falls back to a
+ * Dataverse EqualUserId query. Throws if the ID cannot be determined
+ * so callers can distinguish "no connection" from "not authorized".
+ */
+async function resolveCurrentUserIdForValidation(): Promise<string> {
+  const xrm = getXrmUserSettings();
+  const xrmId = normalizeGuid(xrm?.userId);
+  if (isGuid(xrmId)) return xrmId;
 
-    const verifierTeamNames = [
-      'Customer Service Team',
-      'Verification Specialist Team Members',
-      'Verifier Team Member',
-    ];
+  const result = await SystemusersService.getAll({
+    select: ['systemuserid'],
+    filter: "Microsoft.Dynamics.CRM.EqualUserId(PropertyName='systemuserid')",
+    maxPageSize: 1,
+  });
+  const id = normalizeGuid(result.data?.[0]?.systemuserid);
+  if (isGuid(id)) return id;
 
-    const nameFilter = verifierTeamNames.map(n => `name eq '${n}'`).join(' or ');
-    const teamsResult = await TeamsService.getAll({
-      select: ['teamid'],
-      filter: nameFilter,
-      maxPageSize: 10,
-    });
-    if (!teamsResult.success || !teamsResult.data?.length) return false;
-
-    for (const team of teamsResult.data) {
-      if (!team.teamid) continue;
-      const memberResult = await TeammembershipsService.getAll({
-        select: ['teammembershipid'],
-        filter: `teamid eq '${team.teamid}' and systemuserid eq '${normalizedUserId}'`,
-        top: 1,
-      });
-      if (memberResult.success && memberResult.data?.length) return true;
-    }
-
-    return false;
-  } catch {
-    return false;
-  }
+  throw new Error('Cannot resolve current user for role validation');
 }
 
-export async function checkIsSupervisorQueueMember(systemUserId: string): Promise<boolean> {
-  try {
-    const normalizedUserId = normalizeGuid(systemUserId);
-    if (!isGuid(normalizedUserId)) return false;
+/**
+ * Returns true if the current Dataverse user holds the
+ * "System Administrator" security role.
+ * Throws on connection/resolution errors so the caller can keep
+ * the stored role rather than downgrading.
+ */
+export async function checkHasDataverseSystemAdminRole(): Promise<boolean> {
+  const userId = await resolveCurrentUserIdForValidation();
 
-    const queuesResult = await QueuesService.getAll({
-      select: ['queueid'],
-      filter: `contains(name,'Supervisor') and contains(name,'Approval')`,
-      maxPageSize: 10,
-    });
-    if (!queuesResult.success || !queuesResult.data?.length) return false;
+  const rolesResult = await RolesService.getAll({
+    select: ['roleid'],
+    filter: "name eq 'System Administrator'",
+  });
+  if (!rolesResult.success || !rolesResult.data?.length) return false;
 
-    for (const q of queuesResult.data) {
-      if (!q.queueid) continue;
-      const memberResult = await QueuemembershipsService.getAll({
-        select: ['queuemembershipid'],
-        filter: `queueid eq '${q.queueid}' and systemuserid eq '${normalizedUserId}'`,
-        top: 1,
-      });
-      if (memberResult.success && memberResult.data?.length) return true;
-    }
+  const adminRoleIds = new Set(rolesResult.data.map(r => normalizeGuid(r.roleid)));
 
-    return false;
-  } catch {
-    return false;
-  }
+  const assignmentsResult = await SystemuserrolescollectionService.getAll({
+    select: ['roleid'],
+    filter: `systemuserid eq '${userId}'`,
+    maxPageSize: 500,
+  });
+  if (!assignmentsResult.success || !assignmentsResult.data) return false;
+
+  return assignmentsResult.data.some(a => adminRoleIds.has(normalizeGuid(a.roleid)));
 }
 
-export async function checkIsEnrolmentAdminTeamMember(systemUserId: string): Promise<boolean> {
-  try {
-    const normalizedUserId = normalizeGuid(systemUserId);
-    if (!isGuid(normalizedUserId)) return false;
+/**
+ * Returns true if the current Dataverse user is a member of any queue
+ * whose name contains both "Supervisor" and "Approval".
+ * Throws on connection/resolution errors.
+ */
+export async function checkIsSupervisorQueueMember(): Promise<boolean> {
+  const userId = await resolveCurrentUserIdForValidation();
 
-    const teamsResult = await TeamsService.getAll({
-      select: ['teamid'],
-      filter: `name eq 'Enrolment Admin'`,
-      maxPageSize: 1,
+  const queuesResult = await QueuesService.getAll({
+    select: ['queueid'],
+    filter: `contains(name,'Supervisor') and contains(name,'Approval')`,
+    maxPageSize: 10,
+  });
+  if (!queuesResult.success || !queuesResult.data?.length) return false;
+
+  for (const q of queuesResult.data) {
+    if (!q.queueid) continue;
+    const memberResult = await QueuemembershipsService.getAll({
+      select: ['queuemembershipid'],
+      filter: `queueid eq '${q.queueid}' and systemuserid eq '${userId}'`,
+      top: 1,
     });
-    if (!teamsResult.success || !teamsResult.data?.length) return false;
+    if (memberResult.success && memberResult.data?.length) return true;
+  }
 
-    const teamId = teamsResult.data[0].teamid;
+  return false;
+}
+
+/**
+ * Returns true if the current Dataverse user is a member of the
+ * "Enrolment Admin" team.
+ * Throws on connection/resolution errors.
+ */
+export async function checkIsEnrolmentAdminTeamMember(): Promise<boolean> {
+  const userId = await resolveCurrentUserIdForValidation();
+
+  const teamsResult = await TeamsService.getAll({
+    select: ['teamid'],
+    filter: `name eq 'Enrolment Admin'`,
+    maxPageSize: 1,
+  });
+  if (!teamsResult.success || !teamsResult.data?.length) return false;
+
+  const teamId = teamsResult.data[0].teamid;
+  const memberResult = await TeammembershipsService.getAll({
+    select: ['teammembershipid'],
+    filter: `teamid eq '${teamId}' and systemuserid eq '${userId}'`,
+    top: 1,
+  });
+
+  return !!(memberResult.success && memberResult.data?.length);
+}
+
+/**
+ * Returns true if the current Dataverse user is a member of any of
+ * the recognised verifier teams.
+ * Throws on connection/resolution errors.
+ */
+export async function checkIsVerifierTeamMember(): Promise<boolean> {
+  const userId = await resolveCurrentUserIdForValidation();
+
+  const verifierTeamNames = [
+    'Customer Service Team',
+    'Verification Specialist Team Members',
+    'Verifier Team Member',
+  ];
+
+  const nameFilter = verifierTeamNames.map(n => `name eq '${n}'`).join(' or ');
+  const teamsResult = await TeamsService.getAll({
+    select: ['teamid'],
+    filter: nameFilter,
+    maxPageSize: 10,
+  });
+  if (!teamsResult.success || !teamsResult.data?.length) return false;
+
+  for (const team of teamsResult.data) {
+    if (!team.teamid) continue;
     const memberResult = await TeammembershipsService.getAll({
       select: ['teammembershipid'],
-      filter: `teamid eq '${teamId}' and systemuserid eq '${normalizedUserId}'`,
+      filter: `teamid eq '${team.teamid}' and systemuserid eq '${userId}'`,
       top: 1,
     });
-
-    return !!(memberResult.success && memberResult.data?.length);
-  } catch {
-    return false;
+    if (memberResult.success && memberResult.data?.length) return true;
   }
-}
 
-export async function checkHasDataverseSystemAdminRole(systemUserId: string): Promise<boolean> {
-  try {
-    const normalizedUserId = normalizeGuid(systemUserId);
-    if (!isGuid(normalizedUserId)) return false;
-
-    // Find all roles named "System Administrator" (may exist per business unit)
-    const rolesResult = await RolesService.getAll({
-      select: ['roleid'],
-      filter: "name eq 'System Administrator'",
-    });
-    if (!rolesResult.success || !rolesResult.data?.length) return false;
-
-    // Check if the user is assigned any of those roles
-    const roleFilters = rolesResult.data
-      .map(r => `(systemuserid eq '${normalizedUserId}' and roleid eq '${normalizeGuid(r.roleid)}')`)
-      .join(' or ');
-
-    const assignmentResult = await SystemuserrolescollectionService.getAll({
-      select: ['systemuserroleid'],
-      filter: roleFilters,
-      top: 1,
-    });
-
-    return !!(assignmentResult.success && assignmentResult.data?.length);
-  } catch {
-    return false;
-  }
+  return false;
 }

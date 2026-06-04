@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import { resolveCurrentSystemUser, checkHasDataverseSystemAdminRole, checkIsSupervisorQueueMember, checkIsEnrolmentAdminTeamMember, checkIsVerifierTeamMember } from '../utils/currentUser';
+import { checkHasDataverseSystemAdminRole, checkIsSupervisorQueueMember, checkIsEnrolmentAdminTeamMember, checkIsVerifierTeamMember } from '../utils/currentUser';
 
 export type AppRole = 'SystemAdmin' | 'Supervisor' | 'ENAdmin' | 'Verifier';
 
@@ -35,23 +35,22 @@ export function RoleProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     (async () => {
+      const initialRole = readStoredRole();
       try {
-        const user = await resolveCurrentSystemUser();
-        const initialRole = readStoredRole();
         let valid = false;
         let fallback: AppRole = 'Verifier';
 
         if (initialRole === 'SystemAdmin') {
-          valid = await checkHasDataverseSystemAdminRole(user.systemUserId);
+          valid = await checkHasDataverseSystemAdminRole();
           fallback = 'ENAdmin';
         } else if (initialRole === 'Supervisor') {
-          valid = await checkIsSupervisorQueueMember(user.systemUserId);
+          valid = await checkIsSupervisorQueueMember();
           fallback = 'ENAdmin';
         } else if (initialRole === 'ENAdmin') {
-          valid = await checkIsEnrolmentAdminTeamMember(user.systemUserId);
+          valid = await checkIsEnrolmentAdminTeamMember();
           fallback = 'Verifier';
         } else if (initialRole === 'Verifier') {
-          valid = await checkIsVerifierTeamMember(user.systemUserId);
+          valid = await checkIsVerifierTeamMember();
           fallback = 'Verifier';
         }
 
@@ -60,9 +59,8 @@ export function RoleProvider({ children }: { children: ReactNode }) {
           setActiveRoleState(fallback);
         }
       } catch {
-        // Cannot verify — fall back to Verifier to be safe
-        try { sessionStorage.setItem(STORAGE_KEY, 'Verifier'); } catch { /* ignore */ }
-        setActiveRoleState('Verifier');
+        // Cannot connect to Dataverse or resolve the current user.
+        // Keep the stored role — the Dataverse security layer still enforces access.
       } finally {
         setValidating(false);
       }
