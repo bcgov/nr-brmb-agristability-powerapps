@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { HashRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { ClipboardCheck, ExternalLink, Home, Menu } from 'lucide-react';
-import powerConfig from '../power.config.json';
 
 import { DashboardHomePage } from './pages/DashboardHomePage';
 import { SupervisorApprovalPage } from './pages/SupervisorApprovalPage';
@@ -9,7 +8,7 @@ import { EnrolmentDetailsPage } from './pages/EnrolmentDetailsPage';
 import { EnrolmentCalculationPage } from './pages/EnrolmentCalculationPage';
 import { RoleProvider, useRole, ALL_ROLES, ROLE_LABELS, type AppRole } from './context/RoleContext';
 import { navGuard } from './utils/helpers';
-import { normalizeInitialDeepLink } from './utils/deepLinks';
+import { normalizeInitialDeepLink, openInNewTab } from './utils/deepLinks';
 
 const SUPERVISOR_APPROVAL_ROLES: AppRole[] = ['SystemAdmin', 'Supervisor'];
 const CALCULATION_ROLES: AppRole[] = ['SystemAdmin', 'Supervisor', 'ENAdmin', 'Verifier'];
@@ -83,26 +82,14 @@ function SideNav({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
       </nav>
 
       <a
-        className="side-nav-link side-nav-link--new-tab"
-        href="#"
-        onClick={e => {
-          e.preventDefault();
-          // Construct the Power Apps local-debug shell URL so the new tab has
-          // auth + connection context.  URLSearchParams encodes '#' as '%23'
-          // so the hash becomes part of _localAppUrl, not a URL fragment.
-          const baseLocal = (powerConfig.localAppUrl as string).replace(/\/$/, '');
-          const params = new URLSearchParams({
-            _localAppUrl: baseLocal + window.location.hash,
-            _localConnectionUrl: import.meta.env.VITE_LOCAL_CONNECTION_URL ?? 'http://localhost:8080',
-          });
-          const url = `https://apps.powerapps.com/play/e/${powerConfig.environmentId}/app/local?${params}`;
-          window.open(url, '_blank', 'noopener,noreferrer');
-        }}
-        title="Open in new tab"
-      >
-        <ExternalLink size={22} />
-        {!collapsed && <span>Open in new tab</span>}
-      </a>
+          className="side-nav-link side-nav-link--new-tab"
+          href="#"
+          onClick={e => { e.preventDefault(); openInNewTab(window.location.hash); }}
+          title="Open in new tab"
+        >
+          <ExternalLink size={22} />
+          {!collapsed && <span>Open in new tab</span>}
+        </a>
 
       <RoleSwitcher collapsed={collapsed} />
     </aside>
