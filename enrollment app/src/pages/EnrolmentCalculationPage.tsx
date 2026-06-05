@@ -98,6 +98,13 @@ type PartnerComparisonRow = {
   enrolmentFee: unknown;
 };
 
+type HistoricalComparisonRow = {
+  id: string;
+  year: string;
+  enrolmentName: string;
+  enrolmentFee: unknown;
+};
+
 type CombinedFarmSummary = {
   participantPin: string;
   combinedFarmNumber: string;
@@ -217,6 +224,14 @@ function getProgramYear(record: Vsi_participantprogramyears | null): number | nu
     .map(value => value.match(/\b(19|20)\d{2}\b/))
     .find((result): result is RegExpMatchArray => result != null);
   return match ? Number(match[0]) : null;
+}
+
+function getProgramYearFromRow(record: Vsi_participantprogramyears): number | null {
+  return getProgramYear(record);
+}
+
+function normalizeGuid(value: unknown): string {
+  return typeof value === 'string' ? value.replace(/[{}]/g, '').toLowerCase() : '';
 }
 
 function getBooleanText(value: unknown): string {
@@ -360,6 +375,29 @@ function getPartnerRowsFromResponse(response: unknown): PartnerComparisonRow[] {
   return [...latestByPartner.values()].map(({ scenarioNumber: _scenarioNumber, operationPartnershipPin: _operationPartnershipPin, ...row }) => row);
 }
 
+function getHistoricalComparisonRows(
+  rows: Vsi_participantprogramyears[],
+  currentProgramYear: number,
+  programYearById: Map<string, number>,
+): HistoricalComparisonRow[] {
+  return rows
+    .map(row => {
+      const year = programYearById.get(normalizeGuid(row._vsi_programyearid_value)) ?? getProgramYearFromRow(row);
+      return { row, year };
+    })
+    .filter((item): item is { row: Vsi_participantprogramyears; year: number } => (
+      item.year != null && item.year < currentProgramYear
+    ))
+    .sort((a, b) => b.year - a.year)
+    .slice(0, 5)
+    .map(({ row, year }) => ({
+      id: row.vsi_participantprogramyearid,
+      year: String(year),
+      enrolmentName: row.vsi_name ?? '',
+      enrolmentFee: row.vsi_enrolmentfee,
+    }));
+}
+
 function getCombinedFarmSummaryFromResponse(response: unknown): CombinedFarmSummary | null {
   const listResponse = getEnrolmentPartnerListResponse(response);
   if (!listResponse || !getBooleanFieldValue(listResponse.inCombinedFarm)) return null;
@@ -447,6 +485,81 @@ function CalculationOption({ checked, label }: { checked: boolean; label: string
       <span className={`calc-benefit-radio-visual${checked ? ' calc-benefit-radio-visual-checked' : ''}`} aria-hidden="true" />
       <span>{label}</span>
     </label>
+  );
+}
+
+function HistoricalComparisonPanel({
+  rows,
+  loading,
+  error,
+  open,
+  pinned,
+  onToggleOpen,
+  onTogglePinned,
+}: {
+  rows: HistoricalComparisonRow[];
+  loading: boolean;
+  error: string | null;
+  open: boolean;
+  pinned: boolean;
+  onToggleOpen: () => void;
+  onTogglePinned: () => void;
+}) {
+  if (!open) {
+    return (
+      <aside className="calc-comparison-panel calc-comparison-panel-collapsed" aria-label="Historical comparison panel">
+        <button className="calc-panel-tab" type="button" onClick={onToggleOpen} title="Expand historical comparison panel" aria-label="Expand historical comparison panel">
+          <PanelRightOpen size={14} aria-hidden="true" />
+          <span>Historical Comparison</span>
+        </button>
+      </aside>
+    );
+  }
+
+  return (
+    <aside className="calc-comparison-panel" aria-label="Historical comparison panel">
+      <div className="calc-comparison-header">
+        <h2>Historical Comparison</h2>
+        <div className="calc-comparison-actions">
+          <button
+            className={`calc-panel-icon-btn${pinned ? ' calc-panel-icon-btn-active' : ''}`}
+            type="button"
+            onClick={onTogglePinned}
+            title={pinned ? 'Unpin panel' : 'Pin panel'}
+            aria-label={pinned ? 'Unpin historical comparison panel' : 'Pin historical comparison panel'}
+          >
+            <Pin size={14} aria-hidden="true" />
+          </button>
+          <button className="calc-panel-icon-btn calc-panel-icon-btn-square" type="button" onClick={onToggleOpen} title="Collapse historical comparison panel" aria-label="Collapse historical comparison panel">
+            <PanelRightClose size={14} aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+
+      {loading && <p className="calc-panel-state">Loading history...</p>}
+      {error && <p className="calc-panel-state calc-panel-state-error">{error}</p>}
+      {!loading && !error && rows.length === 0 && <p className="calc-panel-state">No historical enrolment fees found.</p>}
+      {!loading && !error && rows.length > 0 && (
+        <div className="calc-history-list">
+          {rows.map(row => (
+            <div className="calc-history-card" key={row.id || `${row.year}-${row.enrolmentName}`}>
+              <div className="calc-history-card-top">
+                <div>
+                  <div className="calc-history-year">{row.year}</div>
+                  <div className="calc-history-name">{row.enrolmentName || '-'}</div>
+                </div>
+              </div>
+              <dl className="calc-history-details">
+                <div>
+                  <dt>Enrolment Fee</dt>
+                  <dd>{formatCurrencyBlank(row.enrolmentFee)}</dd>
+                </div>
+              </dl>
+            </div>
+          ))}
+        </div>
+      )}
+    </aside>
   );
 }
 
@@ -586,15 +699,6 @@ function PartnerViewPanel({
                     >
                       <ExternalLink size={14} aria-hidden="true" />
                     </button>
-                  {farmsUrl ? (
-                    <a className="calc-partner-farms-link" href={farmsUrl} target="_blank" rel="noopener noreferrer" title="Open FARMS scenario" aria-label={`Open FARMS scenario for PIN ${partnerPin}`}>
-                      <ExternalLink size={15} aria-hidden="true" />
-                    </a>
-                  ) : (
-                    <span className="calc-partner-farms-link calc-partner-farms-link-disabled" aria-label="FARMS link unavailable">
-                      <ExternalLink size={15} aria-hidden="true" />
-                    </span>
-                  )}
                   </div>
                 </div>
                 <dl className="calc-partner-details">
@@ -692,6 +796,11 @@ export function EnrolmentCalculationPage() {
   const [partnerNavigationError, setPartnerNavigationError] = useState<string | null>(null);
   const [partnerPanelOpen, setPartnerPanelOpen] = useState(true);
   const [partnerPanelPinned, setPartnerPanelPinned] = useState(true);
+  const [historicalRows, setHistoricalRows] = useState<HistoricalComparisonRow[]>([]);
+  const [historicalRowsLoading, setHistoricalRowsLoading] = useState(false);
+  const [historicalRowsError, setHistoricalRowsError] = useState<string | null>(null);
+  const [historicalPanelOpen, setHistoricalPanelOpen] = useState(true);
+  const [historicalPanelPinned, setHistoricalPanelPinned] = useState(true);
   const [_queueWorkerName, setQueueWorkerName] = useState<string | null>(null);
   const [_queueWorkerId, setQueueWorkerId] = useState<string | null>(null);
   const [coreAppId, setCoreAppId] = useState<string | null>(() => getCoreConfig().coreAppId);
@@ -864,6 +973,73 @@ export function EnrolmentCalculationPage() {
   const farmsScenarioUrl = useMemo(() => {
     return buildFarmsScenarioUrl(farmsLegacyBaseUrl, participantPin, farmsScenarioProgramYear);
   }, [farmsLegacyBaseUrl, participantPin, farmsScenarioProgramYear]);
+
+  useEffect(() => {
+    const participantId = record?._vsi_participantid_value?.replace(/[{}]/g, '');
+    if (!participantId || !programYear) {
+      setHistoricalRows([]);
+      setHistoricalRowsError(null);
+      setHistoricalRowsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setHistoricalRows([]);
+    setHistoricalRowsError(null);
+    setHistoricalRowsLoading(true);
+
+    Promise.all([
+      Vsi_participantprogramyearsService.getAll({
+        select: [
+          'vsi_participantprogramyearid',
+          'vsi_name',
+          '_vsi_programyearid_value',
+          'vsi_enrolmentfee',
+        ],
+        filter: `_vsi_participantid_value eq '${participantId}' and statecode eq 0`,
+        orderBy: ['modifiedon desc'],
+        maxPageSize: 50,
+      }),
+      Vsi_programyearsService.getAll({
+        select: ['vsi_programyearid', 'vsi_year'],
+        filter: 'statecode eq 0',
+        orderBy: ['vsi_year desc'],
+        maxPageSize: 100,
+      }),
+    ])
+      .then(([historyResult, programYearsResult]) => {
+        if (cancelled) return;
+        if (historyResult.error) {
+          throw new Error(historyResult.error.message ?? 'Unable to load historical enrolment fees.');
+        }
+        if (programYearsResult.error) {
+          throw new Error(programYearsResult.error.message ?? 'Unable to load program years for historical comparison.');
+        }
+
+        const programYearById = new Map<string, number>();
+        for (const programYearRow of programYearsResult.data ?? []) {
+          const id = normalizeGuid(programYearRow.vsi_programyearid);
+          const year = Number(programYearRow.vsi_year);
+          if (id && Number.isFinite(year)) {
+            programYearById.set(id, year);
+          }
+        }
+
+        setHistoricalRows(getHistoricalComparisonRows(historyResult.data ?? [], programYear, programYearById));
+      })
+      .catch(err => {
+        if (cancelled) return;
+        setHistoricalRows([]);
+        setHistoricalRowsError(err instanceof Error ? err.message : 'Unable to load historical enrolment fees.');
+      })
+      .finally(() => {
+        if (!cancelled) setHistoricalRowsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [record, programYear]);
 
   useEffect(() => {
     if (!participantPin || !farmsScenarioProgramYear) {
@@ -1372,7 +1548,7 @@ export function EnrolmentCalculationPage() {
       {farmsWorkflowCalculationError && <p className="calc-state calc-state-error">{farmsWorkflowCalculationError}</p>}
 
       {!loading && !error && record && (
-        <div className={`calc-workspace${partnerPanelPinned ? ' calc-workspace-panel-pinned' : ''}`}>
+        <div className={`calc-workspace${partnerPanelPinned || historicalPanelPinned ? ' calc-workspace-panel-pinned' : ''}`}>
           <div className="calc-legacy-workflow" aria-label="FARMS enrolment calculation">
             <CalculationErrorMessages messages={tableErrors.unmatched} />
 
@@ -1586,23 +1762,35 @@ export function EnrolmentCalculationPage() {
           </div>
           </div>
 
-          <PartnerViewPanel
-            rows={partnerRows}
-            combinedFarm={combinedFarmSummary}
-            loading={partnerRowsLoading}
-            error={partnerRowsError}
-            farmsLegacyBaseUrl={farmsLegacyBaseUrl}
-            farmsScenarioProgramYear={farmsScenarioProgramYear}
-            enrolmentProgramYear={programYear}
-            openingPartnerPin={openingPartnerPin}
-            partnerNavigationError={partnerNavigationError}
-            open={partnerPanelOpen}
-            pinned={partnerPanelPinned}
-            onToggleOpen={() => setPartnerPanelOpen(prev => !prev)}
-            onTogglePinned={() => setPartnerPanelPinned(prev => !prev)}
-            onOpenPartnerDetails={handleOpenPartnerDetails}
-            onOpenPartnerCalculation={handleOpenPartnerCalculation}
-          />
+          <div className="calc-side-panels" aria-label="Calculation comparison panels">
+            <HistoricalComparisonPanel
+              rows={historicalRows}
+              loading={historicalRowsLoading}
+              error={historicalRowsError}
+              open={historicalPanelOpen}
+              pinned={historicalPanelPinned}
+              onToggleOpen={() => setHistoricalPanelOpen(prev => !prev)}
+              onTogglePinned={() => setHistoricalPanelPinned(prev => !prev)}
+            />
+
+            <PartnerViewPanel
+              rows={partnerRows}
+              combinedFarm={combinedFarmSummary}
+              loading={partnerRowsLoading}
+              error={partnerRowsError}
+              farmsLegacyBaseUrl={farmsLegacyBaseUrl}
+              farmsScenarioProgramYear={farmsScenarioProgramYear}
+              enrolmentProgramYear={programYear}
+              openingPartnerPin={openingPartnerPin}
+              partnerNavigationError={partnerNavigationError}
+              open={partnerPanelOpen}
+              pinned={partnerPanelPinned}
+              onToggleOpen={() => setPartnerPanelOpen(prev => !prev)}
+              onTogglePinned={() => setPartnerPanelPinned(prev => !prev)}
+              onOpenPartnerDetails={handleOpenPartnerDetails}
+              onOpenPartnerCalculation={handleOpenPartnerCalculation}
+            />
+          </div>
         </div>
       )}
 
