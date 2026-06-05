@@ -10,10 +10,10 @@ import { getCoreConfig, normalizeCoreBaseUrl, patchEnrolmentCache, clearEnrolmen
 import { removeSaItemsFromCache, clearSaCache } from './SupervisorApprovalPage';
 import { useRole } from '../context/RoleContext';
 import type { Vsi_participantprogramyears } from '../generated/models/Vsi_participantprogramyearsModel';
-import { AccountsService } from '../generated/services/AccountsService';
 import { MicrosoftDataverseService } from '../generated/services/MicrosoftDataverseService';
 import { ProcessEnrolmentActionService } from '../generated/services/ProcessEnrolmentActionService';
 import { QueueitemsService } from '../generated/services/QueueitemsService';
+import { AccountsService } from '../generated/services/AccountsService';
 import { Vsi_armsconfigurationsService } from '../generated/services/Vsi_armsconfigurationsService';
 import { Vsi_participantprogramyearsService } from '../generated/services/Vsi_participantprogramyearsService';
 import { Vsi_programyearsService } from '../generated/services/Vsi_programyearsService';
@@ -455,6 +455,8 @@ function PartnerViewPanel({
   combinedFarm,
   loading,
   error,
+  farmsLegacyBaseUrl,
+  farmsScenarioProgramYear,
   enrolmentProgramYear,
   openingPartnerPin,
   partnerNavigationError,
@@ -469,6 +471,8 @@ function PartnerViewPanel({
   combinedFarm: CombinedFarmSummary | null;
   loading: boolean;
   error: string | null;
+  farmsLegacyBaseUrl: string;
+  farmsScenarioProgramYear: number | null;
   enrolmentProgramYear: number | null;
   openingPartnerPin: string | null;
   partnerNavigationError: string | null;
@@ -551,6 +555,7 @@ function PartnerViewPanel({
             const displayName = [row.firstName, row.lastName].filter(Boolean).join(' ') || row.partnershipName;
             const partnerPin = row.partnerParticipantPin;
             const openingPartner = openingPartnerPin === partnerPin;
+            const farmsUrl = buildFarmsScenarioUrl(farmsLegacyBaseUrl, partnerPin, farmsScenarioProgramYear);
             return (
               <div className="calc-partner-card" key={`${row.operation}-${row.partnerParticipantPin}-${row.firstName}-${row.lastName}`}>
                 <div className="calc-partner-card-top">
@@ -570,16 +575,27 @@ function PartnerViewPanel({
                       ) : '-'}
                     </div>
                   </div>
-              <button
-                className="calc-outline-btn calc-sharepoint-btn calc-partner-calculation-btn"
-                type="button"
-                onClick={() => void onOpenPartnerCalculation(row)}
-                disabled={!partnerPin || !enrolmentProgramYear || openingPartner}
-                title={enrolmentProgramYear ? `Open ${enrolmentProgramYear} calculation` : 'Program year is unavailable'}
-                aria-label={`Open calculation for PIN ${partnerPin}`}
-              >
-                <ExternalLink size={14} aria-hidden="true" />
-              </button>
+                  <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+                    <button
+                      className="calc-outline-btn calc-partner-calculation-btn"
+                      type="button"
+                      onClick={() => void onOpenPartnerCalculation(row)}
+                      disabled={!partnerPin || !enrolmentProgramYear || openingPartner}
+                      title={enrolmentProgramYear ? `Open ${enrolmentProgramYear} calculation` : 'Program year is unavailable'}
+                      aria-label={`Open calculation for PIN ${partnerPin}`}
+                    >
+                      <ExternalLink size={14} aria-hidden="true" />
+                    </button>
+                  {farmsUrl ? (
+                    <a className="calc-partner-farms-link" href={farmsUrl} target="_blank" rel="noopener noreferrer" title="Open FARMS scenario" aria-label={`Open FARMS scenario for PIN ${partnerPin}`}>
+                      <ExternalLink size={15} aria-hidden="true" />
+                    </a>
+                  ) : (
+                    <span className="calc-partner-farms-link calc-partner-farms-link-disabled" aria-label="FARMS link unavailable">
+                      <ExternalLink size={15} aria-hidden="true" />
+                    </span>
+                  )}
+                  </div>
                 </div>
                 <dl className="calc-partner-details">
                   <div>
@@ -642,10 +658,10 @@ export function EnrolmentCalculationPage() {
   const { enrolmentId, source } = useParams<{ enrolmentId: string; source: string }>();
   const navigate = useNavigate();
   const { activeRole } = useRole();
-  const resolvedEnrolmentId = normalizeEnrolmentId(enrolmentId);
   const routeSource = source === 'supervisor' ? 'supervisor' : 'dashboard';
   const backTo = routeSource === 'supervisor' ? '/supervisor-approval' : '/dashboard-home';
   const backLabel = routeSource === 'supervisor' ? 'Back to Supervisor Approval' : 'Back to Dashboard';
+  const resolvedEnrolmentId = normalizeEnrolmentId(enrolmentId);
   const [record, setRecord] = useState<Vsi_participantprogramyears | null>(null);
   const [participantPin, setParticipantPin] = useState('');
   const [participantPinLoading, setParticipantPinLoading] = useState(false);
@@ -1018,7 +1034,6 @@ export function EnrolmentCalculationPage() {
         setPartnerNavigationError(`No ${programYear} enrolment found for partner PIN ${partnerPin}.`);
         return;
       }
-
       navigate(`/${target === 'details' ? 'enrolment' : 'calculation'}/${routeSource}/${partnerEnrolmentId}`);
     } catch (err) {
       setPartnerNavigationError(err instanceof Error ? err.message : 'Unable to open partner enrolment.');
@@ -1576,6 +1591,8 @@ export function EnrolmentCalculationPage() {
             combinedFarm={combinedFarmSummary}
             loading={partnerRowsLoading}
             error={partnerRowsError}
+            farmsLegacyBaseUrl={farmsLegacyBaseUrl}
+            farmsScenarioProgramYear={farmsScenarioProgramYear}
             enrolmentProgramYear={programYear}
             openingPartnerPin={openingPartnerPin}
             partnerNavigationError={partnerNavigationError}
