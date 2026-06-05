@@ -1,3 +1,9 @@
+import powerConfig from '../../power.config.json';
+
+const TENANT_ID_FALLBACK = '6fdb5200-3d0d-4a8a-b036-d3685e359adc';
+const PENDING_ROUTE_KEY = 'pendingDeepLinkRoute';
+const PENDING_ROUTE_TTL_MS = 10_000;
+
 const ID_PARAM_NAMES = [
   'calculationId',
   'enrolmentId',
@@ -104,6 +110,20 @@ export function normalizeInitialDeepLink(): void {
   const url = new URL(window.location.href);
   if (url.hash.startsWith('#/')) return;
 
+  // Check for a pending deep-link written by another tab via openInNewTab().
+  // The route is stored in localStorage so it works across both local dev and production.
+  try {
+    const raw = localStorage.getItem(PENDING_ROUTE_KEY);
+    if (raw) {
+      const { hash, ts } = JSON.parse(raw) as { hash: string; ts: number };
+      localStorage.removeItem(PENDING_ROUTE_KEY);
+      if (Date.now() - ts < PENDING_ROUTE_TTL_MS && hash.startsWith('#/')) {
+        window.history.replaceState(null, '', `${url.pathname}${url.search}${hash}`);
+        return;
+      }
+    }
+  } catch { /* localStorage unavailable */ }
+
   const hashParams = new URLSearchParams(url.hash.replace(/^#/, ''));
   const pathSegments = url.pathname.split('/').map(segment => decodeValue(segment).toLowerCase()).filter(Boolean);
 
@@ -119,4 +139,32 @@ export function normalizeInitialDeepLink(): void {
   if (!route) return;
 
   window.history.replaceState(null, '', `${url.pathname}${url.search}#${route}`);
+}
+
+/**
+ * Opens the app in a new tab deep-linked to the given hash route (e.g. "#/calculation/dashboard/abc-123").
+ * Writes the route to localStorage so normalizeInitialDeepLink() can pick it up in the new tab,
+ * giving real deep-linking in both local dev and production Power Apps.
+ */
+export function openInNewTab(hash: string): void {
+  const route = hash.startsWith('#') ? hash : `#${hash}`;
+
+  // Write the intended route so the new tab can navigate to it on startup.
+  try {
+    localStorage.setItem(PENDING_ROUTE_KEY, JSON.stringify({ hash: route, ts: Date.now() }));
+  } catch { /* localStorage unavailable */ }
+
+  const envId = powerConfig.environmentId;
+
+  if (window.location.hostname === 'localhost') {
+    const baseLocal = (powerConfig.localAppUrl as string).replace(/\/$/, '');
+    const params = new URLSearchParams({
+      _localAppUrl: baseLocal + route,
+      _localConnectionUrl: (import.meta.env.VITE_LOCAL_CONNECTION_URL as string | undefined) ?? 'http://localhost:8080',
+    });
+    window.open(`https://apps.powerapps.com/play/e/${envId}/app/local?${params}`, '_blank', 'noopener,noreferrer');
+  } else {
+    const params = new URLSearchParams({ source: 'portal', tenantId: TENANT_ID_FALLBACK });
+    window.open(`https://apps.powerapps.com/play/e/${envId}/app/${powerConfig.appId}?${params}`, '_blank', 'noopener,noreferrer');
+  }
 }
