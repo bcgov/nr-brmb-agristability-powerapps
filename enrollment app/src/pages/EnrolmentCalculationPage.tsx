@@ -10,13 +10,16 @@ import { getCoreConfig, normalizeCoreBaseUrl, patchEnrolmentCache, clearEnrolmen
 import { removeSaItemsFromCache, clearSaCache } from './SupervisorApprovalPage';
 import { useRole } from '../context/RoleContext';
 import type { Vsi_participantprogramyears } from '../generated/models/Vsi_participantprogramyearsModel';
+import { AccountsService } from '../generated/services/AccountsService';
 import { MicrosoftDataverseService } from '../generated/services/MicrosoftDataverseService';
 import { ProcessEnrolmentActionService } from '../generated/services/ProcessEnrolmentActionService';
 import { QueueitemsService } from '../generated/services/QueueitemsService';
 import { Vsi_armsconfigurationsService } from '../generated/services/Vsi_armsconfigurationsService';
 import { Vsi_participantprogramyearsService } from '../generated/services/Vsi_participantprogramyearsService';
+import { Vsi_programyearsService } from '../generated/services/Vsi_programyearsService';
 import { farmsApi } from '../services/farmsApi';
 import { resolveCurrentSystemUser } from '../utils/currentUser';
+import { normalizeEnrolmentId } from '../utils/deepLinks';
 import { formatCurrencyOr, getAvatarColor, getInitials, getTaskStatusLabel } from '../utils/helpers';
 
 const DATAVERSE_ORG_URL = 'https://aff-brmb-crm-dev.crm3.dynamics.com/';
@@ -251,6 +254,40 @@ function formatTextBlank(value: unknown): string {
   return String(value).trim();
 }
 
+function escapeODataString(value: string): string {
+  return value.replace(/'/g, "''");
+}
+
+async function resolvePartnerEnrolmentId(partnerPin: string, enrolmentProgramYear: number | null): Promise<string | null> {
+  const pin = partnerPin.trim();
+  if (!pin || !enrolmentProgramYear) return null;
+
+  const escapedPin = escapeODataString(pin);
+  const accountResult = await AccountsService.getAll({
+    select: ['accountid', 'vsi_pin', 'accountnumber'],
+    filter: `(vsi_pin eq '${escapedPin}' or accountnumber eq '${escapedPin}') and statecode eq 0`,
+    maxPageSize: 1,
+  });
+  const accountId = accountResult.data?.[0]?.accountid?.replace(/[{}]/g, '');
+  if (!accountId) return null;
+
+  const programYearResult = await Vsi_programyearsService.getAll({
+    select: ['vsi_programyearid', 'vsi_year'],
+    filter: `vsi_year eq '${enrolmentProgramYear}' and statecode eq 0`,
+    maxPageSize: 1,
+  });
+  const programYearId = programYearResult.data?.[0]?.vsi_programyearid?.replace(/[{}]/g, '');
+  if (!programYearId) return null;
+
+  const enrolmentResult = await Vsi_participantprogramyearsService.getAll({
+    select: ['vsi_participantprogramyearid'],
+    filter: `_vsi_participantid_value eq '${accountId}' and _vsi_programyearid_value eq '${programYearId}' and statecode eq 0`,
+    maxPageSize: 1,
+  });
+
+  return enrolmentResult.data?.[0]?.vsi_participantprogramyearid?.replace(/[{}]/g, '') ?? null;
+}
+
 function getNumberValue(value: unknown): number {
   const numberValue = Number(value);
   return Number.isFinite(numberValue) ? numberValue : Number.NEGATIVE_INFINITY;
@@ -418,23 +455,29 @@ function PartnerViewPanel({
   combinedFarm,
   loading,
   error,
-  farmsLegacyBaseUrl,
-  farmsScenarioProgramYear,
+  enrolmentProgramYear,
+  openingPartnerPin,
+  partnerNavigationError,
   open,
   pinned,
   onToggleOpen,
   onTogglePinned,
+  onOpenPartnerDetails,
+  onOpenPartnerCalculation,
 }: {
   rows: PartnerComparisonRow[];
   combinedFarm: CombinedFarmSummary | null;
   loading: boolean;
   error: string | null;
-  farmsLegacyBaseUrl: string;
-  farmsScenarioProgramYear: number | null;
+  enrolmentProgramYear: number | null;
+  openingPartnerPin: string | null;
+  partnerNavigationError: string | null;
   open: boolean;
   pinned: boolean;
   onToggleOpen: () => void;
   onTogglePinned: () => void;
+  onOpenPartnerDetails: (row: PartnerComparisonRow) => Promise<void>;
+  onOpenPartnerCalculation: (row: PartnerComparisonRow) => Promise<void>;
 }) {
   const visibleRows = rows.filter((row): row is PartnerComparisonRow => (
     !!row && (
@@ -479,6 +522,7 @@ function PartnerViewPanel({
 
       {loading && <p className="calc-panel-state">Loading partners...</p>}
       {error && <p className="calc-panel-state calc-panel-state-error">{error}</p>}
+      {partnerNavigationError && <p className="calc-panel-state calc-panel-state-error">{partnerNavigationError}</p>}
       {!loading && !error && !visibleRows.length && !hasCombinedFarm && <p className="calc-panel-state">No partner data found.</p>}
       {!loading && !error && combinedFarm && (
         <div className="calc-combined-farm">
@@ -505,23 +549,37 @@ function PartnerViewPanel({
         <div className="calc-partner-list">
           {visibleRows.map(row => {
             const displayName = [row.firstName, row.lastName].filter(Boolean).join(' ') || row.partnershipName;
-            const farmsUrl = buildFarmsScenarioUrl(farmsLegacyBaseUrl, row.partnerParticipantPin, farmsScenarioProgramYear);
+            const partnerPin = row.partnerParticipantPin;
+            const openingPartner = openingPartnerPin === partnerPin;
             return (
               <div className="calc-partner-card" key={`${row.operation}-${row.partnerParticipantPin}-${row.firstName}-${row.lastName}`}>
                 <div className="calc-partner-card-top">
                   <div>
                     <div className="calc-partner-name">{displayName || '-'}</div>
-                    <div className="calc-partner-pin">PIN {row.partnerParticipantPin || '-'}</div>
+                    <div className="calc-partner-pin">
+                      PIN{' '}
+                      {partnerPin ? (
+                        <button
+                          className="calc-partner-pin-link"
+                          type="button"
+                          onClick={() => void onOpenPartnerDetails(row)}
+                          disabled={!enrolmentProgramYear || openingPartner}
+                        >
+                          {partnerPin}
+                        </button>
+                      ) : '-'}
+                    </div>
                   </div>
-                  {farmsUrl ? (
-                    <a className="calc-partner-farms-link" href={farmsUrl} target="_blank" rel="noopener noreferrer" title="Open FARMS scenario" aria-label={`Open FARMS scenario for PIN ${row.partnerParticipantPin}`}>
-                      <ExternalLink size={15} aria-hidden="true" />
-                    </a>
-                  ) : (
-                    <span className="calc-partner-farms-link calc-partner-farms-link-disabled" aria-label="FARMS link unavailable">
-                      <ExternalLink size={15} aria-hidden="true" />
-                    </span>
-                  )}
+              <button
+                className="calc-outline-btn calc-sharepoint-btn calc-partner-calculation-btn"
+                type="button"
+                onClick={() => void onOpenPartnerCalculation(row)}
+                disabled={!partnerPin || !enrolmentProgramYear || openingPartner}
+                title={enrolmentProgramYear ? `Open ${enrolmentProgramYear} calculation` : 'Program year is unavailable'}
+                aria-label={`Open calculation for PIN ${partnerPin}`}
+              >
+                <ExternalLink size={14} aria-hidden="true" />
+              </button>
                 </div>
                 <dl className="calc-partner-details">
                   <div>
@@ -584,8 +642,10 @@ export function EnrolmentCalculationPage() {
   const { enrolmentId, source } = useParams<{ enrolmentId: string; source: string }>();
   const navigate = useNavigate();
   const { activeRole } = useRole();
-  const backTo = source === 'supervisor' ? '/supervisor-approval' : '/dashboard-home';
-  const backLabel = source === 'supervisor' ? 'Back to Supervisor Approval' : 'Back to Dashboard';
+  const resolvedEnrolmentId = normalizeEnrolmentId(enrolmentId);
+  const routeSource = source === 'supervisor' ? 'supervisor' : 'dashboard';
+  const backTo = routeSource === 'supervisor' ? '/supervisor-approval' : '/dashboard-home';
+  const backLabel = routeSource === 'supervisor' ? 'Back to Supervisor Approval' : 'Back to Dashboard';
   const [record, setRecord] = useState<Vsi_participantprogramyears | null>(null);
   const [participantPin, setParticipantPin] = useState('');
   const [participantPinLoading, setParticipantPinLoading] = useState(false);
@@ -612,6 +672,8 @@ export function EnrolmentCalculationPage() {
   const [combinedFarmSummary, setCombinedFarmSummary] = useState<CombinedFarmSummary | null>(null);
   const [partnerRowsLoading, setPartnerRowsLoading] = useState(false);
   const [partnerRowsError, setPartnerRowsError] = useState<string | null>(null);
+  const [openingPartnerPin, setOpeningPartnerPin] = useState<string | null>(null);
+  const [partnerNavigationError, setPartnerNavigationError] = useState<string | null>(null);
   const [partnerPanelOpen, setPartnerPanelOpen] = useState(true);
   const [partnerPanelPinned, setPartnerPanelPinned] = useState(true);
   const [_queueWorkerName, setQueueWorkerName] = useState<string | null>(null);
@@ -631,7 +693,7 @@ export function EnrolmentCalculationPage() {
   }, [coreAppId]);
 
   useEffect(() => {
-    if (!enrolmentId) {
+    if (!resolvedEnrolmentId) {
       setError('Missing enrolment id.');
       setLoading(false);
       return;
@@ -642,7 +704,7 @@ export function EnrolmentCalculationPage() {
       try {
         setLoading(true);
         setError(null);
-        let result = await Vsi_participantprogramyearsService.get(enrolmentId, {
+        let result = await Vsi_participantprogramyearsService.get(resolvedEnrolmentId, {
           select: [
             'vsi_name',
             'vsi_taskstatus',
@@ -685,7 +747,7 @@ export function EnrolmentCalculationPage() {
         // Match the details page behavior: some environments can return no data
         // for a selected retrieve even when the full record is readable.
         if (!result?.data) {
-          result = await Vsi_participantprogramyearsService.get(enrolmentId);
+          result = await Vsi_participantprogramyearsService.get(resolvedEnrolmentId);
         }
 
         if (cancelled) return;
@@ -720,11 +782,11 @@ export function EnrolmentCalculationPage() {
     return () => {
       cancelled = true;
     };
-  }, [enrolmentId, refreshKey]);
+  }, [resolvedEnrolmentId, refreshKey]);
 
   // Fetch queue worker (who has "picked" this enrolment in the supervisor queue)
   useEffect(() => {
-    if (!enrolmentId) {
+    if (!resolvedEnrolmentId) {
       setQueueWorkerName(null);
       setQueueWorkerId(null);
       return;
@@ -734,7 +796,7 @@ export function EnrolmentCalculationPage() {
       try {
         const [queueResult, user] = await Promise.all([
           QueueitemsService.getAll({
-            filter: `objectid_vsi_participantprogramyear/vsi_participantprogramyearid eq '${enrolmentId}' and statecode eq 0`,
+            filter: `objectid_vsi_participantprogramyear/vsi_participantprogramyearid eq '${resolvedEnrolmentId}' and statecode eq 0`,
             select: ['queueitemid', '_workerid_value'],
             maxPageSize: 1,
           }),
@@ -759,7 +821,7 @@ export function EnrolmentCalculationPage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [enrolmentId, refreshKey]);
+  }, [resolvedEnrolmentId, refreshKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -941,8 +1003,40 @@ export function EnrolmentCalculationPage() {
     unmatched: getUnmatchedErrorMessages(farmsWorkflowCalculation),
   };
 
+  const openPartnerEnrolment = async (row: PartnerComparisonRow, target: 'details' | 'calculation') => {
+    const partnerPin = row.partnerParticipantPin.trim();
+    if (!partnerPin || !programYear) {
+      setPartnerNavigationError('Partner PIN or enrolment year is missing.');
+      return;
+    }
+
+    setOpeningPartnerPin(partnerPin);
+    setPartnerNavigationError(null);
+    try {
+      const partnerEnrolmentId = await resolvePartnerEnrolmentId(partnerPin, programYear);
+      if (!partnerEnrolmentId) {
+        setPartnerNavigationError(`No ${programYear} enrolment found for partner PIN ${partnerPin}.`);
+        return;
+      }
+
+      navigate(`/${target === 'details' ? 'enrolment' : 'calculation'}/${routeSource}/${partnerEnrolmentId}`);
+    } catch (err) {
+      setPartnerNavigationError(err instanceof Error ? err.message : 'Unable to open partner enrolment.');
+    } finally {
+      setOpeningPartnerPin(null);
+    }
+  };
+
+  const handleOpenPartnerDetails = async (row: PartnerComparisonRow) => {
+    await openPartnerEnrolment(row, 'details');
+  };
+
+  const handleOpenPartnerCalculation = async (row: PartnerComparisonRow) => {
+    await openPartnerEnrolment(row, 'calculation');
+  };
+
   const handle45DayPause = async () => {
-    if (!record || !enrolmentId) return;
+    if (!record || !resolvedEnrolmentId) return;
     setCounterActionLoading(true);
     setCounterActionError(null);
     try {
@@ -951,10 +1045,10 @@ export function EnrolmentCalculationPage() {
         vsi_fortyfivedaycounterpaused: true,
         vsi_fortyfivedaypausedate: today,
       };
-      const result = await Vsi_participantprogramyearsService.update(enrolmentId, patch);
+      const result = await Vsi_participantprogramyearsService.update(resolvedEnrolmentId, patch);
       if (!result.success) throw new Error(result.error?.message ?? 'Failed to pause counter.');
       setRecord(prev => prev ? { ...prev, ...patch } : prev);
-      patchEnrolmentCache([{ id: enrolmentId, fields: patch }]);
+      patchEnrolmentCache([{ id: resolvedEnrolmentId, fields: patch }]);
     } catch (err) {
       setCounterActionError(err instanceof Error ? err.message : 'Failed to pause counter.');
     } finally {
@@ -963,7 +1057,7 @@ export function EnrolmentCalculationPage() {
   };
 
   const handle45DayResume = async () => {
-    if (!record || !enrolmentId) return;
+    if (!record || !resolvedEnrolmentId) return;
     setCounterActionLoading(true);
     setCounterActionError(null);
     try {
@@ -977,7 +1071,7 @@ export function EnrolmentCalculationPage() {
         (new Date(pauseDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24),
       );
       const newStartDate = new Date(Date.now() - elapsedAtPause * 24 * 60 * 60 * 1000).toISOString();
-      const resumeResult = await Vsi_participantprogramyearsService.update(enrolmentId, {
+      const resumeResult = await Vsi_participantprogramyearsService.update(resolvedEnrolmentId, {
         vsi_fortyfivedaycounterpaused: false,
         vsi_fortyfivedayletterstartdate: newStartDate,
         vsi_fortyfivedaypausedate: null as unknown as string,
@@ -989,7 +1083,7 @@ export function EnrolmentCalculationPage() {
         vsi_fortyfivedayletterstartdate: newStartDate,
       };
       setRecord(prev => prev ? { ...prev, ...patch } : prev);
-      patchEnrolmentCache([{ id: enrolmentId, fields: patch }]);
+      patchEnrolmentCache([{ id: resolvedEnrolmentId, fields: patch }]);
     } catch (err) {
       setCounterActionError(err instanceof Error ? err.message : 'Failed to resume counter.');
     } finally {
@@ -998,14 +1092,14 @@ export function EnrolmentCalculationPage() {
   };
 
   const handleCompleteConfirm = async () => {
-    if (!record || !enrolmentId) return;
+    if (!record || !resolvedEnrolmentId) return;
     setCompleting(true);
     setError(null);
     try {
       const currentUser = await resolveCurrentSystemUser();
-      const result = await ProcessEnrolmentActionService.Run({ text: enrolmentId, text_1: 'complete', text_2: currentUser.systemUserId });
+      const result = await ProcessEnrolmentActionService.Run({ text: resolvedEnrolmentId, text_1: 'complete', text_2: currentUser.systemUserId });
       if (!result.success) {
-        const msg = (result.error as { message?: string } | undefined)?.message ?? `Failed to complete ${enrolmentId}.`;
+        const msg = (result.error as { message?: string } | undefined)?.message ?? `Failed to complete ${resolvedEnrolmentId}.`;
         throw new Error(msg);
       }
       const flowMessage = result.data?.message;
@@ -1016,7 +1110,7 @@ export function EnrolmentCalculationPage() {
         vsi_taskstatus: 865520002 as unknown as Vsi_participantprogramyears['vsi_taskstatus'],
         vsi_enrolmentstatus: 865520006 as unknown as Vsi_participantprogramyears['vsi_enrolmentstatus'],
       };
-      patchEnrolmentCache([{ id: enrolmentId, fields: completedFields }]);
+      patchEnrolmentCache([{ id: resolvedEnrolmentId, fields: completedFields }]);
       setRecord(prev => prev ? { ...prev, ...completedFields } : prev);
       setShowCompleteConfirm(false);
       setRefreshKey(prev => prev + 1);
@@ -1046,7 +1140,7 @@ export function EnrolmentCalculationPage() {
   };
 
   const handleApproveConfirm = async () => {
-    if (!record || !enrolmentId) return;
+    if (!record || !resolvedEnrolmentId) return;
 
     setApproving(true);
     setError(null);
@@ -1059,7 +1153,7 @@ export function EnrolmentCalculationPage() {
       }
 
       const currentUser = await resolveCurrentSystemUser();
-      const result = await ProcessEnrolmentActionService.Run({ text: enrolmentId, text_1: 'approve', text_2: currentUser.systemUserId });
+      const result = await ProcessEnrolmentActionService.Run({ text: resolvedEnrolmentId, text_1: 'approve', text_2: currentUser.systemUserId });
       if (!result.success) {
         const msg = (result.error as { message?: string } | undefined)?.message ?? 'Failed to approve enrolment';
         throw new Error(msg);
@@ -1072,8 +1166,8 @@ export function EnrolmentCalculationPage() {
       const approvedFields: Partial<Vsi_participantprogramyears> = {
         vsi_taskstatus: 865520003 as unknown as Vsi_participantprogramyears['vsi_taskstatus'],
       };
-      patchEnrolmentCache([{ id: enrolmentId, fields: approvedFields }]);
-      if (source === 'supervisor') removeSaItemsFromCache([enrolmentId]);
+      patchEnrolmentCache([{ id: resolvedEnrolmentId, fields: approvedFields }]);
+      if (routeSource === 'supervisor') removeSaItemsFromCache([resolvedEnrolmentId]);
       setRecord(prev => prev ? { ...prev, ...approvedFields } : prev);
       setShowApproveConfirm(false);
       setRefreshKey(prev => prev + 1);
@@ -1130,7 +1224,7 @@ export function EnrolmentCalculationPage() {
       </div>
 
       <div className="calc-identity">
-        <Link to={`/enrolment/${source}/${enrolmentId}`} className="calc-enrolment-name-link">
+        <Link to={`/enrolment/${routeSource}/${resolvedEnrolmentId}`} className="calc-enrolment-name-link">
           {record?.vsi_name ?? (loading ? 'Loading...' : '-')}
         </Link>
         {participantHref
@@ -1482,12 +1576,15 @@ export function EnrolmentCalculationPage() {
             combinedFarm={combinedFarmSummary}
             loading={partnerRowsLoading}
             error={partnerRowsError}
-            farmsLegacyBaseUrl={farmsLegacyBaseUrl}
-            farmsScenarioProgramYear={farmsScenarioProgramYear}
+            enrolmentProgramYear={programYear}
+            openingPartnerPin={openingPartnerPin}
+            partnerNavigationError={partnerNavigationError}
             open={partnerPanelOpen}
             pinned={partnerPanelPinned}
             onToggleOpen={() => setPartnerPanelOpen(prev => !prev)}
             onTogglePinned={() => setPartnerPanelPinned(prev => !prev)}
+            onOpenPartnerDetails={handleOpenPartnerDetails}
+            onOpenPartnerCalculation={handleOpenPartnerCalculation}
           />
         </div>
       )}
@@ -1512,7 +1609,7 @@ export function EnrolmentCalculationPage() {
       )}
       {show45DayModal && (
         <Send45DayLetterModal
-          enrolmentId={enrolmentId ?? ''}
+          enrolmentId={resolvedEnrolmentId}
           enrolmentName={record?.vsi_name ?? ''}
           programYear={String(getProgramYear(record) ?? '')}
           onClose={() => setShow45DayModal(false)}
