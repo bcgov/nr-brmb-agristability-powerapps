@@ -138,7 +138,6 @@ export function useEnrolmentData() {
           'vsi_prevyearpartnotverified',
           'vsi_variancecalculation',
           'vsi_isnewparticipant',
-          'vsi_fullyprovinciallyfunded',
         ],
         orderBy: ['vsi_taskstatus desc'],
       };
