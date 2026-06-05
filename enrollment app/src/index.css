@@ -341,6 +341,15 @@ button:focus-visible {
   min-width: 0;
 }
 
+.calc-side-panels {
+  position: sticky;
+  top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
 .calc-legacy-panel {
   display: flex;
   flex-direction: column;
@@ -596,6 +605,10 @@ button:focus-visible {
   padding: 0.8rem;
 }
 
+.calc-side-panels .calc-comparison-panel {
+  position: static;
+}
+
 .calc-comparison-panel-collapsed {
   min-height: 0;
   width: 100%;
@@ -641,6 +654,65 @@ button:focus-visible {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
+}
+
+.calc-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.calc-history-card {
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  padding: 0.65rem;
+}
+
+.calc-history-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
+.calc-history-year {
+  color: #0f172a;
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.calc-history-name {
+  margin-top: 0.15rem;
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.calc-history-details {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.45rem 0.75rem;
+  margin: 0.65rem 0 0;
+}
+
+.calc-history-details dt {
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.calc-history-details dd {
+  margin: 0.08rem 0 0;
+  color: #111827;
+  font-size: 0.8rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .calc-panel-icon-btn {
@@ -885,6 +957,11 @@ button:focus-visible {
 
   .calc-workspace {
     grid-template-columns: 1fr;
+  }
+
+  .calc-side-panels {
+    position: static;
+    order: -1;
   }
 
   .calc-comparison-panel {
