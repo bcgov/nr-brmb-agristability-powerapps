@@ -568,8 +568,6 @@ function PartnerViewPanel({
   combinedFarm,
   loading,
   error,
-  farmsLegacyBaseUrl,
-  farmsScenarioProgramYear,
   enrolmentProgramYear,
   openingPartnerPin,
   partnerNavigationError,
@@ -584,8 +582,6 @@ function PartnerViewPanel({
   combinedFarm: CombinedFarmSummary | null;
   loading: boolean;
   error: string | null;
-  farmsLegacyBaseUrl: string;
-  farmsScenarioProgramYear: number | null;
   enrolmentProgramYear: number | null;
   openingPartnerPin: string | null;
   partnerNavigationError: string | null;
@@ -668,7 +664,6 @@ function PartnerViewPanel({
             const displayName = [row.firstName, row.lastName].filter(Boolean).join(' ') || row.partnershipName;
             const partnerPin = row.partnerParticipantPin;
             const openingPartner = openingPartnerPin === partnerPin;
-            const farmsUrl = buildFarmsScenarioUrl(farmsLegacyBaseUrl, partnerPin, farmsScenarioProgramYear);
             return (
               <div className="calc-partner-card" key={`${row.operation}-${row.partnerParticipantPin}-${row.firstName}-${row.lastName}`}>
                 <div className="calc-partner-card-top">
@@ -1779,8 +1774,6 @@ export function EnrolmentCalculationPage() {
               combinedFarm={combinedFarmSummary}
               loading={partnerRowsLoading}
               error={partnerRowsError}
-              farmsLegacyBaseUrl={farmsLegacyBaseUrl}
-              farmsScenarioProgramYear={farmsScenarioProgramYear}
               enrolmentProgramYear={programYear}
               openingPartnerPin={openingPartnerPin}
               partnerNavigationError={partnerNavigationError}
