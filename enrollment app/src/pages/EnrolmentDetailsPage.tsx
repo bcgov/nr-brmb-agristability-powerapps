@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
+import { useEffect, useMemo, useState, useRef, type ChangeEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Calculator } from 'lucide-react';
 import sharepointIconUrl from '/icons/sharepoint.svg?url';
@@ -10,7 +10,7 @@ import {
 } from '../generated/models/Vsi_participantprogramyearsModel';
 import { Vsi_participantprogramyearsService } from '../generated/services/Vsi_participantprogramyearsService';
 import { Vsi_armsconfigurationsService } from '../generated/services/Vsi_armsconfigurationsService';
-import { formatEnrolmentStatusDisplay, getAvatarColor, getInitials, getTaskStatusLabel } from '../utils/helpers';
+import { formatEnrolmentStatusDisplay, getAvatarColor, getInitials, getTaskStatusLabel, navGuard } from '../utils/helpers';
 import { getCoreConfig, normalizeCoreBaseUrl } from '../hooks/useEnrolmentData';
 import { useRole } from '../context/RoleContext';
 import { Toast, type ToastMessage, nextToastId } from '../components/Toast';
@@ -152,6 +152,10 @@ export function EnrolmentDetailsPage() {
   };
   const dismissToast = (id: number) => setToasts(prev => prev.filter(t => t.id !== id));
 
+  const [syncingLateDeadline, setSyncingLateDeadline] = useState(false);
+  const syncIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => () => { if (syncIntervalRef.current) clearInterval(syncIntervalRef.current); }, []);
+
   useEffect(() => {
     if (coreAppId !== null) return;
     Vsi_armsconfigurationsService.getAll({ maxPageSize: 50, select: ['cr4dd_coreappid', 'vsi_coreenvironmenturl'] })
@@ -225,6 +229,28 @@ export function EnrolmentDetailsPage() {
     );
   }, [baseline, formState]);
 
+  const [pendingNavPath, setPendingNavPath] = useState<string | null>(null);
+  const navigateWithGuard = (path: string) => {
+    if (hasChanges) { setPendingNavPath(path); } else { navigate(path); }
+  };
+
+  // Register the nav guard so sidebar links can also be intercepted
+  useEffect(() => {
+    navGuard.register(setPendingNavPath);
+    return () => navGuard.unregister();
+  }, []);
+
+  useEffect(() => {
+    navGuard.setActive(hasChanges);
+  }, [hasChanges]);
+
+  useEffect(() => {
+    if (!hasChanges) return;
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [hasChanges]);
+
   const participantName = useMemo(() => {
     if (!record) return '---';
     const label = record.vsi_participantidname
@@ -267,6 +293,43 @@ export function EnrolmentDetailsPage() {
     setFormState(prev => (prev ? { ...prev, enrolmentStatus: nextValue } : prev));
   };
 
+  const onLateParticipantChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setSaveNotice(null);
+    setFormState(prev => (prev ? { ...prev, vsi_fullyprovinciallyfunded: event.target.checked } : prev));
+  };
+
+  const startLateDeadlinePolling = (deadlineValueAfterSave: string, recordId: string) => {
+    if (syncIntervalRef.current) clearInterval(syncIntervalRef.current);
+    setSyncingLateDeadline(true);
+    let attempts = 0;
+    const MAX_ATTEMPTS = 12; // 5s × 12 = 60 s
+
+    syncIntervalRef.current = setInterval(async () => {
+      attempts++;
+      try {
+        const polled = await Vsi_participantprogramyearsService.get(recordId, {
+          select: ['vsi_lateenrolmentfeesfinaldeadlinedate'],
+        });
+        const newValue = toDateInputValue(polled?.data?.vsi_lateenrolmentfeesfinaldeadlinedate);
+        if (newValue && newValue !== deadlineValueAfterSave) {
+          clearInterval(syncIntervalRef.current!);
+          syncIntervalRef.current = null;
+          const full = await Vsi_participantprogramyearsService.get(recordId, { select: [...DETAIL_SELECT] });
+          const updated = full?.data;
+          if (updated) { setRecord(updated); setFormState(initialFormFromRecord(updated)); }
+          setSyncingLateDeadline(false);
+          addToast('Late enrolment fees deadline date has been updated by the system.', 'success');
+          return;
+        }
+      } catch { /* ignore poll errors */ }
+      if (attempts >= MAX_ATTEMPTS) {
+        clearInterval(syncIntervalRef.current!);
+        syncIntervalRef.current = null;
+        setSyncingLateDeadline(false);
+      }
+    }, 5000);
+  };
+
   const handleSave = () => {
     if (!record || !formState || !baseline) return;
 
@@ -275,6 +338,13 @@ export function EnrolmentDetailsPage() {
       !!formState.vsi_lateenrolmentnoticesentdate;
 
     if (lateNoticeDateChanged) {
+      if (!formState.vsi_fullyprovinciallyfunded) {
+        setLateNoticeModal({
+          type: 'error',
+          message: 'Late Participant must be set to Yes before saving the Late Enrolment Notice Sent Date.',
+        });
+        return;
+      }
       if (!formState.vsi_lateenrolmentfeesfinaldeadlinedate) {
         setLateNoticeModal({
           type: 'error',
@@ -296,7 +366,7 @@ export function EnrolmentDetailsPage() {
     void executeSave();
   };
 
-  const executeSave = async (onSuccess?: () => void) => {
+  const executeSave = async (onSuccess?: (saved: Vsi_participantprogramyears) => void) => {
     if (!record || !formState) return;
 
     const changedFields: Partial<Omit<Vsi_participantprogramyearsBase, 'vsi_participantprogramyearid'>> = {};
@@ -351,7 +421,7 @@ export function EnrolmentDetailsPage() {
       setRecord(updated);
       setFormState(initialFormFromRecord(updated));
       setSaveNotice('Changes saved.');
-      onSuccess?.();
+      onSuccess?.(updated);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Unable to save changes.');
     } finally {
@@ -385,7 +455,7 @@ export function EnrolmentDetailsPage() {
   return (
     <section className="details-wrapper">
       <div className="details-title-row">
-        <button type="button" className="details-back-btn" onClick={() => navigate(backPath)}>{backLabel}</button>
+        <button type="button" className="details-back-btn" onClick={() => navigateWithGuard(backPath)}>{backLabel}</button>
         <h1 className="details-page-title">Enrolment App / Deadlines &amp; Fees</h1>
         <div className="details-meta-strip">
           <div className="details-info-card">
@@ -396,7 +466,20 @@ export function EnrolmentDetailsPage() {
               </div>
               <div className="details-info-stat-divider" />
               <div className="details-info-stat">
-                <span className="details-info-value">{yesNoText(formState.vsi_fullyprovinciallyfunded)}</span>
+                {canEdit
+                  ? (
+                    <label className="details-info-value details-info-checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={formState.vsi_fullyprovinciallyfunded}
+                        onChange={onLateParticipantChange}
+                        disabled={saving}
+                      />
+                      {formState.vsi_fullyprovinciallyfunded ? 'Yes' : 'No'}
+                    </label>
+                  )
+                  : <span className="details-info-value">{yesNoText(formState.vsi_fullyprovinciallyfunded)}</span>
+                }
                 <span className="details-info-label">Late Participant</span>
               </div>
               <div className="details-info-stat-divider" />
@@ -506,7 +589,7 @@ export function EnrolmentDetailsPage() {
               <button
                 type="button"
                 className="calc-outline-btn"
-                onClick={() => navigate(`/calculation/${routeSource}/${resolvedEnrolmentId}`)}
+                onClick={() => navigateWithGuard(`/calculation/${source}/${enrolmentId}`)}
               >
                 <Calculator size={15} /> Go to Calculation
               </button>
@@ -645,14 +728,17 @@ export function EnrolmentDetailsPage() {
             </div>
 
             <div className="details-field">
-              <label htmlFor="late-enrol-fees-final-deadline-date" className="details-label">Late enrolment fees final deadline date</label>
+              <label htmlFor="late-enrol-fees-final-deadline-date" className="details-label">
+                Late enrolment fees final deadline date
+                {syncingLateDeadline && <span className="details-syncing-indicator"> ⟳ Syncing…</span>}
+              </label>
               <input
                 id="late-enrol-fees-final-deadline-date"
                 type="date"
                 className="details-date"
                 value={formState.vsi_lateenrolmentfeesfinaldeadlinedate}
                 onChange={updateDateField('vsi_lateenrolmentfeesfinaldeadlinedate')}
-                disabled={saving || !canEdit}
+                disabled={saving || !canEdit || syncingLateDeadline}
               />
             </div>
           </div>
@@ -689,7 +775,7 @@ export function EnrolmentDetailsPage() {
               {lateNoticeModal.type === 'confirm' && (
                 <button
                   className="btn-ok"
-                  onClick={() => { setLateNoticeModal(null); void executeSave(() => addToast('Save complete. File will be in SharePoint folder momentarily.', 'success')); }}
+                  onClick={() => { setLateNoticeModal(null); void executeSave((saved) => { addToast('Save complete. File will be in SharePoint folder momentarily.', 'success'); startLateDeadlinePolling(toDateInputValue(saved.vsi_lateenrolmentfeesfinaldeadlinedate), saved.vsi_participantprogramyearid); }); }}
                 >
                   Confirm
                 </button>
@@ -703,6 +789,23 @@ export function EnrolmentDetailsPage() {
       )}
 
       <Toast toasts={toasts} onDismiss={dismissToast} />
+
+      {pendingNavPath && (
+        <div className="modal-overlay">
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Unsaved Changes</h3>
+            </div>
+            <div className="modal-body">
+              <div className="no-selection-message">You have unsaved changes. Are you sure you want to leave without saving?</div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-ok" onClick={() => { navigate(pendingNavPath); setPendingNavPath(null); }}>Leave without saving</button>
+              <button className="btn-cancel" onClick={() => setPendingNavPath(null)}>Stay</button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

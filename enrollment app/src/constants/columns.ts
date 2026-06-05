@@ -26,6 +26,7 @@ export const ALL_COLUMNS: ColumnDef[] = [
   { key: 'fileReceivedDate', label: 'File Received Date', icon: 'date', removable: true },
   { key: 'feesPaidDate', label: 'Fees Paid Date', icon: 'date', removable: true },
   { key: 'isNewParticipant', label: 'New Participant', icon: 'check', removable: true },
+  { key: 'lateParticipant', label: 'Late Participant', icon: 'check', removable: true },
 ];
 
 export const DEFAULT_VISIBLE_KEYS: SortKey[] = [
@@ -58,6 +59,7 @@ export const SORTKEY_TO_FIELD: Record<SortKey, string> = {
   feesPaidDate: 'vsi_enrolmentfeespaiddate',
   flagged: 'vsi_previousyearcalculatedenfee',
   isNewParticipant: 'vsi_isnewparticipant',
+  lateParticipant: 'vsi_fullyprovinciallyfunded',
 };
 
 export const FIELD_TO_SORTKEY: Record<string, SortKey> = {

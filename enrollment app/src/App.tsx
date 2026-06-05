@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { HashRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom';
-import { ClipboardCheck, Home, Menu } from 'lucide-react';
+import { ClipboardCheck, ExternalLink, Home, Menu } from 'lucide-react';
+import powerConfig from '../power.config.json';
 
 import { DashboardHomePage } from './pages/DashboardHomePage';
 import { SupervisorApprovalPage } from './pages/SupervisorApprovalPage';
 import { EnrolmentDetailsPage } from './pages/EnrolmentDetailsPage';
 import { EnrolmentCalculationPage } from './pages/EnrolmentCalculationPage';
 import { RoleProvider, useRole, ALL_ROLES, ROLE_LABELS, type AppRole } from './context/RoleContext';
-import { normalizeInitialDeepLink } from './utils/deepLinks';
+import { navGuard } from './utils/helpers';
 
 const SUPERVISOR_APPROVAL_ROLES: AppRole[] = ['SystemAdmin', 'Supervisor'];
 const CALCULATION_ROLES: AppRole[] = ['SystemAdmin', 'Supervisor', 'ENAdmin', 'Verifier'];
@@ -59,18 +60,48 @@ function SideNav({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
       </button>
 
       <nav className="side-nav-links" aria-label="Primary">
-        <NavLink to="/dashboard-home" className={({ isActive }) => `side-nav-link${isActive ? ' active' : ''}`}>
+        <NavLink
+          to="/dashboard-home"
+          className={({ isActive }) => `side-nav-link${isActive ? ' active' : ''}`}
+          onClick={e => { if (navGuard.intercept('/dashboard-home')) e.preventDefault(); }}
+        >
           <Home size={22} />
           {!collapsed && <span>Dashboard</span>}
         </NavLink>
 
         {SUPERVISOR_APPROVAL_ROLES.includes(activeRole) && (
-          <NavLink to="/supervisor-approval" className={({ isActive }) => `side-nav-link${isActive ? ' active' : ''}`}>
+          <NavLink
+            to="/supervisor-approval"
+            className={({ isActive }) => `side-nav-link${isActive ? ' active' : ''}`}
+            onClick={e => { if (navGuard.intercept('/supervisor-approval')) e.preventDefault(); }}
+          >
             <ClipboardCheck size={22} />
             {!collapsed && <span>Supervisor Approval</span>}
           </NavLink>
         )}
       </nav>
+
+      <a
+        className="side-nav-link side-nav-link--new-tab"
+        href="#"
+        onClick={e => {
+          e.preventDefault();
+          // Construct the Power Apps local-debug shell URL so the new tab has
+          // auth + connection context.  URLSearchParams encodes '#' as '%23'
+          // so the hash becomes part of _localAppUrl, not a URL fragment.
+          const baseLocal = (powerConfig.localAppUrl as string).replace(/\/$/, '');
+          const params = new URLSearchParams({
+            _localAppUrl: baseLocal + window.location.hash,
+            _localConnectionUrl: import.meta.env.VITE_LOCAL_CONNECTION_URL ?? 'http://localhost:8080',
+          });
+          const url = `https://apps.powerapps.com/play/e/${powerConfig.environmentId}/app/local?${params}`;
+          window.open(url, '_blank', 'noopener,noreferrer');
+        }}
+        title="Open in new tab"
+      >
+        <ExternalLink size={22} />
+        {!collapsed && <span>Open in new tab</span>}
+      </a>
 
       <RoleSwitcher collapsed={collapsed} />
     </aside>

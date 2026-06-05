@@ -7,6 +7,24 @@ import {
 import type { Vsi_participantprogramyears } from "../generated/models/Vsi_participantprogramyearsModel";
 import type { SortKey } from '../types/enrollment';
 
+// ---------------------------------------------------------------------------
+// Navigation guard singleton — lets EnrolmentDetailsPage block nav-bar links
+// ---------------------------------------------------------------------------
+type NavGuardShowFn = (path: string) => void;
+let _navGuardActive = false;
+let _navGuardShow: NavGuardShowFn | null = null;
+
+export const navGuard = {
+  register(showModal: NavGuardShowFn) { _navGuardShow = showModal; },
+  setActive(active: boolean) { _navGuardActive = active; },
+  unregister() { _navGuardActive = false; _navGuardShow = null; },
+  /** Returns true and shows the modal if navigation should be blocked. */
+  intercept(path: string): boolean {
+    if (_navGuardActive && _navGuardShow) { _navGuardShow(path); return true; }
+    return false;
+  },
+};
+
 export function getEnrolmentStatusLabel(value: unknown): string {
   if (value == null) return '';
   return Vsi_participantprogramyearsvsi_enrolmentstatus[
@@ -143,6 +161,15 @@ export function getSortValue(row: Vsi_participantprogramyears, key: SortKey): st
     case 'regionalOffice': return Vsi_participantprogramyearsvsi_enrollmentregionaloffice[row.vsi_enrollmentregionaloffice as keyof typeof Vsi_participantprogramyearsvsi_enrollmentregionaloffice] ?? '';
     case 'farmingSector': return Vsi_participantprogramyearsvsi_farmingsector[row.vsi_farmingsector as keyof typeof Vsi_participantprogramyearsvsi_farmingsector] ?? '';
     case 'isNewParticipant': return row.vsi_isnewparticipant === true ? 1 : 0;
+    case 'lateParticipant': return row.vsi_fullyprovinciallyfunded === true ? 1 : 0;
+    case 'hasPartners': return row.vsi_haspartners === true ? 1 : 0;
+    case 'inCombinedFarm': return row.vsi_incombinedfarm === true ? 1 : 0;
+    case 'bringForward': return row.vsi_bringforward === true ? 1 : 0;
+    case 'broughtForward': return row.vsi_broughtforward === true ? 1 : 0;
+    case 'manualReview': return row.vsi_manualreview === true ? 1 : 0;
+    case 'enrolNoticeDate': return row.vsi_enrolmentnoticesentdate ?? '';
+    case 'fileReceivedDate': return row.vsi_filereceiveddate ?? '';
+    case 'feesPaidDate': return row.vsi_enrolmentfeespaiddate ?? '';
     default: return '';
   }
 }
