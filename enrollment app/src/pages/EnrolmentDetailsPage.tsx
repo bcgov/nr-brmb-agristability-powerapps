@@ -14,6 +14,7 @@ import { formatEnrolmentStatusDisplay, getAvatarColor, getInitials, getTaskStatu
 import { getCoreConfig, normalizeCoreBaseUrl } from '../hooks/useEnrolmentData';
 import { useRole } from '../context/RoleContext';
 import { Toast, type ToastMessage, nextToastId } from '../components/Toast';
+import { normalizeEnrolmentId } from '../utils/deepLinks';
 
 const CORE_APP_ID_FALLBACK = '88c024d9-9fd5-ec11-a7b5-002248ada475';
 const CORE_BASE_URL_FALLBACK = 'https://aff-brmb-crm-dev.crm3.dynamics.com/main.aspx';
@@ -129,6 +130,8 @@ export function EnrolmentDetailsPage() {
   const navigate = useNavigate();
   const { activeRole } = useRole();
   const canEdit = activeRole === 'SystemAdmin' || activeRole === 'Supervisor';
+  const resolvedEnrolmentId = normalizeEnrolmentId(enrolmentId);
+  const routeSource = source === 'supervisor' ? 'supervisor' : 'dashboard';
 
   const [record, setRecord] = useState<Vsi_participantprogramyears | null>(null);
   const [formState, setFormState] = useState<DetailFormState | null>(null);
@@ -165,7 +168,7 @@ export function EnrolmentDetailsPage() {
   }, []);
 
   useEffect(() => {
-    if (!enrolmentId) {
+    if (!resolvedEnrolmentId) {
       setError('Missing enrolment id.');
       setLoading(false);
       return;
@@ -176,13 +179,13 @@ export function EnrolmentDetailsPage() {
       try {
         setLoading(true);
         setError(null);
-        let result = await Vsi_participantprogramyearsService.get(enrolmentId, {
+        let result = await Vsi_participantprogramyearsService.get(resolvedEnrolmentId, {
           select: [...DETAIL_SELECT],
         });
 
         // Some environments are strict about select fields; retry without select to avoid hard-fail.
         if (!result?.data) {
-          result = await Vsi_participantprogramyearsService.get(enrolmentId);
+          result = await Vsi_participantprogramyearsService.get(resolvedEnrolmentId);
         }
         if (cancelled) return;
         const loaded = result.data;
@@ -205,7 +208,7 @@ export function EnrolmentDetailsPage() {
     return () => {
       cancelled = true;
     };
-  }, [enrolmentId]);
+  }, [resolvedEnrolmentId]);
 
   const statusOptions = useMemo(
     () => Object.entries(Vsi_participantprogramyearsvsi_enrolmentstatus).map(([value, label]) => ({
@@ -434,7 +437,7 @@ export function EnrolmentDetailsPage() {
   // Determine back link and label
   let backPath = '/dashboard-home';
   let backLabel = 'Back to Dashboard';
-  if (source === 'supervisor') {
+  if (routeSource === 'supervisor') {
     backPath = '/supervisor-approval';
     backLabel = 'Back to Supervisor Approval';
   }
@@ -586,7 +589,7 @@ export function EnrolmentDetailsPage() {
               <button
                 type="button"
                 className="calc-outline-btn"
-                onClick={() => navigateWithGuard(`/calculation/${source}/${enrolmentId}`)}
+                onClick={() => navigateWithGuard(`/calculation/${routeSource}/${resolvedEnrolmentId}`)}
               >
                 <Calculator size={15} /> Go to Calculation
               </button>
