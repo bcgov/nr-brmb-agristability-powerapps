@@ -19,7 +19,7 @@ import { Vsi_participantprogramyearsService } from '../generated/services/Vsi_pa
 import { Vsi_programyearsService } from '../generated/services/Vsi_programyearsService';
 import { farmsApi } from '../services/farmsApi';
 import { resolveCurrentSystemUser } from '../utils/currentUser';
-import { normalizeEnrolmentId } from '../utils/deepLinks';
+import { normalizeEnrolmentId, openInNewTab } from '../utils/deepLinks';
 import { formatCurrencyOr, getAvatarColor, getInitials, getTaskStatusLabel } from '../utils/helpers';
 
 const DATAVERSE_ORG_URL = 'https://aff-brmb-crm-dev.crm3.dynamics.com/';
@@ -698,6 +698,7 @@ function PartnerViewPanel({
                       aria-label={`Open calculation for PIN ${partnerPin}`}
                     >
                       <ExternalLink size={14} aria-hidden="true" />
+                      {openingPartner ? 'Opening…' : 'Open Calculation'}
                     </button>
                   </div>
                 </div>
@@ -1210,7 +1211,7 @@ export function EnrolmentCalculationPage() {
         setPartnerNavigationError(`No ${programYear} enrolment found for partner PIN ${partnerPin}.`);
         return;
       }
-      navigate(`/${target === 'details' ? 'enrolment' : 'calculation'}/${routeSource}/${partnerEnrolmentId}`);
+      openInNewTab(`#/${target === 'details' ? 'enrolment' : 'calculation'}/${routeSource}/${partnerEnrolmentId}`);
     } catch (err) {
       setPartnerNavigationError(err instanceof Error ? err.message : 'Unable to open partner enrolment.');
     } finally {
