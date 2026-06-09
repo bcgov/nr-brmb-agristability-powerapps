@@ -102,7 +102,7 @@ type HistoricalComparisonRow = {
   id: string;
   year: string;
   enrolmentName: string;
-  enrolmentFee: unknown;
+  totalFeesOwed: unknown;
 };
 
 type CombinedFarmSummary = {
@@ -394,7 +394,7 @@ function getHistoricalComparisonRows(
       id: row.vsi_participantprogramyearid,
       year: String(year),
       enrolmentName: row.vsi_name ?? '',
-      enrolmentFee: row.vsi_enrolmentfee,
+      totalFeesOwed: row.vsi_totalfeesowed,
     }));
 }
 
@@ -551,8 +551,8 @@ function HistoricalComparisonPanel({
               </div>
               <dl className="calc-history-details">
                 <div>
-                  <dt>Enrolment Fee</dt>
-                  <dd>{formatCurrencyBlank(row.enrolmentFee)}</dd>
+                  <dt>Total Fees Owed</dt>
+                  <dd>{formatCurrencyBlank(row.totalFeesOwed)}</dd>
                 </div>
               </dl>
             </div>
@@ -990,7 +990,7 @@ export function EnrolmentCalculationPage() {
           'vsi_participantprogramyearid',
           'vsi_name',
           '_vsi_programyearid_value',
-          'vsi_enrolmentfee',
+          'vsi_totalfeesowed',
         ],
         filter: `_vsi_participantid_value eq '${participantId}' and statecode eq 0`,
         orderBy: ['modifiedon desc'],
