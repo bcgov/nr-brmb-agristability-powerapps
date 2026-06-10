@@ -44,6 +44,8 @@ export interface Vsi_enrolmenthistoriesBase {
   vsi_partnershipnames?: string;
   vsi_partnershippercents?: string;
   vsi_partnershippins?: string;
+  vsi_previousyearcalculatedenfee?: number;
+  vsi_prevyearpartnotverified?: boolean;
   vsi_programyearmargin1?: number;
   vsi_programyearmargin1used: boolean;
   vsi_programyearmargin2?: number;
@@ -85,6 +87,8 @@ export interface Vsi_enrolmenthistories extends Vsi_enrolmenthistoriesBase {
   vsi_haspartnersname?: string;
   vsi_incombinedfarmname?: string;
   vsi_participantprogramyearidname?: string;
+  vsi_previousyearcalculatedenfee_base?: number;
+  vsi_prevyearpartnotverifiedname?: string;
   vsi_programyearmargin1_base?: number;
   vsi_programyearmargin1usedname?: string;
   vsi_programyearmargin2_base?: number;

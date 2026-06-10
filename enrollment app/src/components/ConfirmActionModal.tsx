@@ -1,5 +1,3 @@
-// ...existing code...
-
 export function ConfirmActionModal({
   title,
   message,

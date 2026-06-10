@@ -21,10 +21,8 @@ import { farmsApi } from '../services/farmsApi';
 import { resolveCurrentSystemUser } from '../utils/currentUser';
 import { normalizeEnrolmentId, openInNewTab } from '../utils/deepLinks';
 import { formatCurrencyOr, getAvatarColor, getInitials, getTaskStatusLabel } from '../utils/helpers';
+import { CORE_APP_ID_FALLBACK, CORE_BASE_URL_FALLBACK, DATAVERSE_ORG_URL } from '../constants/config';
 
-const DATAVERSE_ORG_URL = 'https://aff-brmb-crm-dev.crm3.dynamics.com/';
-const CORE_APP_ID_FALLBACK = '88c024d9-9fd5-ec11-a7b5-002248ada475';
-const CORE_BASE_URL_FALLBACK = 'https://aff-brmb-crm-dev.crm3.dynamics.com/main.aspx';
 const BENEFIT_MARGIN_COUNT = 5;
 const APPROVABLE_STATUSES = new Set([865520005, 865520006]);
 const APPROVABLE_TASK_STATUSES = new Set([865520000, 865520001, 865520002]);
@@ -747,7 +745,7 @@ function getApprovalError(
     return `${enrolmentName} cannot be approved because its task status must be Manual, Supervisor, or Ready.`;
   }
 
-  if (record.vsi_calculatedenfee == null) {
+  if (record.vsi_enrolmentfee == null) {
     return `${enrolmentName} cannot be approved because it does not have a calculated fee.`;
   }
 
@@ -760,7 +758,7 @@ export function EnrolmentCalculationPage() {
   const { activeRole } = useRole();
   const routeSource = source === 'supervisor' ? 'supervisor' : 'dashboard';
   const backTo = routeSource === 'supervisor' ? '/supervisor-approval' : '/dashboard-home';
-  const backLabel = routeSource === 'supervisor' ? 'Back to Supervisor Approval' : 'Back to Dashboard';
+  const backLabel = routeSource === 'supervisor' ? 'Back to Supervisor Approval' : 'Back to Enrolments';
   const resolvedEnrolmentId = normalizeEnrolmentId(enrolmentId);
   const [record, setRecord] = useState<Vsi_participantprogramyears | null>(null);
   const [participantPin, setParticipantPin] = useState('');
@@ -832,7 +830,7 @@ export function EnrolmentCalculationPage() {
             'vsi_enrolmentstatus',
             '_ownerid_value',
             'owneridname',
-            'vsi_calculatedenfee',
+            'vsi_enrolmentfee',
             'vsi_previousyearcalculatedenfee',
             'modifiedon',
             '_vsi_programyearid_value',

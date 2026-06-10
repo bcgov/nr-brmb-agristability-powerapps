@@ -1,5 +1,3 @@
-// ...existing code...
-
 export function ApprovalErrorModal({ message, onClose }: { message: string; onClose: () => void }) {
   return (
     <div className="modal-overlay" onClick={onClose}>

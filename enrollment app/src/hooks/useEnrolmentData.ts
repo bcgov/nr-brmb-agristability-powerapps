@@ -111,7 +111,7 @@ export function useEnrolmentData() {
           '_vsi_programyearid_value',
           'vsi_enrolmentstatus',
           'vsi_taskstatus',
-          'vsi_calculatedenfee',
+          'vsi_enrolmentfee',
           'vsi_previousyearcalculatedenfee',
           'vsi_administrativecostsharingfee',
           'vsi_enrolmentfeecalculated',
@@ -263,7 +263,7 @@ export function useSortedAndFilteredRows(
         return (row.vsi_participantidname
           ?? raw['_vsi_participantid_value@OData.Community.Display.V1.FormattedValue']
           ?? '') as string;
-      case 'fee': return String(row.vsi_calculatedenfee ?? '');
+      case 'fee': return String(row.vsi_enrolmentfee ?? '');
       case 'hasPartners': return row.vsi_haspartners === true ? 'Yes' : 'No';
       case 'inCombinedFarm': return row.vsi_incombinedfarm === true ? 'Yes' : 'No';
       case 'isNewParticipant': return row.vsi_isnewparticipant === true ? 'Yes' : 'No';
@@ -332,7 +332,7 @@ export function useSortedAndFilteredRows(
 
   const isFlaggedByVariance = useCallback((row: Vsi_participantprogramyears): boolean => {
     if (row.vsi_prevyearpartnotverified === true) return true;
-    if (row.vsi_calculatedenfee != null && row.vsi_previousyearcalculatedenfee == null) return true;
+    if (row.vsi_enrolmentfee != null && row.vsi_previousyearcalculatedenfee == null) return true;
     const variance = row.vsi_variancecalculation != null ? row.vsi_variancecalculation * 100 : null;
     if (variance == null) return false;
     return Math.abs(variance) >= FLAGGED_VARIANCE_THRESHOLD;

@@ -32,6 +32,7 @@ export type ColumnHeaderMenuProps<K extends string = string> = {
   columnWidth: number | undefined;
   onColumnWidthChange: (w: number | undefined) => void;
   dragProps?: ColumnHeaderDragProps;
+  thStyle?: React.CSSProperties;
 } & ColumnHeaderFilterProps;
 
 export function ColumnHeaderMenu<K extends string = string>({
@@ -50,6 +51,7 @@ export function ColumnHeaderMenu<K extends string = string>({
   columnWidth,
   onColumnWidthChange,
   dragProps,
+  thStyle,
 }: ColumnHeaderMenuProps<K>) {
 
   const [open, setOpen] = useState(false);
@@ -98,7 +100,7 @@ export function ColumnHeaderMenu<K extends string = string>({
   return (
     <th
       className={`col-hdr-menu-th${dragProps?.className ? ' ' + dragProps.className : ''}`}
-      style={{ position: 'relative', cursor: 'grab', minWidth: columnWidth ? `${columnWidth}px` : undefined, width: columnWidth ? `${columnWidth}px` : undefined }}
+      style={{ position: 'relative', cursor: 'grab', minWidth: columnWidth ? `${columnWidth}px` : undefined, width: columnWidth ? `${columnWidth}px` : undefined, ...thStyle }}
       draggable={dragProps?.draggable}
       onDragStart={dragProps?.onDragStart}
       onDragOver={dragProps?.onDragOver}

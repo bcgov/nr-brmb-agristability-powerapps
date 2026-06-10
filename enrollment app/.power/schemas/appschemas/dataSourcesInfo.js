@@ -3663,6 +3663,35 @@ export const dataSourcesInfo = {
           }
         }
       },
+      "GetEnrolmentPartners": {
+        "path": "/{connectionId}/calculations/enrolment-partners",
+        "method": "GET",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "participantPin",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "programYear",
+            "in": "query",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responseInfo": {
+          "default": {
+            "type": "object"
+          }
+        }
+      },
       "GetAllCodetables": {
         "path": "/{connectionId}/codeTables",
         "method": "GET",

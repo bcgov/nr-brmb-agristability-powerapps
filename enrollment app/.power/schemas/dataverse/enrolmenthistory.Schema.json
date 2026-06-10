@@ -656,6 +656,52 @@
           "x-ms-schema-name": "vsi_PartnershipPINS",
           "maxLength": 1000
         },
+        "vsi_previousyearcalculatedenfee": {
+          "type": "string",
+          "title": "Previous Year Calculated EN Fee",
+          "x-ms-dataverse-attribute": "vsi_previousyearcalculatedenfee",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_PreviousYearCalculatedENFee"
+        },
+        "vsi_previousyearcalculatedenfee_base": {
+          "type": "string",
+          "title": "Previous Year Calculated EN Fee (Base)",
+          "x-ms-dataverse-attribute": "vsi_previousyearcalculatedenfee_base",
+          "x-ms-dataverse-type": "MoneyType",
+          "x-ms-schema-name": "vsi_previousyearcalculatedenfee_Base",
+          "x-ms-read-only": true
+        },
+        "vsi_prevyearpartnotverified": {
+          "type": "string",
+          "title": "Prev Year Part not Verified",
+          "x-ms-dataverse-attribute": "vsi_prevyearpartnotverified",
+          "x-ms-dataverse-type": "BooleanType",
+          "x-ms-schema-name": "vsi_PrevYearPartnotVerified",
+          "enum": [
+            "No",
+            "Yes"
+          ],
+          "x-ms-enum-values": [
+            0,
+            1
+          ],
+          "Color": [
+            null,
+            null
+          ],
+          "x-ms-optionsetmetadataid": "ea0af0e3-d03d-f111-88b5-7c1e5254c1d5",
+          "x-ms-isGlobal": false,
+          "x-ms-optionsetdisplayname": "Prev Year Part not Verified",
+          "x-ms-optionSetType": "Boolean"
+        },
+        "vsi_prevyearpartnotverifiedname": {
+          "type": "string",
+          "title": "vsi_prevyearpartnotverifiedname",
+          "x-ms-dataverse-attribute": "vsi_prevyearpartnotverifiedname",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "vsi_prevyearpartnotverifiedName",
+          "x-ms-read-only": true
+        },
         "vsi_programyearmargin1": {
           "type": "string",
           "title": "Program Year Margin 1",

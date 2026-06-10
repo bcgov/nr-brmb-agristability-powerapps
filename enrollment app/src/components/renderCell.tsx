@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Flag } from 'lucide-react';
+import { Flag, Calculator } from 'lucide-react';
 import sharepointIconUrl from '/icons/sharepoint.svg?url';
 import type { Vsi_participantprogramyears } from '../generated/models/Vsi_participantprogramyearsModel';
 import {
@@ -12,9 +12,7 @@ import {
   formatCurrency, getInitials, getAvatarColor,
   getVarianceClass, formatVariancePercent, formatEnrolmentStatusDisplay,
 } from '../utils/helpers';
-
-const CORE_APP_ID_FALLBACK = '88c024d9-9fd5-ec11-a7b5-002248ada475';
-const CORE_BASE_URL_FALLBACK = 'https://aff-brmb-crm-dev.crm3.dynamics.com/main.aspx';
+import { CORE_APP_ID_FALLBACK, CORE_BASE_URL_FALLBACK } from '../constants/config';
 
 export function renderCell(
   key: SortKey,
@@ -32,7 +30,7 @@ export function renderCell(
   switch (key) {
     case 'pin': {
       // Determine source for navigation: allow row._source override, else default to 'dashboard'
-      const source = (row as any)._source || 'dashboard';
+      const source = (raw._source as string | undefined) || 'dashboard';
       return (
         <td key={key} className="cell-pin">
           {row.vsi_participantprogramyearid
@@ -56,11 +54,11 @@ export function renderCell(
     }
     case 'year': {
       const v = row.vsi_programyearidname ?? raw['_vsi_programyearid_value@OData.Community.Display.V1.FormattedValue'] ?? '';
-      return <td key={key}>{v as string}</td>;
+      return <td key={key} className="cell-year">{v as string}</td>;
     }
     case 'taskStatus': {
       const l = getTaskStatusLabel(row.vsi_taskstatus);
-      return <td key={key}><span className={`task-badge task-${l.toLowerCase()}`}>{taskStatusIcon(l)} {l}</span></td>;
+      return <td key={key} className="cell-task-status"><span className={`task-badge task-${l.toLowerCase()}`}>{taskStatusIcon(l)} {l}</span></td>;
     }
     case 'enrolStatus': {
       const l = getEnrolmentStatusLabel(row.vsi_enrolmentstatus);
@@ -72,7 +70,7 @@ export function renderCell(
       const referenceDate = paused && pauseDate ? new Date(pauseDate).getTime() : Date.now() - 7 * 60 * 60 * 1000;
       const days = startDate ? Math.floor((referenceDate - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)) : null;
       return (
-        <td key={key}>
+        <td key={key} className="cell-enrol-status">
           <div className="enrol-status-cell">
             <span className="enrol-badge">{formatEnrolmentStatusDisplay(l)}</span>
             {days !== null && (
@@ -86,22 +84,35 @@ export function renderCell(
     }
     case 'fee': {
       const adminFee = row.vsi_administrativecostsharingfee ?? 0;
-      const calcFee = row.vsi_calculatedenfee != null ? row.vsi_calculatedenfee + adminFee : null;
-      const variance = row.vsi_calculatedenfee != null && row.vsi_variancecalculation != null ? row.vsi_variancecalculation * 100 : null;
+      const calcFee = row.vsi_enrolmentfee != null ? row.vsi_enrolmentfee + adminFee : null;
+      const variance = row.vsi_variancecalculation != null ? row.vsi_variancecalculation * 100 : null;
       const varianceClass = getVarianceClass(variance);
       const varianceText = formatVariancePercent(variance);
+      const source = (raw._source as string | undefined) || 'dashboard';
 
       return (
         <td key={key} className="cell-fee">
           <div className="calculated-fee-cell">
             <span className="calculated-fee-value">{formatCurrency(calcFee)}</span>
             {variance != null ? <span className={`variance-pill ${varianceClass}`}>{varianceText}</span> : null}
+            {row.vsi_participantprogramyearid
+              ? (
+                <Link
+                  to={`/calculation/${source}/${row.vsi_participantprogramyearid}`}
+                  aria-label="Go to calculation"
+                  data-tooltip="Go to calculation"
+                  className="sa-calc-link cell-fee-calc"
+                >
+                  <Calculator size={20} />
+                </Link>
+              )
+              : null}
           </div>
         </td>
       );
     }
     case 'totalFeesOwedCalculated': {
-      const variance = row.vsi_calculatedenfee != null && row.vsi_variancecalculation != null ? row.vsi_variancecalculation * 100 : null;
+      const variance = row.vsi_variancecalculation != null ? row.vsi_variancecalculation * 100 : null;
       const varianceClass = getVarianceClass(variance);
       const varianceText = formatVariancePercent(variance);
       return (
@@ -120,7 +131,7 @@ export function renderCell(
       const variance = row.vsi_variancecalculation != null ? row.vsi_variancecalculation * 100 : null;
       const isFlagged = (variance != null && Math.abs(variance) > 20)
         || row.vsi_prevyearpartnotverified === true
-        || (row.vsi_calculatedenfee != null && row.vsi_previousyearcalculatedenfee == null);
+        || (row.vsi_enrolmentfee != null && row.vsi_previousyearcalculatedenfee == null);
       return <td key={key} className="cell-flag">{isFlagged ? <Flag size={14} color="#dc2626" fill="#dc2626" aria-label="Flagged" /> : null}</td>;
     }
     case 'sharepoint':

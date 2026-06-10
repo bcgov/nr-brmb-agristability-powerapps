@@ -143,7 +143,7 @@ export function getSortValue(row: Vsi_participantprogramyears, key: SortKey): st
         ?? '') as string;
     case 'taskStatus': return getTaskStatusLabel(row.vsi_taskstatus);
     case 'enrolStatus': return getEnrolmentStatusLabel(row.vsi_enrolmentstatus);
-    case 'fee': return Number(row.vsi_calculatedenfee) || 0;
+    case 'fee': return Number(row.vsi_enrolmentfee) || 0;
     case 'owner': {
       return (row.owneridname
         ?? raw['_ownerid_value@OData.Community.Display.V1.FormattedValue']

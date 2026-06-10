@@ -52,7 +52,6 @@ export async function resolveEntityObjectTypeCode(): Promise<void> {
         const num = Number(raw);
         if (!isNaN(num) && num > 0) {
           entityObjectTypeCode = String(num);
-          console.log('[viewSerializer] Resolved ObjectTypeCode via Xrm.WebApi:', entityObjectTypeCode);
           return;
         }
       }
@@ -61,7 +60,7 @@ export async function resolveEntityObjectTypeCode(): Promise<void> {
     }
   }
   if (cachedGridOpenTag) {
-    console.log('[viewSerializer] Using cachedGridOpenTag fallback for layoutxml object type code');
+    // Grid tag cached from a previous system view load; ObjectTypeCode will be inferred from it
   } else {
     console.warn('[viewSerializer] Could not resolve entity ObjectTypeCode — layoutxml may be rejected by Dataverse');
   }
@@ -109,7 +108,7 @@ const ADV_FIELD_TO_ATTR: Partial<Record<AdvFilterField, string>> = {
   taskStatus: 'vsi_taskstatus',
   enrolStatus: 'vsi_enrolmentstatus',
   pin: 'vsi_name',
-  fee: 'vsi_calculatedenfee',
+  fee: 'vsi_enrolmentfee',
   hasPartners: 'vsi_haspartners',
   inCombinedFarm: 'vsi_incombinedfarm',
   isNewParticipant: 'vsi_isnewparticipant',
@@ -229,28 +228,60 @@ export function parseLayoutXml(xml: string | undefined | null): SortKey[] | null
   } catch { return null; }
 }
 
+/**
+ * Remove AdvFilterNodes whose conditions are already represented by QuickFilterState flags.
+ * This prevents duplication when a system/personal view is applied: the same FetchXML
+ * conditions can be parsed into both `filters.*` quick-filter flags AND `advFilterNodes`,
+ * and `effectiveFilterNodes` in the dashboard also adds synthetic nodes for active quick
+ * filters — so without this strip, the user sees (and applies) the same condition twice.
+ */
+function stripQuickFilterNodes(nodes: AdvFilterNode[], fetchFilters: Partial<QuickFilterState>): AdvFilterNode[] {
+  function filterNode(node: AdvFilterNode): AdvFilterNode | null {
+    if (node.kind === 'row') {
+      // hasPartners / inCombinedFarm are exclusively handled by the partnerships quick filter
+      if (fetchFilters.partnerships && (node.field === 'hasPartners' || node.field === 'inCombinedFarm')) {
+        return null;
+      }
+      // Specific enrolStatus values captured by their corresponding quick filter flags
+      if (node.field === 'enrolStatus' && node.operator === 'equals') {
+        if (fetchFilters.verifiedCalc && node.values.has('VerifiedENCalculalted')) return null;
+        if (fetchFilters.unverifiedCalc && node.values.has('UnverifiedENCalculated')) return null;
+        if (fetchFilters.fortyFiveDayLetter && node.values.has('_45DayLetter')) return null;
+      }
+      return node;
+    }
+    // Group: recurse into children and discard empty groups
+    const filteredChildren = node.children.map(filterNode).filter((n): n is AdvFilterNode => n !== null);
+    if (filteredChildren.length === 0) return null;
+    return { ...node, children: filteredChildren };
+  }
+  return nodes.map(filterNode).filter((n): n is AdvFilterNode => n !== null);
+}
+
 export function userqueryToView(uq: Userqueries): PersonalView {
   try {
     const payload: ViewPayload = JSON.parse(uq.layoutjson ?? '{}');
     if (payload.visibleColumnKeys) {
+      const mergedFilters = { ...DEFAULT_VIEW_SNAPSHOT.filters, ...payload.filters };
       // Fall back to parsing fetchxml for advFilterNodes if layoutjson didn't
       // persist them (e.g. Dataverse may not return layoutjson immediately after create).
-      const advFilterNodes =
-        Array.isArray(payload.advFilterNodes) && payload.advFilterNodes.length > 0
-          ? payload.advFilterNodes
-          : serializeFilterNodes(parseFetchXmlToAdvNodes(uq.fetchxml));
+      const rawAdvNodes = Array.isArray(payload.advFilterNodes) && payload.advFilterNodes.length > 0
+        ? (deserializeFilterNodes(payload.advFilterNodes) as AdvFilterNode[])
+        : parseFetchXmlToAdvNodes(uq.fetchxml);
+      const advFilterNodes = serializeFilterNodes(stripQuickFilterNodes(rawAdvNodes, mergedFilters));
       return {
         id: uq.userqueryid,
         name: uq.name,
         source: 'personal',
         ...payload,
         advFilterNodes,
-        filters: { ...DEFAULT_VIEW_SNAPSHOT.filters, ...payload.filters },
+        filters: mergedFilters,
       };
     }
   } catch { /* layoutjson not in our format */ }
   const xmlCols = parseLayoutXml(uq.layoutxml);
-  const advFilterNodes = serializeFilterNodes(parseFetchXmlToAdvNodes(uq.fetchxml));
+  const rawFallbackNodes = parseFetchXmlToAdvNodes(uq.fetchxml);
+  const advFilterNodes = serializeFilterNodes(rawFallbackNodes);
   const snapshot: ViewPayload = xmlCols
     ? { ...DEFAULT_VIEW_SNAPSHOT, visibleColumnKeys: xmlCols, advFilterNodes }
     : { ...DEFAULT_VIEW_SNAPSHOT, advFilterNodes };
@@ -268,8 +299,9 @@ function mergeRequiredColumns(keys: SortKey[]): SortKey[] {
 
 export function savedqueryToView(sq: Savedqueries): PersonalView {
   const fetchFilters = parseFetchXmlToFilters(sq.fetchxml);
-  // Serialize nodes (Set→array) so deserializeFilterNodes in applyView works correctly
-  const advFilterNodes = serializeFilterNodes(parseFetchXmlToAdvNodes(sq.fetchxml));
+  // Strip nodes already captured by quick filter flags to prevent duplication in effectiveFilterNodes
+  const rawAdvNodes = parseFetchXmlToAdvNodes(sq.fetchxml);
+  const advFilterNodes = serializeFilterNodes(stripQuickFilterNodes(rawAdvNodes, fetchFilters));
 
   // Parse column layout from layoutxml; fall back to defaults if unparseable
   const xmlCols = parseLayoutXml(sq.layoutxml);
@@ -300,7 +332,7 @@ const CONDITION_FIELD_SPECS: Record<string, FieldSpec> = {
   vsi_enrolmentstatus:  { field: 'enrolStatus',      kind: 'enum', map: Vsi_participantprogramyearsvsi_enrolmentstatus },
   vsi_name:             { field: 'pin',              kind: 'text' },
   vsi_producerfullname: { field: 'producer',         kind: 'text' },
-  vsi_calculatedenfee:  { field: 'fee',              kind: 'text' },
+  vsi_enrolmentfee:     { field: 'fee',              kind: 'text' },
 };
 
 function fetchXmlOpToAdvOp(op: string, kind: FieldSpec['kind']): AdvFilterOp {

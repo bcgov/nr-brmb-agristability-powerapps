@@ -356,10 +356,6 @@
   font-weight: 700;
 }
 
-.details-fee-modified {
-  margin-top: 0.8rem;
-}
-
 .details-actions {
   display: flex;
   align-items: center;
@@ -418,4 +414,298 @@
   .details-fees-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ── Enrolment History header grid ───────────────────────────────────────── */
+.details-history-header-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 0.85rem 1.4rem;
+}
+
+@media (max-width: 900px) {
+  .details-history-header-grid {
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .details-history-header-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Section heading inside composite ────────────────────────────────────── */
+.details-section-heading {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #374151;
+}
+
+/* ── Margin "Used" badge ──────────────────────────────────────────────────── */
+.history-margins-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.history-margin-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.history-margin-total {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.history-margin-row .details-label {
+  width: 180px;
+  flex-shrink: 0;
+}
+
+.history-margin-used-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: #dbeafe;
+  color: #1d4ed8;
+  border-radius: 999px;
+  padding: 0.05rem 0.4rem;
+  margin-left: 0.35rem;
+  vertical-align: middle;
+}
+
+.details-money-inactive {
+  color: #9ca3af;
+}
+
+/* ── History relation name in meta strip (allow wrapping) ────────────────── */
+.history-enrolment-name {
+  white-space: normal;
+  max-width: 220px;
+  text-align: center;
+}
+
+/* ── Primary history name link ────────────────────────────────────────────── */
+.history-primary-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.history-name-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #1d4ed8;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: underline;
+}
+
+.history-name-link:hover {
+  color: #1e3a8a;
+}
+
+.history-toggle-btn {
+  border: 1px solid #d0d6dd;
+  background: #f8fafc;
+  color: #374151;
+  border-radius: 5px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.history-toggle-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+/* ── Related history section ─────────────────────────────────────────────── */
+.details-history-section {
+  margin-top: 0;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.87rem;
+}
+
+.history-th {
+  text-align: left;
+  font-weight: 700;
+  color: #374151;
+  border-bottom: 2px solid #e5e7eb;
+  padding: 0.45rem 0.6rem;
+  white-space: nowrap;
+}
+
+.history-th-right {
+  text-align: right;
+}
+
+.history-tr:hover {
+  background: #f9fafb;
+}
+
+.history-td {
+  padding: 0.45rem 0.6rem;
+  border-bottom: 1px solid #f0f0f0;
+  color: #111827;
+  vertical-align: middle;
+}
+
+.history-td-money {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.history-td-action {
+  text-align: right;
+  width: 80px;
+}
+
+.history-view-btn {
+  border: 1px solid #d0d6dd;
+  background: #fff;
+  color: #1d4ed8;
+  border-radius: 5px;
+  padding: 0.28rem 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.history-view-btn:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+}
+
+/* ── Full-width grid field ───────────────────────────────────────────────── */
+.details-field--full {
+  grid-column: 1 / -1;
+}
+
+/* ── Partnerships & Combined Partners section ────────────────────────────── */
+.details-partner-state {
+  color: #6b7280;
+  font-size: 0.88rem;
+  margin: 0;
+}
+
+.details-partner-state-error {
+  color: #b91c1c;
+}
+
+.details-combined-farm {
+  margin-bottom: 1.25rem;
+}
+
+.details-combined-farm-heading {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #374151;
+  margin: 0 0 0.5rem;
+}
+
+.details-partner-table {
+  width: auto;
+  border-collapse: collapse;
+  font-size: 0.87rem;
+}
+
+.details-partner-table th {
+  text-align: left;
+  font-weight: 700;
+  color: #374151;
+  border-bottom: 2px solid #e5e7eb;
+  padding: 0.4rem 0.75rem;
+  white-space: nowrap;
+}
+
+.details-partner-table td {
+  padding: 0.4rem 0.75rem;
+  border-bottom: 1px solid #f0f0f0;
+  color: #111827;
+}
+
+.details-partner-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+}
+
+.details-partner-card {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  min-width: 240px;
+  max-width: 320px;
+  flex: 1 1 240px;
+}
+
+.details-partner-card-top {
+  margin-bottom: 0.6rem;
+}
+
+.details-partner-name {
+  font-weight: 700;
+  font-size: 0.97rem;
+  color: #111827;
+}
+
+.details-partner-pin {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin-top: 0.1rem;
+}
+
+.details-partner-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+}
+
+.details-partner-details > div {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.details-partner-details dt {
+  font-size: 0.77rem;
+  font-weight: 600;
+  color: #6b7280;
+  min-width: 130px;
+  flex-shrink: 0;
+}
+
+.details-partner-details dd {
+  font-size: 0.87rem;
+  color: #111827;
+  margin: 0;
+}
+
+.details-partner-name-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.details-partner-name-row > div {
+  display: flex;
+  gap: 0.5rem;
 }

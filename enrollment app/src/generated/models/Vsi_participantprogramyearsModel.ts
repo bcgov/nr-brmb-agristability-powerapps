@@ -84,7 +84,6 @@ export interface Vsi_participantprogramyearsBase {
   vsi_amendmentnumber?: number;
   vsi_bringforward?: boolean;
   vsi_broughtforward?: boolean;
-  vsi_calculatedenfee?: number;
   vsi_calculatedlatepaymentfee?: number;
   vsi_checkfordatafix?: boolean;
   vsi_cleandata?: boolean;
@@ -187,7 +186,6 @@ export interface Vsi_participantprogramyears extends Vsi_participantprogramyears
   vsi_administrativecostsharingfee_base?: number;
   vsi_bringforwardname?: string;
   vsi_broughtforwardname?: string;
-  vsi_calculatedenfee_base?: number;
   vsi_calculatedlatepaymentfee_base?: number;
   vsi_checkfordatafixname?: string;
   vsi_cleandataname?: string;
