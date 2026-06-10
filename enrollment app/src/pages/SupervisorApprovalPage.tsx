@@ -23,9 +23,7 @@ import { Toast, nextToastId } from '../components/Toast';
 import type { ToastMessage } from '../components/Toast';
 import type { FilterOperator, SortDir } from '../types/enrollment';
 import '../styles/supervisor-approval.css';
-
-const CORE_APP_ID_FALLBACK = '88c024d9-9fd5-ec11-a7b5-002248ada475';
-const CORE_BASE_URL_FALLBACK = 'https://aff-brmb-crm-dev.crm3.dynamics.com/main.aspx';
+import { CORE_APP_ID_FALLBACK, CORE_BASE_URL_FALLBACK } from '../constants/config';
 
 const PAGE_SIZE = 20;
 const SUPERVISOR_QUEUE_NAME = 'Supervisor Approval Queue';
@@ -265,7 +263,7 @@ export function SupervisorApprovalPage() {
             'vsi_fortyfivedayletterstartdate',
             'vsi_fortyfivedaycounterpaused',
             'vsi_fortyfivedaypausedate',
-            'vsi_calculatedenfee',
+            'vsi_enrolmentfee',
             'vsi_previousyearcalculatedenfee',
             'vsi_administrativecostsharingfee',
             'vsi_variancecalculation',
@@ -818,7 +816,7 @@ export function SupervisorApprovalPage() {
         participantName: participantDisplayName,
         taskStatusLabel: getTaskStatusLabel(item.vsi_taskstatus) || 'Unknown',
         enrolmentStatusLabel: getEnrolmentStatusLabel(item.vsi_enrolmentstatus) || '—',
-        calculatedFeeValue: item.vsi_calculatedenfee ?? null,
+        calculatedFeeValue: item.vsi_enrolmentfee ?? null,
         enteredQueue: workMeta?.enteredQueue ?? '—',
         enteredQueueRaw: workMeta?.enteredQueueRaw,
         workedBy: workMeta?.workedBy ?? '—',
@@ -1221,11 +1219,10 @@ export function SupervisorApprovalPage() {
                   const item = row.item;
                   const itemId = row.itemId;
                   const adminFee = item.vsi_administrativecostsharingfee ?? 0;
-                  const calcFeeTotal = item.vsi_calculatedenfee != null ? item.vsi_calculatedenfee + adminFee : null;
-                  const variance = item.vsi_calculatedenfee != null && item.vsi_variancecalculation != null ? item.vsi_variancecalculation * 100 : null;
+                  const calcFeeTotal = item.vsi_enrolmentfee != null ? item.vsi_enrolmentfee + adminFee : null;
+                  const variance = item.vsi_variancecalculation != null ? item.vsi_variancecalculation * 100 : null;
                   const workMeta = row.workMeta;
 
-                  // ...existing code...
                   return (
                     <tr key={itemId ?? `${item.vsi_name ?? 'row'}-${index}`}> 
                       <td className="sa-td-check">

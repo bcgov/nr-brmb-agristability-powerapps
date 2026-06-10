@@ -31,7 +31,7 @@ export function ApproveCalculatedFeesModal({
   const selectedRows = rows.filter(r => selectedIds.has(r.vsi_participantprogramyearid));
   const notReadyRows = selectedRows.filter(r => r.vsi_taskstatus !== 865520002);
   const invalidStatusRows = selectedRows.filter(r => !APPROVABLE_ENROL_STATUSES.has(r.vsi_enrolmentstatus as unknown as number));
-  const missingFeeRows = selectedRows.filter(r => r.vsi_calculatedenfee == null);
+  const missingFeeRows = selectedRows.filter(r => r.vsi_enrolmentfee == null);
   const noSelection = selectedRows.length === 0;
 
   const handleSubmit = async () => {

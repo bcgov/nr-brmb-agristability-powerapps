@@ -458,21 +458,6 @@
           "x-ms-schema-name": "vsi_broughtforwardName",
           "x-ms-read-only": true
         },
-        "vsi_calculatedenfee": {
-          "type": "string",
-          "title": "Calculated EN Fee",
-          "x-ms-dataverse-attribute": "vsi_calculatedenfee",
-          "x-ms-dataverse-type": "MoneyType",
-          "x-ms-schema-name": "vsi_CalculatedENFee"
-        },
-        "vsi_calculatedenfee_base": {
-          "type": "string",
-          "title": "Calculated EN Fee (Base)",
-          "x-ms-dataverse-attribute": "vsi_calculatedenfee_base",
-          "x-ms-dataverse-type": "MoneyType",
-          "x-ms-schema-name": "vsi_calculatedenfee_Base",
-          "x-ms-read-only": true
-        },
         "vsi_calculatedlatepaymentfee": {
           "type": "string",
           "title": "Calculated Late Payment Fee",

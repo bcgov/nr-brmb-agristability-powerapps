@@ -165,13 +165,14 @@ export function EnrolmentDataTable({
                   currentSortDir={sortDir}
                   onSort={onSort}
                   columnWidth={columnWidths[k]}
+                  thStyle={k === 'year' ? { textAlign: 'center' } : k === 'fee' ? { textAlign: 'center' } : undefined}
                   onColumnWidthChange={onColumnWidthChange(k)}
                   dragProps={dragProps}
                   {...extra}
                 />
               );
             })}
-            <th className="dt-th-actions"></th>
+            {!visibleColumnKeys.includes('fee') && <th className="dt-th-actions"></th>}
           </tr>
         </thead>
         <tbody>
@@ -210,26 +211,28 @@ export function EnrolmentDataTable({
                     const rowWithSource = { ...row, _source: 'dashboard' };
                     return renderCell(key, rowWithSource, raw, avatarUrls, coreAppId, coreBaseUrl);
                   })}
-                  <td className="dt-td-actions">
-                    <div className="dt-row-actions">
-                    {row.vsi_participantprogramyearid
-                      ? (
-                        <Link
-                          to={`/calculation/dashboard/${row.vsi_participantprogramyearid}`}
-                          aria-label="Go to calculation"
-                          data-tooltip="Go to calculation"
-                          className="sa-calc-link"
-                        >
-                          <Calculator size={20} />
-                        </Link>
-                      )
-                      : (
-                        <span className="sa-calc-link sa-calc-link-disabled" aria-label="Go to calculation">
-                          <Calculator size={20} className="sa-action-icon-disabled" />
-                        </span>
-                      )}
-                    </div>
-                  </td>
+                  {!visibleColumnKeys.includes('fee') && (
+                    <td className="dt-td-actions">
+                      <div className="dt-row-actions">
+                        {row.vsi_participantprogramyearid
+                          ? (
+                            <Link
+                              to={`/calculation/dashboard/${row.vsi_participantprogramyearid}`}
+                              aria-label="Go to calculation"
+                              data-tooltip="Go to calculation"
+                              className="sa-calc-link"
+                            >
+                              <Calculator size={20} />
+                            </Link>
+                          )
+                          : (
+                            <span className="sa-calc-link sa-calc-link-disabled" aria-label="Go to calculation">
+                              <Calculator size={20} className="sa-action-icon-disabled" />
+                            </span>
+                          )}
+                      </div>
+                    </td>
+                  )}
                 </tr>
               );
             })

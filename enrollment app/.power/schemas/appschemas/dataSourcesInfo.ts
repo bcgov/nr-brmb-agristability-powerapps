@@ -873,8 +873,7 @@ export const dataSourcesInfo = {
             "name": "$top",
             "in": "query",
             "required": false,
-            "type": "integer",
-            "format": "int32"
+            "type": "integer"
           },
           {
             "name": "$skiptoken",
@@ -1028,8 +1027,7 @@ export const dataSourcesInfo = {
             "name": "$top",
             "in": "query",
             "required": false,
-            "type": "integer",
-            "format": "int32"
+            "type": "integer"
           },
           {
             "name": "$skiptoken",
@@ -2610,8 +2608,7 @@ export const dataSourcesInfo = {
             "name": "item",
             "in": "body",
             "required": true,
-            "type": "string",
-            "format": "binary"
+            "type": "object"
           },
           {
             "name": "x-ms-file-name",
@@ -2673,8 +2670,7 @@ export const dataSourcesInfo = {
             "name": "item",
             "in": "body",
             "required": true,
-            "type": "string",
-            "format": "binary"
+            "type": "object"
           },
           {
             "name": "x-ms-file-name",
@@ -3638,6 +3634,64 @@ export const dataSourcesInfo = {
     "primaryKey": "",
     "dataSourceType": "Connector",
     "apis": {
+      "GetEnrolmentNoticeWorkflowCalculation": {
+        "path": "/{connectionId}/calculations/enrolment-notice-workflow",
+        "method": "GET",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "participantPin",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "programYear",
+            "in": "query",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responseInfo": {
+          "default": {
+            "type": "object"
+          }
+        }
+      },
+      "GetEnrolmentPartners": {
+        "path": "/{connectionId}/calculations/enrolment-partners",
+        "method": "GET",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "participantPin",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "programYear",
+            "in": "query",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responseInfo": {
+          "default": {
+            "type": "object"
+          }
+        }
+      },
       "GetAllCodetables": {
         "path": "/{connectionId}/codeTables",
         "method": "GET",
@@ -4115,8 +4169,7 @@ export const dataSourcesInfo = {
             "name": "body",
             "in": "body",
             "required": false,
-            "type": "string",
-            "format": "binary"
+            "type": "object"
           }
         ],
         "responseInfo": {
@@ -4151,8 +4204,7 @@ export const dataSourcesInfo = {
             "name": "body",
             "in": "body",
             "required": false,
-            "type": "string",
-            "format": "binary"
+            "type": "object"
           }
         ],
         "responseInfo": {
@@ -4187,8 +4239,7 @@ export const dataSourcesInfo = {
             "name": "body",
             "in": "body",
             "required": false,
-            "type": "string",
-            "format": "binary"
+            "type": "object"
           }
         ],
         "responseInfo": {
@@ -4269,8 +4320,7 @@ export const dataSourcesInfo = {
             "name": "body",
             "in": "body",
             "required": false,
-            "type": "string",
-            "format": "binary"
+            "type": "object"
           }
         ],
         "responseInfo": {
@@ -5737,8 +5787,7 @@ export const dataSourcesInfo = {
             "name": "body",
             "in": "body",
             "required": true,
-            "type": "string",
-            "format": "binary"
+            "type": "object"
           },
           {
             "name": "Content-Type",
@@ -6045,8 +6094,7 @@ export const dataSourcesInfo = {
             "name": "top",
             "in": "query",
             "required": false,
-            "type": "integer",
-            "format": "int32"
+            "type": "integer"
           }
         ],
         "responseInfo": {
@@ -6093,8 +6141,7 @@ export const dataSourcesInfo = {
             "name": "top",
             "in": "query",
             "required": false,
-            "type": "integer",
-            "format": "int32"
+            "type": "integer"
           },
           {
             "name": "isSearchTermRequired",
@@ -6237,8 +6284,7 @@ export const dataSourcesInfo = {
             "name": "$top",
             "in": "query",
             "required": false,
-            "type": "integer",
-            "format": "int32"
+            "type": "integer"
           }
         ],
         "responseInfo": {
@@ -6338,8 +6384,7 @@ export const dataSourcesInfo = {
             "name": "Body",
             "in": "body",
             "required": false,
-            "type": "string",
-            "format": "binary"
+            "type": "object"
           },
           {
             "name": "ContentType",

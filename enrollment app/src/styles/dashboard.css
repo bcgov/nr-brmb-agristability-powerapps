@@ -229,7 +229,10 @@
 .enrol-badge {
   display: inline-block;
   font-size: 0.78rem;
-  white-space: normal;
+  white-space: nowrap;
+}
+
+.cell-enrol-status {
 }
 
 .enrol-status-cell {
@@ -269,6 +272,8 @@
 .cell-fee {
   font-variant-numeric: tabular-nums;
   color: #2d3748;
+  text-align: right;
+  width: 1px;
 }
 
 /* SharePoint link-style */
@@ -283,6 +288,9 @@
   align-items: center;
   justify-content: center;
   text-decoration: none;
+}
+.cell-sp {
+  text-align: center;
 }
 .sp-icon {
   width: 24px;
@@ -302,11 +310,16 @@
 .dt-th-actions {
   width: 40px;
   text-align: center;
+  padding-left: 0.1rem;
+  padding-right: 0.4rem;
 }
 
 .dt-td-actions {
   text-align: center;
+  vertical-align: middle;
   width: 40px;
+  padding-left: 0.1rem;
+  padding-right: 0.4rem;
 }
 
 .dt-row-actions {
@@ -324,6 +337,14 @@
 .cell-flag {
   text-align: center;
   width: 32px;
+}
+
+.cell-year {
+  text-align: center;
+}
+
+.cell-task-status {
+  white-space: nowrap;
 }
 
 /* Modified-by avatar */

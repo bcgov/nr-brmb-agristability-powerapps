@@ -6,6 +6,7 @@ import { DashboardHomePage } from './pages/DashboardHomePage';
 import { SupervisorApprovalPage } from './pages/SupervisorApprovalPage';
 import { EnrolmentDetailsPage } from './pages/EnrolmentDetailsPage';
 import { EnrolmentCalculationPage } from './pages/EnrolmentCalculationPage';
+import { EnrolmentHistoryPage } from './pages/EnrolmentHistoryPage';
 import { RoleProvider, useRole, ALL_ROLES, ROLE_LABELS, type AppRole } from './context/RoleContext';
 import { navGuard } from './utils/helpers';
 import { normalizeInitialDeepLink, openInNewTab } from './utils/deepLinks';
@@ -66,7 +67,7 @@ function SideNav({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
           onClick={e => { if (navGuard.intercept('/dashboard-home')) e.preventDefault(); }}
         >
           <Home size={22} />
-          {!collapsed && <span>Dashboard</span>}
+          {!collapsed && <span>Enrolments</span>}
         </NavLink>
 
         {SUPERVISOR_APPROVAL_ROLES.includes(activeRole) && (
@@ -112,6 +113,8 @@ function AppShell() {
           <Route path="/calculation/:enrolmentId" element={<ProtectedRoute allowedRoles={CALCULATION_ROLES}><EnrolmentCalculationPage /></ProtectedRoute>} />
           <Route path="/calculation/:source/:enrolmentId" element={<ProtectedRoute allowedRoles={CALCULATION_ROLES}><EnrolmentCalculationPage /></ProtectedRoute>} />
           <Route path="/calculation" element={<Navigate to="/dashboard-home" replace />} />
+          <Route path="/history/:historyId" element={<EnrolmentHistoryPage />} />
+          <Route path="/history/:enrolmentId/:historyId" element={<EnrolmentHistoryPage />} />
           <Route path="*" element={<Navigate to="/dashboard-home" replace />} />
         </Routes>
       </main>

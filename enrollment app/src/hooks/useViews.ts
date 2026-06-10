@@ -144,7 +144,6 @@ export function useViews(state: ViewState, setters: {
           const num = Number(rawCode);
           if (!isNaN(num) && num > 0) {
             setEntityObjectTypeCode(num);
-            console.log('[Views] Extracted ObjectTypeCode from savedquery OData response:', num);
           }
         }
         const mainViews = allSq.filter(sq => String(sq.querytype) === '0');
@@ -206,9 +205,7 @@ export function useViews(state: ViewState, setters: {
       layoutxml: generateLayoutXml(snap.visibleColumnKeys, snap.columnWidths),
     };
     try {
-      console.log('[Views] Creating new view:', name);
       const result = await UserqueriesService.create(payload as unknown as Parameters<typeof UserqueriesService.create>[0]);
-      console.log('[Views] Create result — success:', result.success, 'data:', result.data, 'error:', result.error);
 
       // The SDK returns { success: false, error } without throwing on API errors.
       // Must check result.success explicitly since a failed create does not throw.
