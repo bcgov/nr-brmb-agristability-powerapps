@@ -233,6 +233,7 @@
 }
 
 .cell-enrol-status {
+  white-space: nowrap;
 }
 
 .enrol-status-cell {

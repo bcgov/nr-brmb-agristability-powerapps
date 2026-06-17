@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { HashRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom';
-import { ClipboardCheck, ExternalLink, Home, Menu } from 'lucide-react';
+import { ClipboardCheck, ExternalLink, Home, LayoutDashboard, Menu } from 'lucide-react';
 
 import { DashboardHomePage } from './pages/DashboardHomePage';
+import { DashboardPage } from './pages/DashboardPage';
 import { SupervisorApprovalPage } from './pages/SupervisorApprovalPage';
 import { EnrolmentDetailsPage } from './pages/EnrolmentDetailsPage';
 import { EnrolmentCalculationPage } from './pages/EnrolmentCalculationPage';
@@ -62,6 +63,14 @@ function SideNav({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
 
       <nav className="side-nav-links" aria-label="Primary">
         <NavLink
+          to="/dashboard"
+          className={({ isActive }) => `side-nav-link${isActive ? ' active' : ''}`}
+        >
+          <LayoutDashboard size={22} />
+          {!collapsed && <span>Dashboard</span>}
+        </NavLink>
+
+        <NavLink
           to="/dashboard-home"
           className={({ isActive }) => `side-nav-link${isActive ? ' active' : ''}`}
           onClick={e => { if (navGuard.intercept('/dashboard-home')) e.preventDefault(); }}
@@ -105,7 +114,8 @@ function AppShell() {
       <SideNav collapsed={navCollapsed} onToggle={() => setNavCollapsed(prev => !prev)} />
       <main className="app-shell-content">
         <Routes>
-          <Route path="/" element={<Navigate to="/dashboard-home" replace />} />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/dashboard-home" element={<DashboardHomePage />} />
           <Route path="/enrolment/:enrolmentId" element={<EnrolmentDetailsPage />} />
           <Route path="/enrolment/:source/:enrolmentId" element={<EnrolmentDetailsPage />} />
