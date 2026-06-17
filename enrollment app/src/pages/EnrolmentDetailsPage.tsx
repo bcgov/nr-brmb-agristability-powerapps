@@ -72,6 +72,12 @@ const DETAIL_SELECT = [
   'vsi_enrolmentfeesnonpenaltyduedate',
   'vsi_enrolmentfeesfinaldeadlinedate',
   'vsi_lateenrolmentfeesfinaldeadlinedate',
+  'vsi_nonpenaltydeadlinedaysleft',
+  'vsi_finaldeadlinedaysdiff',
+  'vsi_latefinaldeadlinedaysdiff',
+  'vsi_nonpenaltydeadlineremindersent',
+  'vsi_finaldeadlineremindersent',
+  'vsi_latefinaldeadlineremindersent',
   'vsi_administrativecostsharingfee',
   'vsi_latepaymentfee',
   'vsi_adjustedlateenrolmentfee',
@@ -93,6 +99,15 @@ const yesNoText = (value: unknown): string => {
   if (value === false || value === 0 || value === '0') return 'No';
   return '---';
 };
+
+const formatDaysValue = (value: number | undefined): string => {
+  if (value == null || Number.isNaN(Number(value))) return '---';
+  const days = Math.trunc(Number(value));
+  return `${days} day${Math.abs(days) === 1 ? '' : 's'}`;
+};
+
+const isUrgentDays = (value: number | undefined): boolean =>
+  value != null && Number.isFinite(Number(value)) && Number(value) >= 0 && Number(value) <= 7;
 
 const toDateInputValue = (value: string | undefined): string => {
   if (!value) return '';
@@ -478,6 +493,10 @@ export function EnrolmentDetailsPage() {
     );
   }
 
+  const nonPenaltyDaysLeft = record.vsi_nonpenaltydeadlinedaysleft;
+  const finalDeadlineDaysLeft = record.vsi_finaldeadlinedaysdiff;
+  const lateFinalDeadlineDaysLeft = record.vsi_latefinaldeadlinedaysdiff;
+
 
   return (
     <section className="details-wrapper">
@@ -652,18 +671,6 @@ export function EnrolmentDetailsPage() {
             </div>
 
             <div className="details-field">
-              <label htmlFor="enrol-notice-date" className="details-label">Enrolment Notice Sent Date</label>
-              <input
-                id="enrol-notice-date"
-                type="date"
-                className="details-date"
-                value={formState.vsi_enrolmentnoticesentdate}
-                onChange={updateDateField('vsi_enrolmentnoticesentdate')}
-                disabled={saving || !canEdit}
-              />
-            </div>
-
-            <div className="details-field">
               <span className="details-label">Total Fees Paid</span>
               <strong className="details-money">{formatCad(record.vsi_totalfeespaid)}</strong>
             </div>
@@ -681,29 +688,6 @@ export function EnrolmentDetailsPage() {
             </div>
 
             <div className="details-field">
-              <label htmlFor="late-notice-date" className="details-label">Late Enrolment Notice Sent Date</label>
-              <input
-                id="late-notice-date"
-                type="date"
-                className="details-date"
-                value={formState.vsi_lateenrolmentnoticesentdate}
-                onChange={updateDateField('vsi_lateenrolmentnoticesentdate')}
-                disabled={saving || !canEdit}
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="details-section-break" />
-
-        <div className="details-content-section details-content-fees">
-          <div className="details-fees-grid">
-            <div className="details-field">
-              <span className="details-label">Enrolment Fee</span>
-              <strong className="details-money">{formatCad(record.vsi_enrolmentfee)}</strong>
-            </div>
-
-            <div className="details-field">
               <label htmlFor="enrol-fees-paid-date" className="details-label">Enrolment Fees Paid Date</label>
               <input
                 id="enrol-fees-paid-date"
@@ -714,29 +698,26 @@ export function EnrolmentDetailsPage() {
                 disabled={saving || !canEdit}
               />
             </div>
+          </div>
+        </div>
 
+        <div className="details-section-break" />
+
+        <div className="details-content-section details-content-fees">
+          <div className="details-fees-summary-grid">
             <div className="details-field">
-              <label htmlFor="non-penalty-date" className="details-label">Enrolment-fees non-penalty due date</label>
-              <input
-                id="non-penalty-date"
-                type="date"
-                className="details-date"
-                value={formState.vsi_enrolmentfeesnonpenaltyduedate}
-                onChange={updateDateField('vsi_enrolmentfeesnonpenaltyduedate')}
-                disabled={saving || !canEdit}
-              />
+              <span className="details-label">Enrolment Fee</span>
+              <strong className="details-money">{formatCad(record.vsi_enrolmentfee)}</strong>
             </div>
 
             <div className="details-field">
-              <label htmlFor="final-deadline-date" className="details-label">Enrolment fees final deadline date</label>
-              <input
-                id="final-deadline-date"
-                type="date"
-                className="details-date"
-                value={formState.vsi_enrolmentfeesfinaldeadlinedate}
-                onChange={updateDateField('vsi_enrolmentfeesfinaldeadlinedate')}
-                disabled={saving || !canEdit}
-              />
+              <span className="details-label">Adjusted late enrolment fee</span>
+              <strong className="details-money">{formatCad(record.vsi_adjustedlateenrolmentfee)}</strong>
+            </div>
+
+            <div className="details-field">
+              <span className="details-label">Fee modified by:</span>
+              <strong className="details-value-strong">{feeModifiedBy}</strong>
             </div>
 
             <div className="details-field">
@@ -747,26 +728,6 @@ export function EnrolmentDetailsPage() {
             <div className="details-field">
               <span className="details-label">Late payment fee</span>
               <strong className="details-money">{formatCad(record.vsi_latepaymentfee)}</strong>
-            </div>
-
-            <div className="details-field">
-              <span className="details-label">Adjusted late enrolment fee</span>
-              <strong className="details-money">{formatCad(record.vsi_adjustedlateenrolmentfee)}</strong>
-            </div>
-
-            <div className="details-field">
-              <label htmlFor="late-enrol-fees-final-deadline-date" className="details-label">
-                Late enrolment fees final deadline date
-                {syncingLateDeadline && <span className="details-syncing-indicator"> ⟳ Syncing…</span>}
-              </label>
-              <input
-                id="late-enrol-fees-final-deadline-date"
-                type="date"
-                className="details-date"
-                value={formState.vsi_lateenrolmentfeesfinaldeadlinedate}
-                onChange={updateDateField('vsi_lateenrolmentfeesfinaldeadlinedate')}
-                disabled={saving || !canEdit || syncingLateDeadline}
-              />
             </div>
 
             {(() => {
@@ -803,11 +764,121 @@ export function EnrolmentDetailsPage() {
               );
             })()}
 
+          </div>
+        </div>
+
+        <div className="details-section-break" />
+
+        <div className="details-content-section details-content-deadlines">
+          <div className="details-deadlines-grid">
             <div className="details-field">
-              <span className="details-label">Fee modified by:</span>
-              <strong className="details-value-strong">{feeModifiedBy}</strong>
+              <label htmlFor="enrol-notice-date" className="details-label">Enrolment Notice Sent Date</label>
+              <input
+                id="enrol-notice-date"
+                type="date"
+                className="details-date"
+                value={formState.vsi_enrolmentnoticesentdate}
+                onChange={updateDateField('vsi_enrolmentnoticesentdate')}
+                disabled={saving || !canEdit}
+              />
+            </div>
+
+            <div className="details-field">
+              <label htmlFor="non-penalty-date" className="details-label">Enrolment-fees non-penalty due date</label>
+              <input
+                id="non-penalty-date"
+                type="date"
+                className="details-date"
+                value={formState.vsi_enrolmentfeesnonpenaltyduedate}
+                onChange={updateDateField('vsi_enrolmentfeesnonpenaltyduedate')}
+                disabled={saving || !canEdit}
+              />
+            </div>
+
+            <div className="details-field">
+              <span className="details-label">Remaining days - non penalty deadline</span>
+              <strong className={`details-value-strong details-days-left${isUrgentDays(nonPenaltyDaysLeft) ? ' details-days-left-urgent' : ''}`}>
+                {formatDaysValue(nonPenaltyDaysLeft)}
+              </strong>
+            </div>
+
+            <div className="details-field">
+              <span className="details-label">Reminder Sent</span>
+              <strong className="details-value-strong">{yesNoText(record.vsi_nonpenaltydeadlineremindersent)}</strong>
+            </div>
+
+            <div className="details-field details-field-spacer" aria-hidden="true" />
+
+            <div className="details-field">
+              <label htmlFor="final-deadline-date" className="details-label">Enrolment fees final deadline date</label>
+              <input
+                id="final-deadline-date"
+                type="date"
+                className="details-date"
+                value={formState.vsi_enrolmentfeesfinaldeadlinedate}
+                onChange={updateDateField('vsi_enrolmentfeesfinaldeadlinedate')}
+                disabled={saving || !canEdit}
+              />
+            </div>
+
+            <div className="details-field">
+              <span className="details-label">Remaining days - penalty deadline</span>
+              <strong className={`details-value-strong details-days-left${isUrgentDays(finalDeadlineDaysLeft) ? ' details-days-left-urgent' : ''}`}>
+                {formatDaysValue(finalDeadlineDaysLeft)}
+              </strong>
+            </div>
+
+            <div className="details-field">
+              <span className="details-label">Reminder Sent</span>
+              <strong className="details-value-strong">{yesNoText(record.vsi_finaldeadlineremindersent)}</strong>
+            </div>
+
+            <div className="details-field">
+              <label htmlFor="late-notice-date" className="details-label">Late Enrolment Notice Sent Date</label>
+              <input
+                id="late-notice-date"
+                type="date"
+                className="details-date"
+                value={formState.vsi_lateenrolmentnoticesentdate}
+                onChange={updateDateField('vsi_lateenrolmentnoticesentdate')}
+                disabled={saving || !canEdit}
+              />
+            </div>
+
+            <div className="details-field">
+              <label htmlFor="late-enrol-fees-final-deadline-date" className="details-label">
+                Late enrolment fees final deadline date
+                {syncingLateDeadline && <span className="details-syncing-indicator"> ⟳ Syncing…</span>}
+              </label>
+              <input
+                id="late-enrol-fees-final-deadline-date"
+                type="date"
+                className="details-date"
+                value={formState.vsi_lateenrolmentfeesfinaldeadlinedate}
+                onChange={updateDateField('vsi_lateenrolmentfeesfinaldeadlinedate')}
+                disabled={saving || !canEdit || syncingLateDeadline}
+              />
+            </div>
+
+            <div className="details-field">
+              <span className="details-label">Remaining days - Late Enrolment deadlines</span>
+              <strong className={`details-value-strong details-days-left${isUrgentDays(lateFinalDeadlineDaysLeft) ? ' details-days-left-urgent' : ''}`}>
+                {formatDaysValue(lateFinalDeadlineDaysLeft)}
+              </strong>
+            </div>
+
+            <div className="details-field">
+              <span className="details-label">Reminder Sent</span>
+              <strong className="details-value-strong">{yesNoText(record.vsi_latefinaldeadlineremindersent)}</strong>
             </div>
           </div>
+        </div>
+
+        <div className="details-section-break" />
+
+        <div className="details-content-section">
+          <h3 className="details-subsection-title">Partnerships &amp; Combined Partners</h3>
+          <p className="details-subsection-empty">No partner or combined farm data found.</p>
         </div>
 
         {showHistory && (
