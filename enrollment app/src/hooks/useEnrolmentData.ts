@@ -2,6 +2,7 @@
 let enrolmentRowsCache: Vsi_participantprogramyears[] | null = null;
 let coreAppIdCache: string | null = null;
 let coreBaseUrlCache: string | null = null;
+let dataverseOrgUrlCache: string | null = null;
 let coreAppIdLoaded = false;
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Vsi_participantprogramyears } from '../generated/models/Vsi_participantprogramyearsModel';
@@ -33,8 +34,15 @@ function normalizeCoreBaseUrl(url: string | null | undefined) {
   return /\/main\.aspx(?:$|[?#])/i.test(trimmed) ? trimmed : `${trimmed.replace(/\/$/, '')}/main.aspx`;
 }
 
-export function getCoreConfig(): { coreAppId: string | null; coreBaseUrl: string | null } {
-  return { coreAppId: coreAppIdCache, coreBaseUrl: coreBaseUrlCache };
+function normalizeOrgUrl(url: string | null | undefined): string | null {
+  const trimmed = url?.trim();
+  if (!trimmed) return null;
+  // Strip /main.aspx if present, ensure trailing slash
+  return trimmed.replace(/\/main\.aspx.*$/i, '').replace(/\/?$/, '/');
+}
+
+export function getCoreConfig(): { coreAppId: string | null; coreBaseUrl: string | null; dataverseOrgUrl: string | null } {
+  return { coreAppId: coreAppIdCache, coreBaseUrl: coreBaseUrlCache, dataverseOrgUrl: dataverseOrgUrlCache };
 }
 
 export { normalizeCoreBaseUrl };
@@ -83,6 +91,7 @@ export function useEnrolmentData() {
       setCoreBaseUrl(nextCoreBaseUrl);
       coreAppIdCache = nextCoreAppId;
       coreBaseUrlCache = nextCoreBaseUrl;
+      dataverseOrgUrlCache = normalizeOrgUrl(configRows.map(r => r.vsi_coreenvironmenturl).find(u => !!u?.trim()));
       coreAppIdLoaded = true;
     } catch {
       if (!coreAppIdLoaded) {

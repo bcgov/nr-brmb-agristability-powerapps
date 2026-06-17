@@ -12,7 +12,9 @@ import {
   formatCurrency, getInitials, getAvatarColor,
   getVarianceClass, formatVariancePercent, formatEnrolmentStatusDisplay,
 } from '../utils/helpers';
-import { CORE_APP_ID_FALLBACK, CORE_BASE_URL_FALLBACK } from '../constants/config';
+
+const CORE_APP_ID_FALLBACK = '88c024d9-9fd5-ec11-a7b5-002248ada475';
+const CORE_BASE_URL_FALLBACK = 'https://aff-brmb-crm-dev.crm3.dynamics.com/main.aspx';
 
 export function renderCell(
   key: SortKey,
@@ -30,7 +32,7 @@ export function renderCell(
   switch (key) {
     case 'pin': {
       // Determine source for navigation: allow row._source override, else default to 'dashboard'
-      const source = (raw._source as string | undefined) || 'dashboard';
+      const source = (row as any)._source || 'dashboard';
       return (
         <td key={key} className="cell-pin">
           {row.vsi_participantprogramyearid
@@ -85,10 +87,10 @@ export function renderCell(
     case 'fee': {
       const adminFee = row.vsi_administrativecostsharingfee ?? 0;
       const calcFee = row.vsi_enrolmentfee != null ? row.vsi_enrolmentfee + adminFee : null;
-      const variance = row.vsi_variancecalculation != null ? row.vsi_variancecalculation * 100 : null;
+      const variance = row.vsi_enrolmentfee != null && row.vsi_variancecalculation != null ? row.vsi_variancecalculation * 100 : null;
       const varianceClass = getVarianceClass(variance);
       const varianceText = formatVariancePercent(variance);
-      const source = (raw._source as string | undefined) || 'dashboard';
+      const source = (row as any)._source || 'dashboard';
 
       return (
         <td key={key} className="cell-fee">
@@ -112,7 +114,7 @@ export function renderCell(
       );
     }
     case 'totalFeesOwedCalculated': {
-      const variance = row.vsi_variancecalculation != null ? row.vsi_variancecalculation * 100 : null;
+      const variance = row.vsi_enrolmentfee != null && row.vsi_variancecalculation != null ? row.vsi_variancecalculation * 100 : null;
       const varianceClass = getVarianceClass(variance);
       const varianceText = formatVariancePercent(variance);
       return (

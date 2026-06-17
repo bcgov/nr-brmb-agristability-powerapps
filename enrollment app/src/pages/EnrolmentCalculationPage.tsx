@@ -21,7 +21,7 @@ import { farmsApi } from '../services/farmsApi';
 import { resolveCurrentSystemUser } from '../utils/currentUser';
 import { normalizeEnrolmentId, openInNewTab } from '../utils/deepLinks';
 import { formatCurrencyOr, getAvatarColor, getInitials, getTaskStatusLabel } from '../utils/helpers';
-import { CORE_APP_ID_FALLBACK, CORE_BASE_URL_FALLBACK, DATAVERSE_ORG_URL } from '../constants/config';
+import { CORE_APP_ID_FALLBACK, CORE_BASE_URL_FALLBACK, DATAVERSE_ORG_URL_FALLBACK } from '../constants/config';
 
 const BENEFIT_MARGIN_COUNT = 5;
 const APPROVABLE_STATUSES = new Set([865520005, 865520006]);
@@ -192,11 +192,11 @@ async function getAccountPinFromXrm(accountId: string): Promise<string> {
   return pin;
 }
 
-async function getAccountPin(accountId: string): Promise<string> {
+async function getAccountPin(accountId: string, orgUrl: string): Promise<string> {
   const genericAccount = await MicrosoftDataverseService.GetItemWithOrganization(
     '',
     'application/json',
-    DATAVERSE_ORG_URL,
+    orgUrl,
     'accounts',
     accountId,
     false,
@@ -883,7 +883,8 @@ export function EnrolmentCalculationPage() {
         if (participantId) {
           setParticipantPinLoading(true);
           try {
-            const pin = await getAccountPin(participantId);
+            const orgUrl = getCoreConfig().dataverseOrgUrl ?? DATAVERSE_ORG_URL_FALLBACK;
+            const pin = await getAccountPin(participantId, orgUrl);
             if (!cancelled) setParticipantPin(pin);
           } catch {
             if (!cancelled) setParticipantPin('');

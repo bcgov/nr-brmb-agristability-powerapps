@@ -3634,64 +3634,6 @@ export const dataSourcesInfo = {
     "primaryKey": "",
     "dataSourceType": "Connector",
     "apis": {
-      "GetEnrolmentNoticeWorkflowCalculation": {
-        "path": "/{connectionId}/calculations/enrolment-notice-workflow",
-        "method": "GET",
-        "parameters": [
-          {
-            "name": "connectionId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "participantPin",
-            "in": "query",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "programYear",
-            "in": "query",
-            "required": true,
-            "type": "integer"
-          }
-        ],
-        "responseInfo": {
-          "default": {
-            "type": "object"
-          }
-        }
-      },
-      "GetEnrolmentPartners": {
-        "path": "/{connectionId}/calculations/enrolment-partners",
-        "method": "GET",
-        "parameters": [
-          {
-            "name": "connectionId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "participantPin",
-            "in": "query",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "programYear",
-            "in": "query",
-            "required": true,
-            "type": "integer"
-          }
-        ],
-        "responseInfo": {
-          "default": {
-            "type": "object"
-          }
-        }
-      },
       "GetAllCodetables": {
         "path": "/{connectionId}/codeTables",
         "method": "GET",
@@ -6429,6 +6371,1472 @@ export const dataSourcesInfo = {
           },
           "default": {
             "type": "void"
+          }
+        }
+      }
+    }
+  },
+  "powerbi": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "",
+    "dataSourceType": "Connector",
+    "apis": {
+      "GetScorecards": {
+        "path": "/{connectionId}/v1.0/myOrg/groups/{groupid}/internalScorecards",
+        "method": "GET",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "groupid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "pbi_source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          }
+        }
+      },
+      "CreateScorecard": {
+        "path": "/{connectionId}/v1.0/myOrg/groups/{groupid}/internalScorecards",
+        "method": "POST",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "groupid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "Scorecard",
+            "in": "body",
+            "required": true,
+            "type": "object"
+          },
+          {
+            "name": "pbi_source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          }
+        }
+      },
+      "GetMultipleGoals": {
+        "path": "/{connectionId}/v1.0/myOrg/groups/{groupid}/internalScorecards({scorecardId})/goals",
+        "method": "GET",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "groupid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "scorecardId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "$expand",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "pbi_source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          }
+        }
+      },
+      "CreateGoal": {
+        "path": "/{connectionId}/v1.0/myOrg/groups/{groupid}/internalScorecards({scorecardId})/goals",
+        "method": "POST",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "groupid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "scorecardId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "goal",
+            "in": "body",
+            "required": true,
+            "type": "object"
+          },
+          {
+            "name": "pbi_source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          }
+        }
+      },
+      "GetGoal": {
+        "path": "/{connectionId}/v1.0/myOrg/groups/{groupid}/internalScorecards({scorecardId})/goals({goalId})",
+        "method": "GET",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "groupid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "scorecardId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "goalId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "$expand",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "pbi_source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          }
+        }
+      },
+      "UpdateGoal": {
+        "path": "/{connectionId}/v1.0/myOrg/groups/{groupid}/internalScorecards({scorecardId})/goals({goalId})",
+        "method": "PATCH",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "groupid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "scorecardId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "goalId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "Goal",
+            "in": "body",
+            "required": true,
+            "type": "object"
+          },
+          {
+            "name": "pbi_source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "void"
+          }
+        }
+      },
+      "GoalsAssignedTrigger": {
+        "path": "/{connectionId}/internalFlowTriggerGoalChange/v1.0/myOrg/groups/{groupid}/internalScorecards({scorecardId})/goals",
+        "method": "GET",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "groupid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "scorecardId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "pollingInterval",
+            "in": "query",
+            "required": true,
+            "type": "number"
+          },
+          {
+            "name": "owner",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "pbi_source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          },
+          "202": {
+            "type": "object"
+          }
+        }
+      },
+      "GoalChangeTrigger": {
+        "path": "/{connectionId}/internalFlowTriggerGoalChange/v1.0/myOrg/groups/{groupid}/internalScorecards({scorecardId})/goals({goalId})",
+        "method": "GET",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "groupid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "scorecardId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "goalId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "pollingInterval",
+            "in": "query",
+            "required": true,
+            "type": "number"
+          },
+          {
+            "name": "pbi_source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          },
+          "202": {
+            "type": "object"
+          }
+        }
+      },
+      "GoalStatusChangeTrigger": {
+        "path": "/{connectionId}/internalFlowTriggerGoalChange/v1.0/myOrg/groups/{groupid}/internalScorecards({scorecardId})/goals({goalId})/GetFlowTriggerStatus",
+        "method": "GET",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "groupid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "scorecardId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "goalId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "pollingInterval",
+            "in": "query",
+            "required": true,
+            "type": "number"
+          },
+          {
+            "name": "pbi_source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          },
+          "202": {
+            "type": "object"
+          }
+        }
+      },
+      "GoalValueChangeTrigger": {
+        "path": "/{connectionId}/internalFlowTriggerGoalChange/v1.0/myOrg/groups/{groupid}/internalScorecards({scorecardId})/goals({goalId})/GetFlowTriggerValue",
+        "method": "GET",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "groupid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "scorecardId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "goalId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "pollingInterval",
+            "in": "query",
+            "required": true,
+            "type": "number"
+          },
+          {
+            "name": "pbi_source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          },
+          "202": {
+            "type": "object"
+          }
+        }
+      },
+      "GoalRefreshFailedTrigger": {
+        "path": "/{connectionId}/internalFlowTriggerGoalChange/v1.0/myOrg/groups/{groupid}/internalScorecards({scorecardId})/goals({goalId})/GetRefreshHistory",
+        "method": "GET",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "groupid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "scorecardId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "goalId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "trackTargetSource",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "trackValueSource",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "pollingInterval",
+            "in": "query",
+            "required": true,
+            "type": "number"
+          },
+          {
+            "name": "pbi_source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          },
+          "202": {
+            "type": "object"
+          }
+        }
+      },
+      "GoalValueOrNoteUpsertTrigger": {
+        "path": "/{connectionId}/internalFlowTriggerGoalChange/v1.0/myOrg/groups/{groupid}/internalScorecards({scorecardId})/goals({goalId})/goalValues",
+        "method": "GET",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "groupid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "scorecardId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "goalId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "pollingInterval",
+            "in": "query",
+            "required": true,
+            "type": "number"
+          },
+          {
+            "name": "pbi_source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          },
+          "202": {
+            "type": "object"
+          }
+        }
+      },
+      "GetAlerts": {
+        "path": "/{connectionId}/metadata/v201606/alerts",
+        "method": "GET",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "pbi_source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "array"
+          },
+          "default": {
+            "type": "void"
+          }
+        }
+      },
+      "CheckAlertStatus": {
+        "path": "/{connectionId}/metadata/v201606/alerts/{alertId}/status",
+        "method": "GET",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "alertId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "pbi_source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          },
+          "202": {
+            "type": "object"
+          }
+        }
+      },
+      "ExecuteDatasetQuery": {
+        "path": "/{connectionId}/v1.0/myorg/groups/{groupid}/datasets/{datasetid}/executeQueries",
+        "method": "POST",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "groupid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "datasetid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "specification",
+            "in": "body",
+            "required": true,
+            "type": "object"
+          },
+          {
+            "name": "pbi_source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          }
+        }
+      },
+      "ExecuteDatasetQueriesJson": {
+        "path": "/{connectionId}/internalFlowActionOverloadAsJson/v1.0/myorg/groups/{groupid}/datasets/{datasetid}/executeQueries",
+        "method": "POST",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "groupid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "datasetid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "Specification",
+            "in": "body",
+            "required": true,
+            "type": "object"
+          },
+          {
+            "name": "pbi_source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          }
+        }
+      },
+      "AddRows": {
+        "path": "/{connectionId}/v1.0/myorg/groups/{groupid}/datasets/{datasetid}/tables/{tablename}/rows",
+        "method": "POST",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "groupid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "datasetid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tablename",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "Payload",
+            "in": "body",
+            "required": false,
+            "type": "object"
+          },
+          {
+            "name": "pbi_source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "void"
+          }
+        }
+      },
+      "ListGroups": {
+        "path": "/{connectionId}/v1.0/myorg/groups",
+        "method": "GET",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "pbi_source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "$filter",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          }
+        }
+      },
+      "ListDatasets": {
+        "path": "/{connectionId}/v1.0/myorg/groups/{groupid}/datasets",
+        "method": "GET",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "groupid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "refreshDatasetsFilter",
+            "in": "header",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "pbi_source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          }
+        }
+      },
+      "ListTables": {
+        "path": "/{connectionId}/v1.0/myorg/groups/{groupid}/datasets/{datasetid}/tables",
+        "method": "GET",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "groupid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "datasetid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "pbi_source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          }
+        }
+      },
+      "GetColumns": {
+        "path": "/{connectionId}/v1.0/myorg/groups/{groupid}/datasets/{datasetid}/tables/{tablename}/columns",
+        "method": "GET",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "groupid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "datasetid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tablename",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "pbi_source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          }
+        }
+      },
+      "GoalValueCheckinNote": {
+        "path": "/{connectionId}/v1.0/myorg/groups/{groupid}/internalScorecards({scorecardId})/goals({goalId})/goalValues({goalCheckin})/notes",
+        "method": "POST",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "groupid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "scorecardId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "goalId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "goalCheckin",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "note",
+            "in": "body",
+            "required": true,
+            "type": "object"
+          },
+          {
+            "name": "pbi_source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "void"
+          }
+        }
+      },
+      "GoalValueCheckin": {
+        "path": "/{connectionId}/v1.0/myorg/groups/{groupid}/internalScorecards({scorecardId})/goals({goalId})/goalValues",
+        "method": "POST",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "groupid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "scorecardId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "goalId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "checkin",
+            "in": "body",
+            "required": true,
+            "type": "object"
+          },
+          {
+            "name": "pbi_source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "void"
+          }
+        }
+      },
+      "GetGoalCheckins": {
+        "path": "/{connectionId}/v1.0/myorg/groups/{groupid}/internalScorecards({scorecardId})/goals({goalId})/goalValues",
+        "method": "GET",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "groupid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "scorecardId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "goalId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "$expand",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "pbi_source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          }
+        }
+      },
+      "UpdateGoalCheckin": {
+        "path": "/{connectionId}/v1.0/myorg/groups/{groupid}/internalScorecards({scorecardId})/goals({goalId})/goalValues({goalCheckin})",
+        "method": "PATCH",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "groupid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "scorecardId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "goalId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "goalCheckin",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "checkin",
+            "in": "body",
+            "required": true,
+            "type": "object"
+          },
+          {
+            "name": "pbi_source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "void"
+          }
+        }
+      },
+      "GetGoalCheckin": {
+        "path": "/{connectionId}/v1.0/myorg/groups/{groupid}/internalScorecards({scorecardId})/goals({goalId})/goalValues({goalCheckin})",
+        "method": "GET",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "groupid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "scorecardId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "goalId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "goalCheckin",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "$expand",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "pbi_source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          }
+        }
+      },
+      "PowerBiButtonClicked": {
+        "path": "/{connectionId}/hybridtriggers/powerBiButtonClicked",
+        "method": "GET",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "inputsPowerBiData",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "pbi_source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          },
+          "default": {
+            "type": "object"
+          }
+        }
+      },
+      "GetPowerBiButtonClickedOutputs": {
+        "path": "/{connectionId}/powerbihybridtriggeroutput/triggers/PowerBiButtonClicked/PowerBiButtonClickedOutputs",
+        "method": "POST",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "type": "object"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          },
+          "default": {
+            "type": "object"
+          }
+        }
+      },
+      "RefreshDataset": {
+        "path": "/{connectionId}/v1.0/myorg/groups/{groupid}/datasets/{datasetid}/refreshes",
+        "method": "POST",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "groupid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "datasetid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "pbi_source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "void"
+          }
+        }
+      },
+      "InitiateExportToFileForPbiReports": {
+        "path": "/{connectionId}/v1.0/myorg/groups/{groupid}/reports/{reportid}/ExportTo",
+        "method": "POST",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "groupid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "reportid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "ExportPayloadPowerBIReport",
+            "in": "body",
+            "required": false,
+            "type": "object"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "string",
+            "format": "binary"
+          }
+        }
+      },
+      "InitiateExportToFileForPaginatedReports": {
+        "path": "/{connectionId}/v1.0/myorg/groups/{groupid}/reports/{reportid}/ExportToPaginatedReports",
+        "method": "POST",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "groupid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "reportid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "ExportPayloadPaginatedReport",
+            "in": "body",
+            "required": false,
+            "type": "object"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "string",
+            "format": "binary"
+          }
+        }
+      },
+      "ExportStatus": {
+        "path": "/{connectionId}/v1.0/myorg/groups/{groupid}/reports/{reportid}/exports/{exportid}",
+        "method": "GET",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "groupid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "reportid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "exportid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "string",
+            "format": "binary"
+          }
+        }
+      },
+      "MyWSExportStatus": {
+        "path": "/{connectionId}/v1.0/myorg/reports/{reportid}/exports/{exportid}",
+        "method": "GET",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "reportid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "exportid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "string",
+            "format": "binary"
+          }
+        }
+      },
+      "GetExportFile": {
+        "path": "/{connectionId}/v1.0/myorg/groups/{groupid}/reports/{reportid}/exports/{exportid}/file",
+        "method": "GET",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "groupid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "reportid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "exportid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "string",
+            "format": "binary"
+          }
+        }
+      },
+      "MyWSGetExportFile": {
+        "path": "/{connectionId}/v1.0/myorg/reports/{reportid}/exports/{exportid}/file",
+        "method": "GET",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "reportid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "exportid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "string",
+            "format": "binary"
+          }
+        }
+      },
+      "GetReportsInGroup": {
+        "path": "/{connectionId}/v1.0/myorg/groups/{groupid}/reports",
+        "method": "GET",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "groupid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "reportType",
+            "in": "header",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
           }
         }
       }
