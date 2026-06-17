@@ -108,6 +108,7 @@ export interface Vsi_participantprogramyearsBase {
   vsi_farmtypedetailed?: string;
   "vsi_FeeModifiedBy@odata.bind"?: string;
   vsi_filereceiveddate?: string;
+  vsi_finaldeadlineremindersent?: boolean;
   vsi_firstmonthlateinformationfee?: number;
   vsi_fortyfivedaycounterpaused?: boolean;
   vsi_fortyfivedaylettersent?: string;
@@ -121,11 +122,13 @@ export interface Vsi_participantprogramyearsBase {
   vsi_incombinedfarm: boolean;
   vsi_lateenrolmentfeesfinaldeadlinedate?: string;
   vsi_lateenrolmentnoticesentdate?: string;
+  vsi_latefinaldeadlineremindersent?: boolean;
   vsi_lateinformationfeeassessed?: boolean;
   vsi_latepaymentfee?: number;
   vsi_latepaymentfeeassessed?: boolean;
   vsi_manualreview?: boolean;
   vsi_name: string;
+  vsi_nonpenaltydeadlineremindersent?: boolean;
   "vsi_ParticipantId@odata.bind": string;
   vsi_participantprogramyearid: string;
   vsi_partnershipnames?: string;
@@ -202,6 +205,8 @@ export interface Vsi_participantprogramyears extends Vsi_participantprogramyears
   vsi_farmingsectorname?: string;
   vsi_feemodifiedbyname?: string;
   vsi_feemodifiedbyyominame?: string;
+  vsi_finaldeadlinedaysdiff?: number;
+  vsi_finaldeadlineremindersentname?: string;
   vsi_firstmonthlateinformationfee_base?: number;
   vsi_fortyfivedaycounterpausedname?: string;
   vsi_fullyprovinciallyfundedname?: string;
@@ -210,10 +215,14 @@ export interface Vsi_participantprogramyears extends Vsi_participantprogramyears
   vsi_incombinedfarmname?: string;
   vsi_isnewparticipant?: boolean;
   vsi_isnewparticipantname?: string;
+  vsi_latefinaldeadlinedaysdiff?: number;
+  vsi_latefinaldeadlineremindersentname?: string;
   vsi_lateinformationfeeassessedname?: string;
   vsi_latepaymentfee_base?: number;
   vsi_latepaymentfeeassessedname?: string;
   vsi_manualreviewname?: string;
+  vsi_nonpenaltydeadlinedaysleft?: number;
+  vsi_nonpenaltydeadlineremindersentname?: string;
   vsi_participantidname?: string;
   vsi_participantidyominame?: string;
   vsi_previousyearcalculatedenfee_base?: number;

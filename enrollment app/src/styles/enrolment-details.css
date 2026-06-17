@@ -231,10 +231,20 @@
   gap: 0.9rem 1.4rem;
 }
 
-.details-fees-grid {
+.details-fees-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  gap: 1rem 1.5rem;
+}
+
+.details-deadlines-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(180px, 1fr));
   gap: 1rem 1.3rem;
+}
+
+.details-field-spacer {
+  min-height: 0;
 }
 
 .details-field {
@@ -256,6 +266,15 @@
   font-weight: 700;
 }
 
+.details-days-left {
+  font-size: 1.4rem;
+  line-height: 1.15;
+}
+
+.details-days-left-urgent {
+  color: #d64545;
+}
+
 .details-value-muted {
   color: #667085;
   font-size: 0.95rem;
@@ -269,6 +288,19 @@
 
 .details-money-alert {
   color: #e55a5a;
+}
+
+.details-subsection-title {
+  margin: 0 0 0.45rem;
+  color: #1f2937;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.details-subsection-empty {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.95rem;
 }
 
 /* 45-day counter card embedded in the header band */
@@ -398,7 +430,11 @@
     grid-template-columns: repeat(2, minmax(220px, 1fr));
   }
 
-  .details-fees-grid {
+  .details-fees-summary-grid {
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+  }
+
+  .details-deadlines-grid {
     grid-template-columns: repeat(2, minmax(220px, 1fr));
   }
 }
@@ -411,7 +447,8 @@
 
   .details-header-grid,
   .details-main-grid,
-  .details-fees-grid {
+  .details-fees-summary-grid,
+  .details-deadlines-grid {
     grid-template-columns: 1fr;
   }
 }
