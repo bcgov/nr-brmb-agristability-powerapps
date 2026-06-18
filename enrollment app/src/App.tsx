@@ -3,7 +3,6 @@ import { HashRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { ClipboardCheck, ExternalLink, Home, LayoutDashboard, Menu } from 'lucide-react';
 
 import { DashboardHomePage } from './pages/DashboardHomePage';
-import { DashboardPage } from './pages/DashboardPage';
 import { SupervisorApprovalPage } from './pages/SupervisorApprovalPage';
 import { EnrolmentDetailsPage } from './pages/EnrolmentDetailsPage';
 import { EnrolmentCalculationPage } from './pages/EnrolmentCalculationPage';
@@ -11,11 +10,40 @@ import { EnrolmentHistoryPage } from './pages/EnrolmentHistoryPage';
 import { RoleProvider, useRole, ALL_ROLES, ROLE_LABELS, type AppRole } from './context/RoleContext';
 import { navGuard } from './utils/helpers';
 import { normalizeInitialDeepLink, openInNewTab } from './utils/deepLinks';
+import { Vsi_armsconfigurationsService } from './generated/services/Vsi_armsconfigurationsService';
 
 const SUPERVISOR_APPROVAL_ROLES: AppRole[] = ['SystemAdmin', 'Supervisor'];
 const CALCULATION_ROLES: AppRole[] = ['SystemAdmin', 'Supervisor', 'ENAdmin', 'Verifier'];
+const DASHBOARD_URL_FALLBACK = 'https://app.powerbi.com/groups/b447b3b3-d200-43ee-b3cd-eabccd22a717/reports/a14e5dfe-22ca-4974-a97b-844a5050fb64';
 
 normalizeInitialDeepLink();
+
+function normalizeRequired(value: string | null | undefined): string {
+  const normalized = value?.trim();
+  if (!normalized) {
+    throw new Error('Missing required dashboard configuration value.');
+  }
+  return normalized;
+}
+
+async function getPowerBiDashboardUrl(): Promise<string> {
+  const result = await Vsi_armsconfigurationsService.getAll({
+    maxPageSize: 50,
+    select: [
+      'vsi_activeconfiguration',
+      'vsi_powerbireportgroupid',
+      'vsi_powerbiendashboardreportid',
+    ],
+  });
+
+  const rows = result.data ?? [];
+  const activeRow = rows.find(row => row.vsi_activeconfiguration === true);
+  if (!activeRow) return DASHBOARD_URL_FALLBACK;
+
+  const groupId = normalizeRequired(activeRow.vsi_powerbireportgroupid);
+  const reportId = normalizeRequired(activeRow.vsi_powerbiendashboardreportid);
+  return `https://app.powerbi.com/groups/${groupId}/reports/${reportId}`;
+}
 
 function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode; allowedRoles: AppRole[] }) {
   const { activeRole } = useRole();
@@ -55,6 +83,18 @@ function RoleSwitcher({ collapsed }: { collapsed: boolean }) {
 
 function SideNav({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
   const { activeRole } = useRole();
+
+  const handleOpenDashboard = async (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    let dashboardUrl = DASHBOARD_URL_FALLBACK;
+    try {
+      dashboardUrl = await getPowerBiDashboardUrl();
+    } catch {
+      // Use fallback URL if config read fails.
+    }
+    window.open(dashboardUrl, '_blank', 'noopener,noreferrer');
+  };
+
   return (
     <aside className={`side-nav${collapsed ? ' collapsed' : ''}`}>
       <button className="side-nav-toggle" type="button" onClick={onToggle} aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}>
@@ -62,13 +102,15 @@ function SideNav({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
       </button>
 
       <nav className="side-nav-links" aria-label="Primary">
-        <NavLink
-          to="/dashboard"
-          className={({ isActive }) => `side-nav-link${isActive ? ' active' : ''}`}
+        <a
+          className="side-nav-link"
+          href="#"
+          onClick={handleOpenDashboard}
+          title="Open Power BI Dashboard"
         >
           <LayoutDashboard size={22} />
           {!collapsed && <span>Dashboard</span>}
-        </NavLink>
+        </a>
 
         <NavLink
           to="/dashboard-home"
@@ -114,8 +156,7 @@ function AppShell() {
       <SideNav collapsed={navCollapsed} onToggle={() => setNavCollapsed(prev => !prev)} />
       <main className="app-shell-content">
         <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/" element={<Navigate to="/dashboard-home" replace />} />
           <Route path="/dashboard-home" element={<DashboardHomePage />} />
           <Route path="/enrolment/:enrolmentId" element={<EnrolmentDetailsPage />} />
           <Route path="/enrolment/:source/:enrolmentId" element={<EnrolmentDetailsPage />} />
