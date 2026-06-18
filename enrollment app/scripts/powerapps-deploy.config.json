@@ -1,0 +1,68 @@
+{
+    "appName":  "Enrollment App",
+    "environments":  {
+                         "dev":  {
+                                     "environmentId":  "dcd88fe8-d919-ee82-8313-8376a1e413f4",
+                                     "dataSources":  [
+                                                         {
+                                                             "apiId":  "shared_farms-20api-5fe39d1efd21a19d13-5f571039b465579741",
+                                                             "connectionId":  "7f0dbaddf90e498e82c553b27272a705"
+                                                         },
+                                                         {
+                                                             "apiId":  "shared_commondataserviceforapps",
+                                                             "connectionId":  "b05319f6f3244385ac9d9959391a2970"
+                                                         },
+                                                         {
+                                                             "apiId":  "shared_logicflows",
+                                                             "connectionId":  "replace-with-dev-logicflows-connection-id"
+                                                         },
+                                                         {
+                                                             "apiId":  "shared_powerbi",
+                                                             "connectionId":  "replace-with-dev-powerbi-connection-id"
+                                                         }
+                                                     ]
+                                 },
+                         "test":  {
+                                      "environmentId":  "dcd88fe8-d919-ee82-8313-8376a1e413f4",
+                                      "dataSources":  [
+                                                          {
+                                                              "apiId":  "shared_farms-20api-5fe39d1efd21a19d13-5f571039b465579741",
+                                                              "connectionId":  "7f0dbaddf90e498e82c553b27272a705"
+                                                          },
+                                                          {
+                                                              "apiId":  "shared_commondataserviceforapps",
+                                                              "connectionId":  "b05319f6f3244385ac9d9959391a2970"
+                                                          },
+                                                          {
+                                                              "apiId":  "shared_logicflows",
+                                                              "connectionId":  "replace-with-test-logicflows-connection-id"
+                                                          },
+                                                          {
+                                                              "apiId":  "shared_powerbi",
+                                                              "connectionId":  "replace-with-test-powerbi-connection-id"
+                                                          }
+                                                      ]
+                                  },
+                         "prod":  {
+                                      "environmentId":  "replace-with-prod-environment-id",
+                                      "dataSources":  [
+                                                          {
+                                                              "apiId":  "shared_farms-20api-5fe39d1efd21a19d13-5f571039b465579741",
+                                                              "connectionId":  "replace-with-prod-farms-connection-id"
+                                                          },
+                                                          {
+                                                              "apiId":  "shared_commondataserviceforapps",
+                                                              "connectionId":  "replace-with-prod-dataverse-connection-id"
+                                                          },
+                                                          {
+                                                              "apiId":  "shared_logicflows",
+                                                              "connectionId":  "replace-with-prod-logicflows-connection-id"
+                                                          },
+                                                          {
+                                                              "apiId":  "shared_powerbi",
+                                                              "connectionId":  "replace-with-prod-powerbi-connection-id"
+                                                          }
+                                                      ]
+                                  }
+                     }
+}

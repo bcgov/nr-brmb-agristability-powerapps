@@ -452,6 +452,14 @@
           "x-ms-read-only": true,
           "maxLength": 160
         },
+        "vsi_coreenvironmentid": {
+          "type": "string",
+          "title": "Core EnvironmentID",
+          "x-ms-dataverse-attribute": "vsi_coreenvironmentid",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vsi_CoreEnvironmentID",
+          "maxLength": 100
+        },
         "vsi_coreenvironmenturl": {
           "type": "string",
           "title": "Core Environment URL",
@@ -575,6 +583,22 @@
           "x-ms-schema-name": "vsi_minimumenrolmentfee_Base",
           "x-ms-read-only": true
         },
+        "vsi_powerbiendashboardreportid": {
+          "type": "string",
+          "title": "PowerBI EN Dashboard Report ID",
+          "x-ms-dataverse-attribute": "vsi_powerbiendashboardreportid",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vsi_PowerBIENDashboardReportID",
+          "maxLength": 100
+        },
+        "vsi_powerbireportgroupid": {
+          "type": "string",
+          "title": "PowerBI Report Group ID",
+          "x-ms-dataverse-attribute": "vsi_powerbireportgroupid",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vsi_PowerBIReportGroupID",
+          "maxLength": 100
+        },
         "vsi_reportbulkoutputpath": {
           "type": "string",
           "title": "Report Bulk Output Path",
@@ -607,6 +631,14 @@
           "x-ms-schema-name": "vsi_RepositoryRootDirectory",
           "required": true,
           "maxLength": 300
+        },
+        "vsi_tenantid": {
+          "type": "string",
+          "title": "Tenant ID",
+          "x-ms-dataverse-attribute": "vsi_tenantid",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "vsi_TenantID",
+          "maxLength": 100
         },
         "vsi_triagepaymentthreshold": {
           "type": "string",
