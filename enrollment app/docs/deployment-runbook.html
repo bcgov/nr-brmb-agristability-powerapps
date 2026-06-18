@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Enrollment App Deployment Runbook</title>
+  <style>
+    :root {
+      --text: #1c1c1c;
+      --muted: #4f4f4f;
+      --rule: #d9d9d9;
+      --bg: #ffffff;
+      --code-bg: #f5f7fa;
+      --accent: #005a9c;
+    }
+    html, body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+      line-height: 1.45;
+      margin: 0;
+      padding: 0;
+    }
+    .page {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 28px 32px 40px;
+    }
+    h1, h2, h3 {
+      margin: 0 0 10px;
+      line-height: 1.25;
+    }
+    h1 {
+      font-size: 28px;
+      color: var(--accent);
+      margin-top: 6px;
+    }
+    h2 {
+      font-size: 20px;
+      border-top: 1px solid var(--rule);
+      padding-top: 16px;
+      margin-top: 20px;
+    }
+    h3 {
+      font-size: 16px;
+      margin-top: 16px;
+    }
+    p {
+      margin: 8px 0;
+    }
+    ul, ol {
+      margin: 8px 0 10px 22px;
+    }
+    li { margin: 4px 0; }
+    code, pre {
+      font-family: Consolas, "Courier New", monospace;
+    }
+    code {
+      background: var(--code-bg);
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--rule);
+      border-radius: 6px;
+      padding: 10px 12px;
+      overflow-x: auto;
+      margin: 10px 0;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid var(--rule);
+      text-align: left;
+      vertical-align: top;
+      padding: 8px;
+    }
+    th { background: #f2f6fb; }
+    .small { color: var(--muted); font-size: 13px; }
+    .callout {
+      border-left: 4px solid var(--accent);
+      background: #f3f8ff;
+      padding: 10px 12px;
+      margin: 10px 0;
+    }
+    @page {
+      size: A4;
+      margin: 14mm;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>Enrollment App Deployment Runbook</h1>
+    <p class="small">Repository: nr-brmb-agristability-powerapps/enrollment app</p>
+    <p class="small">Generated: 2026-06-18</p>
+
+    <h2>1. Purpose</h2>
+    <p>This runbook defines the full deployment process for Test and Prod, including pipeline release, required Dataverse core configuration fields, and the post-deploy PowerShell scripts used to bind environment-specific connectors and push the app.</p>
+
+    <h2>2. High-Level Release Flow</h2>
+    <ol>
+      <li>Deploy with your standard pipeline release into the target environment (Test or Prod).</li>
+      <li>On a deployment workstation/agent authenticated to the target Power Platform environment, run post-deploy script steps to bind data sources and push.</li>
+      <li>Validate core configuration values in Dataverse.</li>
+      <li>Run smoke tests (dashboard, deep links, enrolment pages).</li>
+    </ol>
+
+    <div class="callout">
+      The values visible in <code>.power/schemas</code> are generated connector metadata and will differ per environment. Do not manually edit these schema files.
+    </div>
+
+    <h2>3. Prerequisites</h2>
+    <ul>
+      <li>Power Platform CLI (<code>pac</code>) installed and authenticated to the target tenant/environment.</li>
+      <li>Node.js + npm installed.</li>
+      <li>Repo cloned and dependencies installed (<code>npm ci</code> or <code>npm install</code>).</li>
+      <li>Permission to add/rebind Power Apps data sources in target environment.</li>
+      <li>Environment-specific connector connection IDs available (FARMS, Dataverse, Logic Flows, Power BI).</li>
+    </ul>
+
+    <h2>4. Pipeline Release Instructions</h2>
+    <h3>4.1 Release to target stage</h3>
+    <ol>
+      <li>Run your normal pipeline release for the target stage (Test or Prod).</li>
+      <li>Confirm the app/solution artifact deployment is successful in release logs.</li>
+      <li>Do not stop at this point. Pipeline release does not finalize local code bindings for all connectors.</li>
+    </ol>
+
+    <h3>4.2 Post-release handoff</h3>
+    <p>After pipeline success, execute the scripts in this repo to complete target-environment connector binding and app push.</p>
+
+    <h2>5. Required Dataverse Core Configuration Fields</h2>
+    <p>In table <code>vsi_armsconfiguration</code>, ensure one active row (<code>vsi_activeconfiguration = Yes</code>) exists with these fields:</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Field</th>
+          <th>Required</th>
+          <th>Used For</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>vsi_activeconfiguration</code></td>
+          <td>Yes</td>
+          <td>Chooses active config row</td>
+          <td>Only one active row should be used per environment.</td>
+        </tr>
+        <tr>
+          <td><code>vsi_coreenvironmentid</code></td>
+          <td>Yes</td>
+          <td>Deep-link app URL environment segment</td>
+          <td>Used by open-in-new-tab routing.</td>
+        </tr>
+        <tr>
+          <td><code>vsi_tenantid</code></td>
+          <td>Yes</td>
+          <td>Portal deep-link tenant query param and Power BI embed</td>
+          <td>No fallback should be relied on.</td>
+        </tr>
+        <tr>
+          <td><code>vsi_powerbireportgroupid</code></td>
+          <td>Yes</td>
+          <td>Dashboard embed workspace/group</td>
+          <td>Required for dashboard rendering.</td>
+        </tr>
+        <tr>
+          <td><code>vsi_powerbiendashboardreportid</code></td>
+          <td>Yes</td>
+          <td>Dashboard embed report id</td>
+          <td>Required for dashboard rendering.</td>
+        </tr>
+        <tr>
+          <td><code>vsi_enrolmentenfeevariancethreshold</code></td>
+          <td>Recommended</td>
+          <td>Variance warning/flag threshold</td>
+          <td>Used in dashboard/enrolment list variance styling.</td>
+        </tr>
+        <tr>
+          <td><code>vsi_coreenvironmenturl</code></td>
+          <td>Recommended</td>
+          <td>Core record URL base for links</td>
+          <td>Used for record navigation links.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>6. Script Files</h2>
+    <ul>
+      <li><code>scripts/powerapps-deploy.config.json</code>: stage-specific environment IDs and datasource connection IDs.</li>
+      <li><code>scripts/sync-deploy-config-from-powerconfig.ps1</code>: copies discovered values from <code>power.config.json</code> into a selected stage in deploy config.</li>
+      <li><code>scripts/post-deploy-powerapps.ps1</code>: runs <code>pac code init</code>, <code>pac code add-data-source</code>, optional build, and <code>npx power-apps push</code>.</li>
+    </ul>
+
+    <h2>7. Step-by-Step Execution</h2>
+    <h3>7.1 Open terminal at repo root</h3>
+    <pre>cd "c:\agristability\nr-brmb-agristability-powerapps\enrollment app"</pre>
+
+    <h3>7.2 Review stage config placeholders</h3>
+    <p>Open <code>scripts/powerapps-deploy.config.json</code> and confirm target stage values are populated. Any value starting with <code>replace-with-</code> will fail fast in script execution.</p>
+
+    <h3>7.3 Optional: auto-sync discovered values from power.config.json</h3>
+    <p>After running <code>pac code init</code> / datasource binding in the target environment, use:</p>
+    <pre>.\scripts\sync-deploy-config-from-powerconfig.ps1 -Stage test -PowerConfigPath .\power.config.json -DeployConfigPath .\scripts\powerapps-deploy.config.json -AllowOverwrite</pre>
+
+    <p>This can auto-fill environment ID and connector IDs where <code>sharedConnectionId</code> is present in <code>power.config.json</code>.</p>
+
+    <h3>7.4 Run full post-deploy workflow</h3>
+    <pre>.\scripts\post-deploy-powerapps.ps1 -Stage test -ConfigPath .\scripts\powerapps-deploy.config.json</pre>
+
+    <p>For Prod:</p>
+    <pre>.\scripts\post-deploy-powerapps.ps1 -Stage prod -ConfigPath .\scripts\powerapps-deploy.config.json</pre>
+
+    <h3>7.5 Skip build option (if build already validated in pipeline)</h3>
+    <pre>.\scripts\post-deploy-powerapps.ps1 -Stage prod -ConfigPath .\scripts\powerapps-deploy.config.json -SkipBuild</pre>
+
+    <h2>8. What the post-deploy script executes</h2>
+    <ol>
+      <li><code>pac code init -n &lt;appName&gt; -env &lt;environmentId&gt;</code></li>
+      <li>For each datasource: <code>pac code add-data-source -a &lt;apiId&gt; -c &lt;connectionId&gt;</code> (plus optional table/dataset parameters if configured)</li>
+      <li><code>npm.cmd run build</code> (unless <code>-SkipBuild</code>)</li>
+      <li><code>npx.cmd power-apps push</code></li>
+    </ol>
+
+    <h2>9. Post-Deployment Validation Checklist</h2>
+    <ol>
+      <li>Dashboard loads (Power BI embed works in target stage).</li>
+      <li>Deep links open target app URL with correct environment and tenant context.</li>
+      <li>Enrolment grid loads and variance highlighting behaves as expected.</li>
+      <li>Core links navigate correctly (if <code>vsi_coreenvironmenturl</code> is set).</li>
+      <li>No script placeholder errors remain for target stage config.</li>
+    </ol>
+
+    <h2>10. Troubleshooting</h2>
+    <h3>Issue: placeholder value error</h3>
+    <p>Update <code>scripts/powerapps-deploy.config.json</code> for the target stage. Any <code>replace-with-*</code> value is intentionally blocked.</p>
+
+    <h3>Issue: missing shared connection IDs for Logic Flows or Power BI</h3>
+    <p>Some connection references in <code>power.config.json</code> may not include <code>sharedConnectionId</code>. Fill those connection IDs manually in deploy config.</p>
+
+    <h3>Issue: schema still shows old environment GUID</h3>
+    <p>Expected until connectors are rebound in target environment. Re-run post-deploy process for the target stage.</p>
+
+    <h3>Issue: deep links fail</h3>
+    <p>Check active core config row has valid <code>vsi_coreenvironmentid</code> and <code>vsi_tenantid</code>.</p>
+
+    <h2>11. Recommended Operational Practice</h2>
+    <ol>
+      <li>Keep this runbook and scripts versioned with the app code.</li>
+      <li>Treat <code>.power/schemas</code> and <code>power.config.json</code> as environment-generated artifacts.</li>
+      <li>Use stage-specific config + script execution after every pipeline promotion.</li>
+    </ol>
+  </div>
+</body>
+</html>

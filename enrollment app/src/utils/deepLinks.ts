@@ -1,8 +1,15 @@
 import powerConfig from '../../power.config.json';
+import { Vsi_armsconfigurationsService } from '../generated/services/Vsi_armsconfigurationsService';
 
-const TENANT_ID_FALLBACK = '6fdb5200-3d0d-4a8a-b036-d3685e359adc';
 const PENDING_ROUTE_KEY = 'pendingDeepLinkRoute';
 const PENDING_ROUTE_TTL_MS = 10_000;
+
+type LaunchConfig = {
+  environmentId: string;
+  tenantId: string;
+};
+
+let launchConfigCache: LaunchConfig | null = null;
 
 const ID_PARAM_NAMES = [
   'calculationId',
@@ -44,6 +51,34 @@ function getFirstIdParam(params: URLSearchParams): string {
 
 function normalizeSource(value: string | null | undefined): string {
   return value?.toLowerCase() === 'supervisor' ? 'supervisor' : 'dashboard';
+}
+
+function normalizeRequired(value: string | null | undefined, fieldName: string): string {
+  const normalized = value?.trim();
+  if (!normalized) {
+    throw new Error(`Missing required core configuration value: ${fieldName}`);
+  }
+  return normalized;
+}
+
+async function loadLaunchConfig(): Promise<LaunchConfig> {
+  if (launchConfigCache) return launchConfigCache;
+
+  const result = await Vsi_armsconfigurationsService.getAll({
+    maxPageSize: 50,
+    select: ['vsi_activeconfiguration', 'vsi_coreenvironmentid', 'vsi_tenantid'],
+  });
+  const rows = result.data ?? [];
+  const activeRow = rows.find(row => row.vsi_activeconfiguration === true);
+  if (!activeRow) {
+    throw new Error('No active core configuration record found.');
+  }
+
+  launchConfigCache = {
+    environmentId: normalizeRequired(activeRow.vsi_coreenvironmentid, 'vsi_coreenvironmentid'),
+    tenantId: normalizeRequired(activeRow.vsi_tenantid, 'vsi_tenantid'),
+  };
+  return launchConfigCache;
 }
 
 function getRouteSource(params: URLSearchParams): string {
@@ -146,7 +181,7 @@ export function normalizeInitialDeepLink(): void {
  * Writes the route to localStorage so normalizeInitialDeepLink() can pick it up in the new tab,
  * giving real deep-linking in both local dev and production Power Apps.
  */
-export function openInNewTab(hash: string): void {
+export async function openInNewTab(hash: string): Promise<void> {
   const route = hash.startsWith('#') ? hash : `#${hash}`;
 
   // Write the intended route so the new tab can navigate to it on startup.
@@ -154,7 +189,7 @@ export function openInNewTab(hash: string): void {
     localStorage.setItem(PENDING_ROUTE_KEY, JSON.stringify({ hash: route, ts: Date.now() }));
   } catch { /* localStorage unavailable */ }
 
-  const envId = powerConfig.environmentId;
+  const { environmentId: envId, tenantId } = await loadLaunchConfig();
 
   if (window.location.hostname === 'localhost') {
     const baseLocal = (powerConfig.localAppUrl as string).replace(/\/$/, '');
@@ -164,7 +199,7 @@ export function openInNewTab(hash: string): void {
     });
     window.open(`https://apps.powerapps.com/play/e/${envId}/app/local?${params}`, '_blank', 'noopener,noreferrer');
   } else {
-    const params = new URLSearchParams({ source: 'portal', tenantId: TENANT_ID_FALLBACK });
+    const params = new URLSearchParams({ source: 'portal', tenantId });
     window.open(`https://apps.powerapps.com/play/e/${envId}/app/${powerConfig.appId}?${params}`, '_blank', 'noopener,noreferrer');
   }
 }

@@ -94,7 +94,7 @@ function SideNav({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
       <a
           className="side-nav-link side-nav-link--new-tab"
           href="#"
-          onClick={e => { e.preventDefault(); openInNewTab(window.location.hash); }}
+          onClick={e => { e.preventDefault(); void openInNewTab(window.location.hash); }}
           title="Open in new tab"
         >
           <ExternalLink size={22} />

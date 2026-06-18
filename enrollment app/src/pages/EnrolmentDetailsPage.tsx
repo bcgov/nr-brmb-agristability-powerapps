@@ -651,7 +651,7 @@ export function EnrolmentDetailsPage() {
         setPartnerNavigationError(`No ${enrolmentProgramYear} enrolment found for partner PIN ${partnerPin}.`);
         return;
       }
-      openInNewTab(`#/${target === 'details' ? 'enrolment' : 'calculation'}/${routeSource}/${partnerEnrolmentId}`);
+      void openInNewTab(`#/${target === 'details' ? 'enrolment' : 'calculation'}/${routeSource}/${partnerEnrolmentId}`);
     } catch (err) {
       setPartnerNavigationError(err instanceof Error ? err.message : 'Unable to open partner enrolment.');
     } finally {

@@ -1,0 +1,68 @@
+{
+  "appName": "enrollment app",
+  "environments": {
+    "dev": {
+      "environmentId": "00000000-0000-0000-0000-000000000000",
+      "dataSources": [
+        {
+          "apiId": "shared_farms-20api-5fe39d1efd21a19d13-5f571039b465579741",
+          "connectionId": "replace-with-dev-connection-id"
+        },
+        {
+          "apiId": "shared_commondataserviceforapps",
+          "connectionId": "replace-with-dev-connection-id"
+        },
+        {
+          "apiId": "shared_office365users",
+          "connectionId": "replace-with-dev-connection-id"
+        },
+        {
+          "apiId": "shared_powerbi",
+          "connectionId": "replace-with-dev-connection-id"
+        }
+      ]
+    },
+    "test": {
+      "environmentId": "00000000-0000-0000-0000-000000000000",
+      "dataSources": [
+        {
+          "apiId": "shared_farms-20api-5fe39d1efd21a19d13-5f571039b465579741",
+          "connectionId": "replace-with-test-connection-id"
+        },
+        {
+          "apiId": "shared_commondataserviceforapps",
+          "connectionId": "replace-with-test-connection-id"
+        },
+        {
+          "apiId": "shared_office365users",
+          "connectionId": "replace-with-test-connection-id"
+        },
+        {
+          "apiId": "shared_powerbi",
+          "connectionId": "replace-with-test-connection-id"
+        }
+      ]
+    },
+    "prod": {
+      "environmentId": "00000000-0000-0000-0000-000000000000",
+      "dataSources": [
+        {
+          "apiId": "shared_farms-20api-5fe39d1efd21a19d13-5f571039b465579741",
+          "connectionId": "replace-with-prod-connection-id"
+        },
+        {
+          "apiId": "shared_commondataserviceforapps",
+          "connectionId": "replace-with-prod-connection-id"
+        },
+        {
+          "apiId": "shared_office365users",
+          "connectionId": "replace-with-prod-connection-id"
+        },
+        {
+          "apiId": "shared_powerbi",
+          "connectionId": "replace-with-prod-connection-id"
+        }
+      ]
+    }
+  }
+}

@@ -31,6 +31,7 @@ export interface Vsi_armsconfigurationsBase {
   "vsi_AddressManagementTeamId@odata.bind": string;
   vsi_armsconfigurationid: string;
   "vsi_ClaimsAdministratorTeamId@odata.bind"?: string;
+  vsi_coreenvironmentid?: string;
   vsi_coreenvironmenturl?: string;
   vsi_defaultadministrativecostsharingfee: number;
   vsi_enrolmentenfeevariancethreshold?: number;
@@ -41,10 +42,13 @@ export interface Vsi_armsconfigurationsBase {
   vsi_farmsscenarioparameter?: string;
   vsi_farmsurl: string;
   vsi_minimumenrolmentfee: number;
+  vsi_powerbiendashboardreportid?: string;
+  vsi_powerbireportgroupid?: string;
   vsi_reportbulkoutputpath?: string;
   vsi_reportexecutionserviceurl?: string;
   vsi_reportpath?: string;
   vsi_repositoryrootdirectory: string;
+  vsi_tenantid?: string;
   vsi_triagepaymentthreshold?: number;
 }
 
