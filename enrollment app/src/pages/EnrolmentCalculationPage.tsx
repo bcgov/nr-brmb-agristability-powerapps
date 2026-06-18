@@ -12,12 +12,18 @@ import { useRole } from '../context/RoleContext';
 import type { Vsi_participantprogramyears } from '../generated/models/Vsi_participantprogramyearsModel';
 import { MicrosoftDataverseService } from '../generated/services/MicrosoftDataverseService';
 import { ProcessEnrolmentActionService } from '../generated/services/ProcessEnrolmentActionService';
-import { QueueitemsService } from '../generated/services/QueueitemsService';
 import { AccountsService } from '../generated/services/AccountsService';
 import { Vsi_armsconfigurationsService } from '../generated/services/Vsi_armsconfigurationsService';
 import { Vsi_participantprogramyearsService } from '../generated/services/Vsi_participantprogramyearsService';
 import { Vsi_programyearsService } from '../generated/services/Vsi_programyearsService';
 import { farmsApi } from '../services/farmsApi';
+import {
+  getCombinedFarmSummaryFromResponse,
+  getPartnerRowsFromResponse,
+  type CombinedFarmSummary,
+  type EnrolmentPartnerListRsrc,
+  type PartnerComparisonRow,
+} from '../services/enrolmentPartners';
 import { resolveCurrentSystemUser } from '../utils/currentUser';
 import { normalizeEnrolmentId, openInNewTab } from '../utils/deepLinks';
 import { formatCurrencyOr, getAvatarColor, getInitials, getTaskStatusLabel } from '../utils/helpers';
@@ -26,11 +32,6 @@ import { CORE_APP_ID_FALLBACK, CORE_BASE_URL_FALLBACK, DATAVERSE_ORG_URL_FALLBAC
 const BENEFIT_MARGIN_COUNT = 5;
 const APPROVABLE_STATUSES = new Set([865520005, 865520006]);
 const APPROVABLE_TASK_STATUSES = new Set([865520000, 865520001, 865520002]);
-
-type CurrentUser = {
-  systemUserId: string;
-  displayName: string;
-};
 
 type CalculationTableKey = 'enrolmentFee' | 'benefit' | 'proxy' | 'manual';
 
@@ -86,49 +87,11 @@ type EnrolmentWorkflowCalculation = {
   enwEnrolment?: EnwEnrolment | null;
 };
 
-type PartnerComparisonRow = {
-  operation: string;
-  partnerParticipantPin: string;
-  partnerPercent: string;
-  firstName: string;
-  lastName: string;
-  partnershipName: string;
-  enrolmentFee: unknown;
-};
-
 type HistoricalComparisonRow = {
   id: string;
   year: string;
   enrolmentName: string;
   totalFeesOwed: unknown;
-};
-
-type CombinedFarmSummary = {
-  participantPin: string;
-  combinedFarmNumber: string;
-  scenarioNumber: string;
-};
-
-type EnrolmentPartnerRsrc = {
-  scenarioNumber?: number | string | null;
-  operationSchedule?: string | null;
-  operationPartnershipPin?: number | string | null;
-  partnerPercent?: number | string | null;
-  partnerParticipantPin?: number | string | null;
-  partnerEnrolmentFee?: number | string | null;
-  firstName?: string | null;
-  lastName?: string | null;
-  partnershipName?: string | null;
-  dynamicProperties?: Partial<EnrolmentPartnerRsrc>;
-};
-
-type EnrolmentPartnerListRsrc = {
-  participantPin?: number | string | null;
-  scenarioNumber?: number | string | null;
-  inCombinedFarm?: boolean | number | string | null;
-  combinedFarmNumber?: number | string | null;
-  enrolmentPartnerList?: EnrolmentPartnerRsrc[] | null;
-  dynamicProperties?: Partial<EnrolmentPartnerListRsrc>;
 };
 
 type XrmWebApiHost = {
@@ -262,11 +225,6 @@ function buildFarmsScenarioUrl(baseUrl: string, pinValue: string, scenarioProgra
   return `${baseUrl}/farm800.do?${params.toString()}`;
 }
 
-function formatTextBlank(value: unknown): string {
-  if (value == null) return '';
-  return String(value).trim();
-}
-
 function escapeODataString(value: string): string {
   return value.replace(/'/g, "''");
 }
@@ -301,78 +259,6 @@ async function resolvePartnerEnrolmentId(partnerPin: string, enrolmentProgramYea
   return enrolmentResult.data?.[0]?.vsi_participantprogramyearid?.replace(/[{}]/g, '') ?? null;
 }
 
-function getNumberValue(value: unknown): number {
-  const numberValue = Number(value);
-  return Number.isFinite(numberValue) ? numberValue : Number.NEGATIVE_INFINITY;
-}
-
-function formatPartnerPercentValue(value: unknown): string {
-  if (value == null || value === '') return '';
-  const text = String(value).trim();
-  const hasPercentSign = text.includes('%');
-  const normalized = text.replace('%', '').trim();
-  const numberValue = Number(normalized);
-  if (!Number.isFinite(numberValue)) return text;
-  const percentValue = !hasPercentSign && numberValue > 0 && numberValue <= 1
-    ? numberValue * 100
-    : numberValue;
-  return `${percentValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}%`;
-}
-
-function getBooleanFieldValue(value: unknown): boolean {
-  return value === true || value === 1 || value === '1' || String(value).toLowerCase() === 'true';
-}
-
-function mergeDynamicProperties<T extends { dynamicProperties?: Partial<T> }>(value: T): T {
-  return value.dynamicProperties ? { ...value, ...value.dynamicProperties } : value;
-}
-
-function getEnrolmentPartnerListResponse(response: unknown): EnrolmentPartnerListRsrc | null {
-  if (!response || typeof response !== 'object') return null;
-  return mergeDynamicProperties(response as EnrolmentPartnerListRsrc);
-}
-
-function getEnrolmentPartnerRows(response: unknown): EnrolmentPartnerRsrc[] {
-  const listResponse = getEnrolmentPartnerListResponse(response);
-  return (listResponse?.enrolmentPartnerList ?? [])
-    .filter((row): row is EnrolmentPartnerRsrc => !!row && typeof row === 'object')
-    .map(mergeDynamicProperties);
-}
-
-function getPartnerRowsFromResponse(response: unknown): PartnerComparisonRow[] {
-  const rows = getEnrolmentPartnerRows(response)
-    .map(row => ({
-      scenarioNumber: getNumberValue(row.scenarioNumber),
-      operation: formatTextBlank(row.operationSchedule),
-      operationPartnershipPin: formatTextBlank(row.operationPartnershipPin),
-      partnerParticipantPin: formatTextBlank(row.partnerParticipantPin),
-      partnerPercent: formatPartnerPercentValue(row.partnerPercent),
-      firstName: formatTextBlank(row.firstName),
-      lastName: formatTextBlank(row.lastName),
-      partnershipName: formatTextBlank(row.partnershipName),
-      enrolmentFee: row.partnerEnrolmentFee,
-    }))
-    .filter(row => row.partnerParticipantPin || row.firstName || row.lastName || row.partnershipName);
-
-  const latestByPartner = new Map<string, typeof rows[number]>();
-  for (const row of rows) {
-    const key = [
-      row.operation,
-      row.operationPartnershipPin,
-      row.partnerParticipantPin,
-      row.firstName,
-      row.lastName,
-      row.partnershipName,
-    ].join('|');
-    const existing = latestByPartner.get(key);
-    if (!existing || row.scenarioNumber > existing.scenarioNumber) {
-      latestByPartner.set(key, row);
-    }
-  }
-
-  return [...latestByPartner.values()].map(({ scenarioNumber: _scenarioNumber, operationPartnershipPin: _operationPartnershipPin, ...row }) => row);
-}
-
 function getHistoricalComparisonRows(
   rows: Vsi_participantprogramyears[],
   currentProgramYear: number,
@@ -394,17 +280,6 @@ function getHistoricalComparisonRows(
       enrolmentName: row.vsi_name ?? '',
       totalFeesOwed: row.vsi_totalfeesowed,
     }));
-}
-
-function getCombinedFarmSummaryFromResponse(response: unknown): CombinedFarmSummary | null {
-  const listResponse = getEnrolmentPartnerListResponse(response);
-  if (!listResponse || !getBooleanFieldValue(listResponse.inCombinedFarm)) return null;
-
-  return {
-    participantPin: formatTextBlank(listResponse.participantPin),
-    combinedFarmNumber: formatTextBlank(listResponse.combinedFarmNumber),
-    scenarioNumber: formatTextBlank(listResponse.scenarioNumber),
-  };
 }
 
 function getFarmsWorkflowErrorMessage(error: unknown): string {
@@ -769,7 +644,6 @@ export function EnrolmentCalculationPage() {
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [showSupervisorModal, setShowSupervisorModal] = useState(false);
-  const [_currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [approvalErrorModal, setApprovalErrorModal] = useState<string | null>(null);
   const [showApproveConfirm, setShowApproveConfirm] = useState(false);
   const [approving, setApproving] = useState(false);
@@ -795,8 +669,6 @@ export function EnrolmentCalculationPage() {
   const [historicalRowsError, setHistoricalRowsError] = useState<string | null>(null);
   const [historicalPanelOpen, setHistoricalPanelOpen] = useState(true);
   const [historicalPanelPinned, setHistoricalPanelPinned] = useState(true);
-  const [_queueWorkerName, setQueueWorkerName] = useState<string | null>(null);
-  const [_queueWorkerId, setQueueWorkerId] = useState<string | null>(null);
   const [coreAppId, setCoreAppId] = useState<string | null>(() => getCoreConfig().coreAppId);
   const [coreBaseUrl, setCoreBaseUrl] = useState<string | null>(() => getCoreConfig().coreBaseUrl);
 
@@ -902,45 +774,6 @@ export function EnrolmentCalculationPage() {
     return () => {
       cancelled = true;
     };
-  }, [resolvedEnrolmentId, refreshKey]);
-
-  // Fetch queue worker (who has "picked" this enrolment in the supervisor queue)
-  useEffect(() => {
-    if (!resolvedEnrolmentId) {
-      setQueueWorkerName(null);
-      setQueueWorkerId(null);
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      try {
-        const [queueResult, user] = await Promise.all([
-          QueueitemsService.getAll({
-            filter: `objectid_vsi_participantprogramyear/vsi_participantprogramyearid eq '${resolvedEnrolmentId}' and statecode eq 0`,
-            select: ['queueitemid', '_workerid_value'],
-            maxPageSize: 1,
-          }),
-          resolveCurrentSystemUser(),
-        ]);
-        if (cancelled) return;
-        setCurrentUser({ systemUserId: user.systemUserId, displayName: user.displayName });
-        const q = queueResult.data?.[0];
-        if (q && q._workerid_value) {
-          const raw = q as unknown as Record<string, unknown>;
-          setQueueWorkerName((raw['_workerid_value@OData.Community.Display.V1.FormattedValue'] as string) ?? null);
-          setQueueWorkerId(q._workerid_value);
-        } else {
-          setQueueWorkerName(null);
-          setQueueWorkerId(null);
-        }
-      } catch {
-        if (!cancelled) {
-          setQueueWorkerName(null);
-          setQueueWorkerId(null);
-        }
-      }
-    })();
-    return () => { cancelled = true; };
   }, [resolvedEnrolmentId, refreshKey]);
 
   useEffect(() => {
