@@ -16,7 +16,22 @@ import { formatEnrolmentStatusDisplay, getAvatarColor, getInitials, getTaskStatu
 import { getCoreConfig, normalizeCoreBaseUrl } from '../hooks/useEnrolmentData';
 import { useRole } from '../context/RoleContext';
 import { Toast, type ToastMessage, nextToastId } from '../components/Toast';
-import { normalizeEnrolmentId } from '../utils/deepLinks';
+import { EnrolmentPartnersPanel } from '../components/EnrolmentPartnersPanel';
+import { normalizeEnrolmentId, openInNewTab } from '../utils/deepLinks';
+import { farmsApi } from '../services/farmsApi';
+import {
+  getCombinedFarmSummaryFromResponse,
+  getNumericProgramYear,
+  getParticipantPin,
+  getPartnerDataverseDetails,
+  getPartnerRowsFromResponse,
+  resolvePartnerAccountId,
+  resolvePartnerEnrolmentId,
+  resolveProgramYearId,
+  type CombinedFarmSummary,
+  type EnrolmentPartnerListRsrc,
+  type PartnerComparisonRow,
+} from '../services/enrolmentPartners';
 
 const CORE_APP_ID_FALLBACK = '88c024d9-9fd5-ec11-a7b5-002248ada475';
 const CORE_BASE_URL_FALLBACK = 'https://aff-brmb-crm-dev.crm3.dynamics.com/main.aspx';
@@ -41,6 +56,8 @@ type DetailFormState = {
   vsi_enrolmentfeesfinaldeadlinedate: string;
   vsi_lateenrolmentfeesfinaldeadlinedate: string;
 };
+
+type EnrolmentUpdateFields = Partial<Omit<Vsi_participantprogramyearsBase, 'vsi_participantprogramyearid'>>;
 
 const DATE_FIELDS: DateField[] = [
   'vsi_enrolmentnoticesentdate',
@@ -89,7 +106,7 @@ const DETAIL_SELECT = [
   '_vsi_primaryenrolmenthistory_value',
 ] as const;
 
-const formatCad = (value: number | undefined): string => {
+const formatCad = (value: unknown): string => {
   if (value == null || Number.isNaN(Number(value))) return '---';
   return `CA$${Number(value).toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
@@ -134,6 +151,31 @@ const initialFormFromRecord = (record: Vsi_participantprogramyears): DetailFormS
   vsi_lateenrolmentfeesfinaldeadlinedate: toDateInputValue(record.vsi_lateenrolmentfeesfinaldeadlinedate),
 });
 
+function getEnrolmentStatusChanges(
+  currentStatus: EnrolmentStatusValue | null,
+  nextStatus: EnrolmentStatusValue,
+  hasFortyFiveDayStartDate = false,
+): EnrolmentUpdateFields {
+  const changedFields: EnrolmentUpdateFields = {
+    vsi_enrolmentstatus: nextStatus,
+  };
+
+  if (currentStatus === 865520010 && nextStatus !== 865520010) {
+    changedFields.vsi_fortyfivedayletterstartdate = null as unknown as string;
+    changedFields.vsi_fortyfivedaylettersent = null as unknown as string;
+    changedFields.vsi_fortyfivedaycounterpaused = null as unknown as boolean;
+    changedFields.vsi_fortyfivedaypausedate = null as unknown as string;
+  }
+
+  if (currentStatus !== 865520010 && nextStatus === 865520010 && !hasFortyFiveDayStartDate) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    changedFields.vsi_fortyfivedayletterstartdate = today.toISOString();
+  }
+
+  return changedFields;
+}
+
 const getFormattedLookup = (record: Vsi_participantprogramyears, key: string): string => {
   const raw = record as unknown as Record<string, unknown>;
   const value = raw[key];
@@ -153,6 +195,13 @@ export function EnrolmentDetailsPage() {
 
   const [record, setRecord] = useState<Vsi_participantprogramyears | null>(null);
   const [formState, setFormState] = useState<DetailFormState | null>(null);
+  const [participantPin, setParticipantPin] = useState('');
+  const [partnerRows, setPartnerRows] = useState<PartnerComparisonRow[]>([]);
+  const [combinedFarmSummary, setCombinedFarmSummary] = useState<CombinedFarmSummary | null>(null);
+  const [partnerRowsLoading, setPartnerRowsLoading] = useState(false);
+  const [partnerRowsError, setPartnerRowsError] = useState<string | null>(null);
+  const [openingPartnerKey, setOpeningPartnerKey] = useState<string | null>(null);
+  const [partnerNavigationError, setPartnerNavigationError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -196,6 +245,93 @@ export function EnrolmentDetailsPage() {
       .catch(() => {});
   }, [resolvedEnrolmentId]);
 
+  useEffect(() => {
+    const participantId = record?._vsi_participantid_value?.replace(/[{}]/g, '');
+    if (!participantId) {
+      setParticipantPin('');
+      return;
+    }
+
+    let cancelled = false;
+    setParticipantPin('');
+    getParticipantPin(participantId)
+      .then(pin => {
+        if (!cancelled) setParticipantPin(pin);
+      })
+      .catch(() => {
+        if (!cancelled) setParticipantPin('');
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [record]);
+
+  const enrolmentProgramYear = useMemo(() => getNumericProgramYear(record), [record]);
+  const farmsScenarioProgramYear = enrolmentProgramYear ? enrolmentProgramYear - 2 : null;
+
+  useEffect(() => {
+    if (!participantPin || !farmsScenarioProgramYear) {
+      setPartnerRows([]);
+      setCombinedFarmSummary(null);
+      setPartnerRowsError(null);
+      setPartnerRowsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setPartnerRows([]);
+    setCombinedFarmSummary(null);
+    setPartnerRowsError(null);
+    setPartnerRowsLoading(true);
+
+    farmsApi.getEnrolmentPartners<EnrolmentPartnerListRsrc>(
+      participantPin,
+      farmsScenarioProgramYear,
+    )
+      .then(async result => {
+        if (cancelled) return;
+        if (!result.success) {
+          throw new Error(result.error?.message ?? 'Unable to load FARMS enrolment partners.');
+        }
+
+        const rows = getPartnerRowsFromResponse(result.data);
+        const programYearId = enrolmentProgramYear
+          ? await resolveProgramYearId(enrolmentProgramYear)
+          : null;
+        const enrichedRows = programYearId
+          ? await Promise.all(rows.map(async row => {
+            try {
+              const dataverseDetails = await getPartnerDataverseDetails(
+                row.partnerParticipantPin,
+                programYearId,
+              );
+              return { ...row, ...dataverseDetails };
+            } catch {
+              return row;
+            }
+          }))
+          : rows;
+
+        if (cancelled) return;
+        setPartnerRows(enrichedRows);
+        setCombinedFarmSummary(getCombinedFarmSummaryFromResponse(result.data));
+      })
+      .catch(err => {
+        if (cancelled) return;
+        setPartnerRows([]);
+        setCombinedFarmSummary(null);
+        setPartnerRowsError(err instanceof Error ? err.message : 'Unable to load FARMS enrolment partners.');
+      })
+      .finally(() => {
+        if (!cancelled) setPartnerRowsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [participantPin, farmsScenarioProgramYear, enrolmentProgramYear]);
+
   const handleShowHistory = () => setShowHistory(prev => !prev);
 
   useEffect(() => {
@@ -207,7 +343,7 @@ export function EnrolmentDetailsPage() {
         setCoreBaseUrl(rows.map(r => normalizeCoreBaseUrl(r.vsi_coreenvironmenturl)).find((c): c is string => !!c) ?? null);
       })
       .catch(() => {});
-  }, []);
+  }, [coreAppId]);
 
   useEffect(() => {
     if (!resolvedEnrolmentId) {
@@ -262,14 +398,26 @@ export function EnrolmentDetailsPage() {
 
   const baseline = useMemo(() => (record ? initialFormFromRecord(record) : null), [record]);
 
+  const hasPartnerChanges = useMemo(
+    () => partnerRows.some(row => (
+      !!row.partnerEnrolmentId
+      && (
+        row.enrolmentStatus !== row.originalEnrolmentStatus
+        || row.enrolmentFeesPaidDate !== row.originalEnrolmentFeesPaidDate
+      )
+    )),
+    [partnerRows],
+  );
+
   const hasChanges = useMemo(() => {
     if (!baseline || !formState) return false;
     return (
       baseline.enrolmentStatus !== formState.enrolmentStatus
       || baseline.vsi_fullyprovinciallyfunded !== formState.vsi_fullyprovinciallyfunded
       || DATE_FIELDS.some(field => baseline[field] !== formState[field])
+      || hasPartnerChanges
     );
-  }, [baseline, formState]);
+  }, [baseline, formState, hasPartnerChanges]);
 
   const [pendingNavPath, setPendingNavPath] = useState<string | null>(null);
   const navigateWithGuard = (path: string) => {
@@ -323,6 +471,56 @@ export function EnrolmentDetailsPage() {
     return `${baseUrl}?appid=${encodeURIComponent(appId)}&pagetype=entityrecord&etn=account&id=${encodeURIComponent(participantId)}`;
   }, [record, coreAppId, coreBaseUrl]);
 
+  const openPartnerAccount = async (row: PartnerComparisonRow) => {
+    const partnerPin = row.partnerParticipantPin.trim();
+    if (!partnerPin) {
+      setPartnerNavigationError('Partner PIN is missing.');
+      return;
+    }
+
+    setOpeningPartnerKey(`account:${partnerPin}`);
+    setPartnerNavigationError(null);
+    try {
+      const accountId = row.partnerAccountId || await resolvePartnerAccountId(partnerPin);
+      if (!accountId) {
+        setPartnerNavigationError(`No CORE account found for partner PIN ${partnerPin}.`);
+        return;
+      }
+      const appId = coreAppId?.trim() || CORE_APP_ID_FALLBACK;
+      const baseUrl = coreBaseUrl?.trim() || CORE_BASE_URL_FALLBACK;
+      const href = `${baseUrl}?appid=${encodeURIComponent(appId)}&pagetype=entityrecord&etn=account&id=${encodeURIComponent(accountId)}`;
+      window.open(href, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      setPartnerNavigationError(err instanceof Error ? err.message : 'Unable to open partner account.');
+    } finally {
+      setOpeningPartnerKey(null);
+    }
+  };
+
+  const openPartnerEnrolment = async (row: PartnerComparisonRow, target: 'details' | 'calculation') => {
+    const partnerPin = row.partnerParticipantPin.trim();
+    if (!partnerPin || !enrolmentProgramYear) {
+      setPartnerNavigationError('Partner PIN or enrolment year is missing.');
+      return;
+    }
+
+    setOpeningPartnerKey(`${target}:${partnerPin}`);
+    setPartnerNavigationError(null);
+    try {
+      const partnerEnrolmentId = row.partnerEnrolmentId
+        || await resolvePartnerEnrolmentId(partnerPin, enrolmentProgramYear);
+      if (!partnerEnrolmentId) {
+        setPartnerNavigationError(`No ${enrolmentProgramYear} enrolment found for partner PIN ${partnerPin}.`);
+        return;
+      }
+      openInNewTab(`#/${target === 'details' ? 'enrolment' : 'calculation'}/${routeSource}/${partnerEnrolmentId}`);
+    } catch (err) {
+      setPartnerNavigationError(err instanceof Error ? err.message : 'Unable to open partner enrolment.');
+    } finally {
+      setOpeningPartnerKey(null);
+    }
+  };
+
   const updateDateField = (field: DateField) => (event: ChangeEvent<HTMLInputElement>) => {
     const { value } = event.target;
     setSaveNotice(null);
@@ -333,6 +531,24 @@ export function EnrolmentDetailsPage() {
     const nextValue = Number(event.target.value) as EnrolmentStatusValue;
     setSaveNotice(null);
     setFormState(prev => (prev ? { ...prev, enrolmentStatus: nextValue } : prev));
+  };
+
+  const onPartnerStatusChange = (partnerEnrolmentId: string, nextValue: EnrolmentStatusValue) => {
+    setSaveNotice(null);
+    setPartnerRows(rows => rows.map(row => (
+      row.partnerEnrolmentId === partnerEnrolmentId
+        ? { ...row, enrolmentStatus: nextValue }
+        : row
+    )));
+  };
+
+  const onPartnerPaidDateChange = (partnerEnrolmentId: string, value: string) => {
+    setSaveNotice(null);
+    setPartnerRows(rows => rows.map(row => (
+      row.partnerEnrolmentId === partnerEnrolmentId
+        ? { ...row, enrolmentFeesPaidDate: value }
+        : row
+    )));
   };
 
   const onLateParticipantChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -411,25 +627,24 @@ export function EnrolmentDetailsPage() {
   const executeSave = async (onSuccess?: (saved: Vsi_participantprogramyears) => void) => {
     if (!record || !formState) return;
 
-    const changedFields: Partial<Omit<Vsi_participantprogramyearsBase, 'vsi_participantprogramyearid'>> = {};
+    const changedFields: EnrolmentUpdateFields = {};
+    const changedPartnerRows = partnerRows.filter(row => (
+      !!row.partnerEnrolmentId
+      && (
+        row.enrolmentStatus !== row.originalEnrolmentStatus
+        || row.enrolmentFeesPaidDate !== row.originalEnrolmentFeesPaidDate
+      )
+    ));
 
     if (formState.enrolmentStatus !== record.vsi_enrolmentstatus) {
-      changedFields.vsi_enrolmentstatus = formState.enrolmentStatus;
-
-      // Clear 45-day fields when moving away from the 45 Day Letter status
-      if (record.vsi_enrolmentstatus === 865520010 && formState.enrolmentStatus !== 865520010) {
-        changedFields.vsi_fortyfivedayletterstartdate = null as unknown as string;
-        changedFields.vsi_fortyfivedaylettersent = null as unknown as string;
-        changedFields.vsi_fortyfivedaycounterpaused = null as unknown as boolean;
-        changedFields.vsi_fortyfivedaypausedate = null as unknown as string;
-      }
-
-      // Set start date immediately when changing TO 45 Day Letter so the counter shows right away
-      if (formState.enrolmentStatus === 865520010 && !record.vsi_fortyfivedayletterstartdate) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        changedFields.vsi_fortyfivedayletterstartdate = today.toISOString();
-      }
+      Object.assign(
+        changedFields,
+        getEnrolmentStatusChanges(
+          record.vsi_enrolmentstatus,
+          formState.enrolmentStatus,
+          !!record.vsi_fortyfivedayletterstartdate,
+        ),
+      );
     }
     if (formState.vsi_fullyprovinciallyfunded !== Boolean(record.vsi_fullyprovinciallyfunded)) {
       changedFields.vsi_fullyprovinciallyfunded = formState.vsi_fullyprovinciallyfunded;
@@ -443,7 +658,7 @@ export function EnrolmentDetailsPage() {
       }
     }
 
-    if (Object.keys(changedFields).length === 0) {
+    if (Object.keys(changedFields).length === 0 && changedPartnerRows.length === 0) {
       setSaveNotice('No changes to save.');
       return;
     }
@@ -452,7 +667,43 @@ export function EnrolmentDetailsPage() {
       setSaving(true);
       setError(null);
       setSaveNotice(null);
-      await Vsi_participantprogramyearsService.update(record.vsi_participantprogramyearid, changedFields);
+      if (Object.keys(changedFields).length > 0) {
+        const mainUpdate = await Vsi_participantprogramyearsService.update(
+          record.vsi_participantprogramyearid,
+          changedFields,
+        );
+        if (!mainUpdate.success) {
+          throw new Error(mainUpdate.error?.message ?? 'Unable to save enrolment changes.');
+        }
+      }
+
+      await Promise.all(changedPartnerRows.map(async row => {
+        const partnerChanges: EnrolmentUpdateFields = {};
+        if (row.enrolmentStatus !== row.originalEnrolmentStatus && row.enrolmentStatus != null) {
+          Object.assign(
+            partnerChanges,
+            getEnrolmentStatusChanges(
+              row.originalEnrolmentStatus,
+              row.enrolmentStatus,
+            ),
+          );
+        }
+        if (row.enrolmentFeesPaidDate !== row.originalEnrolmentFeesPaidDate) {
+          partnerChanges.vsi_enrolmentfeespaiddate = row.enrolmentFeesPaidDate || null as unknown as string;
+        }
+
+        const partnerUpdate = await Vsi_participantprogramyearsService.update(
+          row.partnerEnrolmentId,
+          partnerChanges,
+        );
+        if (!partnerUpdate.success) {
+          throw new Error(
+            partnerUpdate.error?.message
+              ?? `Unable to save partner PIN ${row.partnerParticipantPin}.`,
+          );
+        }
+      }));
+
       let refreshed = await Vsi_participantprogramyearsService.get(record.vsi_participantprogramyearid, {
         select: [...DETAIL_SELECT],
       });
@@ -462,6 +713,15 @@ export function EnrolmentDetailsPage() {
       const updated = refreshed.data ?? record;
       setRecord(updated);
       setFormState(initialFormFromRecord(updated));
+      setPartnerRows(rows => rows.map(row => (
+        row.partnerEnrolmentId
+          ? {
+            ...row,
+            originalEnrolmentStatus: row.enrolmentStatus,
+            originalEnrolmentFeesPaidDate: row.enrolmentFeesPaidDate,
+          }
+          : row
+      )));
       setSaveNotice('Changes saved.');
       onSuccess?.(updated);
     } catch (e: unknown) {
@@ -876,10 +1136,23 @@ export function EnrolmentDetailsPage() {
 
         <div className="details-section-break" />
 
-        <div className="details-content-section">
-          <h3 className="details-subsection-title">Partnerships &amp; Combined Partners</h3>
-          <p className="details-subsection-empty">No partner or combined farm data found.</p>
-        </div>
+        <EnrolmentPartnersPanel
+          rows={partnerRows}
+          combinedFarm={combinedFarmSummary}
+          loading={partnerRowsLoading}
+          error={partnerRowsError}
+          navigationError={partnerNavigationError}
+          openingPartnerKey={openingPartnerKey}
+          enrolmentProgramYear={enrolmentProgramYear}
+          statusOptions={statusOptions}
+          saving={saving}
+          canEdit={canEdit}
+          formatCurrency={formatCad}
+          onOpenAccount={row => { void openPartnerAccount(row); }}
+          onOpenEnrolment={(row, target) => { void openPartnerEnrolment(row, target); }}
+          onStatusChange={onPartnerStatusChange}
+          onPaidDateChange={onPartnerPaidDateChange}
+        />
 
         {showHistory && (
           <>
