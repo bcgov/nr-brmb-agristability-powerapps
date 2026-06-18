@@ -29,6 +29,21 @@ export interface ViewState {
   advLogicOp: LogicOp;
 }
 
+function shouldRestoreLastViewOnLoad(): boolean {
+  if (typeof window === 'undefined') return false;
+
+  const searchParams = new URLSearchParams(window.location.search);
+  const searchValue = (searchParams.get('restoreLastView') ?? '').toLowerCase();
+  if (searchValue === '1' || searchValue === 'true') return true;
+
+  const hashQuery = window.location.hash.includes('?')
+    ? window.location.hash.split('?')[1]
+    : '';
+  const hashParams = new URLSearchParams(hashQuery);
+  const hashValue = (hashParams.get('restoreLastView') ?? '').toLowerCase();
+  return hashValue === '1' || hashValue === 'true';
+}
+
 export function useViews(state: ViewState, setters: {
   setVisibleColumnKeys: (keys: SortKey[]) => void;
   setColumnWidths: (w: Partial<Record<SortKey, number>>) => void;
@@ -46,7 +61,7 @@ export function useViews(state: ViewState, setters: {
 }) {
   const [savedViews, setSavedViews] = useState<PersonalView[]>([]);
   const [viewsLoading, setViewsLoading] = useState(true);
-  const [activeViewId, setActiveViewId] = useState<string | null>(() => loadActiveViewId());
+  const [activeViewId, setActiveViewId] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const ensureRequiredColumns = useCallback((keys: SortKey[]): SortKey[] => {
@@ -159,8 +174,13 @@ export function useViews(state: ViewState, setters: {
         const lastId = loadActiveViewId();
         if (lastId) {
           const match = allViews.find(v => v.id === lastId);
-          if (match) applyView(match);
-          else { setActiveViewId(null); saveActiveViewId(null); }
+          if (match) {
+            setActiveViewId(lastId);
+            applyView(match);
+          } else {
+            setActiveViewId(null);
+            saveActiveViewId(null);
+          }
         }
       }
 
@@ -176,7 +196,7 @@ export function useViews(state: ViewState, setters: {
 
   // Load views on mount
   useEffect(() => {
-    loadViews(true);
+    loadViews(shouldRestoreLastViewOnLoad());
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
