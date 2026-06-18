@@ -18,6 +18,14 @@
           "x-ms-schema-name": "cr4dd_CoreAppId",
           "maxLength": 100
         },
+        "cr4dd_farmsurlnew": {
+          "type": "string",
+          "title": "FARMS URL NEW",
+          "x-ms-dataverse-attribute": "cr4dd_farmsurlnew",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "cr4dd_FARMSURLNEW",
+          "maxLength": 100
+        },
         "cr4dd_triagepaymentthreshold": {
           "type": "string",
           "title": "TriagePaymentThreshold",
@@ -467,6 +475,13 @@
           "x-ms-dataverse-type": "MoneyType",
           "x-ms-schema-name": "vsi_defaultadministrativecostsharingfee_Base",
           "x-ms-read-only": true
+        },
+        "vsi_enrolmentenfeevariancethreshold": {
+          "type": "string",
+          "title": "Enrolment EN Fee Variance Threshold",
+          "x-ms-dataverse-attribute": "vsi_enrolmentenfeevariancethreshold",
+          "x-ms-dataverse-type": "IntegerType",
+          "x-ms-schema-name": "vsi_EnrolmentENFeeVarianceThreshold"
         },
         "vsi_enrolmentnoticereportbulkoutputenabled": {
           "type": "string",

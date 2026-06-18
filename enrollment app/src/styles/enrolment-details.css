@@ -357,6 +357,50 @@
   cursor: not-allowed;
 }
 
+.details-optout-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  width: 100%;
+  padding-right: 2rem;
+  box-sizing: border-box;
+}
+
+.details-optout-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+
+.details-optout-item-flag {
+  align-items: center;
+  text-align: center;
+}
+
+.details-optout-item-date {
+  flex: 1 1 260px;
+  min-width: 220px;
+}
+
+.details-optout-item-date .details-date {
+  width: 100%;
+}
+
+.details-optout-flag {
+  color: #4b5563;
+  font-size: 0.84rem;
+  font-weight: 600;
+  white-space: nowrap;
+  min-height: 2rem;
+  display: inline-flex;
+  align-items: center;
+}
+
+.details-optout-flag strong {
+  color: #111827;
+}
+
 .details-checkbox-control {
   display: inline-flex;
   align-items: center;

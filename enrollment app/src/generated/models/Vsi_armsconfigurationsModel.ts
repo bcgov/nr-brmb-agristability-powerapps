@@ -15,6 +15,7 @@ export type Vsi_armsconfigurationsstatuscode = keyof typeof Vsi_armsconfiguratio
 
 export interface Vsi_armsconfigurationsBase {
   cr4dd_coreappid?: string;
+  cr4dd_farmsurlnew?: string;
   cr4dd_triagepaymentthreshold?: string;
   dynamics_integrationkey?: string;
   importsequencenumber?: number;
@@ -32,6 +33,7 @@ export interface Vsi_armsconfigurationsBase {
   "vsi_ClaimsAdministratorTeamId@odata.bind"?: string;
   vsi_coreenvironmenturl?: string;
   vsi_defaultadministrativecostsharingfee: number;
+  vsi_enrolmentenfeevariancethreshold?: number;
   vsi_enrolmentnoticereportbulkoutputenabled: boolean;
   vsi_enrolmentnoticereportpath?: string;
   vsi_environment: string;
