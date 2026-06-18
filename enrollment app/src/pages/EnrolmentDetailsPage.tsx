@@ -8,16 +8,19 @@ import {
   type Vsi_participantprogramyearsBase,
   type Vsi_participantprogramyearsvsi_enrolmentstatus as EnrolmentStatusValue,
 } from '../generated/models/Vsi_participantprogramyearsModel';
+import { AccountsService } from '../generated/services/AccountsService';
 import { Vsi_participantprogramyearsService } from '../generated/services/Vsi_participantprogramyearsService';
 import { Vsi_armsconfigurationsService } from '../generated/services/Vsi_armsconfigurationsService';
 import { Vsi_enrolmenthistoriesService } from '../generated/services/Vsi_enrolmenthistoriesService';
 import { type Vsi_enrolmenthistories } from '../generated/models/Vsi_enrolmenthistoriesModel';
+import { CORE_APP_ID_FALLBACK, CORE_BASE_URL_FALLBACK } from '../constants/config';
 import { formatEnrolmentStatusDisplay, getAvatarColor, getInitials, getTaskStatusLabel, navGuard } from '../utils/helpers';
 import { getCoreConfig, normalizeCoreBaseUrl } from '../hooks/useEnrolmentData';
 import { useRole } from '../context/RoleContext';
 import { Toast, type ToastMessage, nextToastId } from '../components/Toast';
 import { EnrolmentPartnersPanel } from '../components/EnrolmentPartnersPanel';
 import { normalizeEnrolmentId, openInNewTab } from '../utils/deepLinks';
+import { toDateInputValue } from '../utils/date';
 import { farmsApi } from '../services/farmsApi';
 import {
   getCombinedFarmSummaryFromResponse,
@@ -32,9 +35,6 @@ import {
   type EnrolmentPartnerListRsrc,
   type PartnerComparisonRow,
 } from '../services/enrolmentPartners';
-
-const CORE_APP_ID_FALLBACK = '88c024d9-9fd5-ec11-a7b5-002248ada475';
-const CORE_BASE_URL_FALLBACK = 'https://aff-brmb-crm-dev.crm3.dynamics.com/main.aspx';
 
 type DateField =
   | 'vsi_enrolmentnoticesentdate'
@@ -58,6 +58,27 @@ type DetailFormState = {
 };
 
 type EnrolmentUpdateFields = Partial<Omit<Vsi_participantprogramyearsBase, 'vsi_participantprogramyearid'>>;
+
+type NullableUpdateKey =
+  | DateField
+  | 'vsi_fortyfivedayletterstartdate'
+  | 'vsi_fortyfivedaylettersent'
+  | 'vsi_fortyfivedaycounterpaused'
+  | 'vsi_fortyfivedaypausedate';
+
+type NullableEnrolmentUpdateFields = Omit<EnrolmentUpdateFields, NullableUpdateKey> & {
+  [K in DateField]?: string | null;
+} & {
+  vsi_fortyfivedayletterstartdate?: string | null;
+  vsi_fortyfivedaylettersent?: string | null;
+  vsi_fortyfivedaycounterpaused?: boolean | null;
+  vsi_fortyfivedaypausedate?: string | null;
+};
+
+const toServiceUpdatePayload = (
+  fields: NullableEnrolmentUpdateFields,
+): Parameters<typeof Vsi_participantprogramyearsService.update>[1] =>
+  fields as Parameters<typeof Vsi_participantprogramyearsService.update>[1];
 
 const DATE_FIELDS: DateField[] = [
   'vsi_enrolmentnoticesentdate',
@@ -117,6 +138,52 @@ const yesNoText = (value: unknown): string => {
   return '---';
 };
 
+const toBooleanFlag = (value: unknown): boolean | null => {
+  if (value === true || value === 1 || value === '1') return true;
+  if (value === false || value === 0 || value === '0') return false;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'yes' || normalized === 'true') return true;
+    if (normalized === 'no' || normalized === 'false') return false;
+  }
+  return null;
+};
+
+const ACCOUNT_OPT_OUT_SELECT = [
+  'vsi_quitagristabilityprogram',
+  'vsi_quitagristabilityprogramname',
+  'msdyn_gdproptout',
+  'msdyn_gdproptoutname',
+  'vsi_programyearoptoutdate',
+] as const;
+
+const hasDateValue = (value: string | null | undefined): boolean =>
+  toDateInputValue(value ?? undefined).length > 0;
+
+const resolveAccountOptOutFlag = (account: Record<string, unknown> | undefined): boolean | null => {
+  if (!account) return null;
+  const candidates: Array<unknown> = [
+    account['vsi_quitagristabilityprogram'],
+    account['vsi_quitagristabilityprogramname'],
+    account['vsi_quitagristabilityprogram@OData.Community.Display.V1.FormattedValue'],
+    account['msdyn_gdproptout'],
+    account['msdyn_gdproptoutname'],
+    account['msdyn_gdproptout@OData.Community.Display.V1.FormattedValue'],
+    account['vsi_programyearoptout'],
+    account['vsi_programyearoptoutname'],
+    account['vsi_programyearoptout@OData.Community.Display.V1.FormattedValue'],
+    account['vsi_optedout'],
+    account['vsi_optedoutname'],
+    account['vsi_optedout@OData.Community.Display.V1.FormattedValue'],
+    account['vsi_optout'],
+    account['vsi_optoutname'],
+    account['vsi_optout@OData.Community.Display.V1.FormattedValue'],
+  ];
+  return candidates
+    .map(candidate => toBooleanFlag(candidate))
+    .find((candidate): candidate is boolean => candidate !== null) ?? null;
+};
+
 const formatDaysValue = (value: number | undefined): string => {
   if (value == null || Number.isNaN(Number(value))) return '---';
   const days = Math.trunc(Number(value));
@@ -125,19 +192,6 @@ const formatDaysValue = (value: number | undefined): string => {
 
 const isUrgentDays = (value: number | undefined): boolean =>
   value != null && Number.isFinite(Number(value)) && Number(value) >= 0 && Number(value) <= 7;
-
-const toDateInputValue = (value: string | undefined): string => {
-  if (!value) return '';
-  const directMatch = value.match(/^(\d{4}-\d{2}-\d{2})/);
-  if (directMatch) return directMatch[1];
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return '';
-  const yyyy = parsed.getFullYear();
-  const mm = String(parsed.getMonth() + 1).padStart(2, '0');
-  const dd = String(parsed.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
-};
 
 const initialFormFromRecord = (record: Vsi_participantprogramyears): DetailFormState => ({
   enrolmentStatus: record.vsi_enrolmentstatus,
@@ -155,16 +209,16 @@ function getEnrolmentStatusChanges(
   currentStatus: EnrolmentStatusValue | null,
   nextStatus: EnrolmentStatusValue,
   hasFortyFiveDayStartDate = false,
-): EnrolmentUpdateFields {
-  const changedFields: EnrolmentUpdateFields = {
+): NullableEnrolmentUpdateFields {
+  const changedFields: NullableEnrolmentUpdateFields = {
     vsi_enrolmentstatus: nextStatus,
   };
 
   if (currentStatus === 865520010 && nextStatus !== 865520010) {
-    changedFields.vsi_fortyfivedayletterstartdate = null as unknown as string;
-    changedFields.vsi_fortyfivedaylettersent = null as unknown as string;
-    changedFields.vsi_fortyfivedaycounterpaused = null as unknown as boolean;
-    changedFields.vsi_fortyfivedaypausedate = null as unknown as string;
+    changedFields.vsi_fortyfivedayletterstartdate = null;
+    changedFields.vsi_fortyfivedaylettersent = null;
+    changedFields.vsi_fortyfivedaycounterpaused = null;
+    changedFields.vsi_fortyfivedaypausedate = null;
   }
 
   if (currentStatus !== 865520010 && nextStatus === 865520010 && !hasFortyFiveDayStartDate) {
@@ -183,6 +237,33 @@ const getFormattedLookup = (record: Vsi_participantprogramyears, key: string): s
   return '';
 };
 
+const toLooseRecord = (value: unknown): Record<string, unknown> | undefined =>
+  (typeof value === 'object' && value !== null)
+    ? (value as Record<string, unknown>)
+    : undefined;
+
+const getNormalizedParticipantId = (record: Vsi_participantprogramyears | null): string | null =>
+  record?._vsi_participantid_value?.replace(/[{}]/g, '') ?? null;
+
+const getRecordDateOptOutFallback = (record: Vsi_participantprogramyears | null): boolean =>
+  hasDateValue(record?.vsi_programyearoptoutdate);
+
+const getRecordLookupLabel = (
+  record: Vsi_participantprogramyears,
+  directValue: string | null | undefined,
+  fallbackLookupKey: string,
+): string => {
+  const label = directValue ?? getFormattedLookup(record, fallbackLookupKey);
+  return label || '---';
+};
+
+const buildCoreEntityRecordHref = (
+  baseUrl: string,
+  appId: string,
+  entityName: string,
+  recordId: string,
+): string => `${baseUrl}?appid=${encodeURIComponent(appId)}&pagetype=entityrecord&etn=${encodeURIComponent(entityName)}&id=${encodeURIComponent(recordId)}`;
+
 
 export function EnrolmentDetailsPage() {
   // Read both source and enrolmentId from params
@@ -194,6 +275,7 @@ export function EnrolmentDetailsPage() {
   const routeSource = source === 'supervisor' ? 'supervisor' : 'dashboard';
 
   const [record, setRecord] = useState<Vsi_participantprogramyears | null>(null);
+  const [isParticipantOptedOut, setIsParticipantOptedOut] = useState(false);
   const [formState, setFormState] = useState<DetailFormState | null>(null);
   const [participantPin, setParticipantPin] = useState('');
   const [partnerRows, setPartnerRows] = useState<PartnerComparisonRow[]>([]);
@@ -246,7 +328,7 @@ export function EnrolmentDetailsPage() {
   }, [resolvedEnrolmentId]);
 
   useEffect(() => {
-    const participantId = record?._vsi_participantid_value?.replace(/[{}]/g, '');
+    const participantId = getNormalizedParticipantId(record);
     if (!participantId) {
       setParticipantPin('');
       return;
@@ -261,6 +343,56 @@ export function EnrolmentDetailsPage() {
       .catch(() => {
         if (!cancelled) setParticipantPin('');
       });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [record]);
+
+  useEffect(() => {
+    const participantId = getNormalizedParticipantId(record);
+    const fallbackOptOut = getRecordDateOptOutFallback(record);
+    if (!participantId) {
+      setIsParticipantOptedOut(fallbackOptOut);
+      return;
+    }
+
+    let cancelled = false;
+    setIsParticipantOptedOut(false);
+
+    (async () => {
+      try {
+        let account = toLooseRecord((await AccountsService.get(participantId, {
+          select: [...ACCOUNT_OPT_OUT_SELECT],
+        })).data);
+
+        let resolvedFlag = resolveAccountOptOutFlag(account);
+
+        if (resolvedFlag === null) {
+          account = toLooseRecord((await AccountsService.get(participantId)).data);
+          resolvedFlag = resolveAccountOptOutFlag(account);
+        }
+
+        if (cancelled) return;
+
+        if (resolvedFlag !== null) {
+          setIsParticipantOptedOut(resolvedFlag);
+          return;
+        }
+
+        const optOutDate = account?.['vsi_programyearoptoutdate'];
+        if (typeof optOutDate === 'string' && optOutDate.trim()) {
+          setIsParticipantOptedOut(hasDateValue(optOutDate));
+          return;
+        }
+
+        setIsParticipantOptedOut(fallbackOptOut);
+      } catch {
+        if (!cancelled) {
+          setIsParticipantOptedOut(fallbackOptOut);
+        }
+      }
+    })();
 
     return () => {
       cancelled = true;
@@ -443,23 +575,29 @@ export function EnrolmentDetailsPage() {
 
   const participantName = useMemo(() => {
     if (!record) return '---';
-    const label = record.vsi_participantidname
-      ?? getFormattedLookup(record, '_vsi_participantid_value@OData.Community.Display.V1.FormattedValue');
-    return label || '---';
+    return getRecordLookupLabel(
+      record,
+      record.vsi_participantidname,
+      '_vsi_participantid_value@OData.Community.Display.V1.FormattedValue',
+    );
   }, [record]);
 
   const programYear = useMemo(() => {
     if (!record) return '---';
-    const label = record.vsi_programyearidname
-      ?? getFormattedLookup(record, '_vsi_programyearid_value@OData.Community.Display.V1.FormattedValue');
-    return label || '---';
+    return getRecordLookupLabel(
+      record,
+      record.vsi_programyearidname,
+      '_vsi_programyearid_value@OData.Community.Display.V1.FormattedValue',
+    );
   }, [record]);
 
   const feeModifiedBy = useMemo(() => {
     if (!record) return '---';
-    const label = record.vsi_feemodifiedbyname
-      ?? getFormattedLookup(record, '_vsi_feemodifiedby_value@OData.Community.Display.V1.FormattedValue');
-    return label || '---';
+    return getRecordLookupLabel(
+      record,
+      record.vsi_feemodifiedbyname,
+      '_vsi_feemodifiedby_value@OData.Community.Display.V1.FormattedValue',
+    );
   }, [record]);
 
   const participantHref = useMemo(() => {
@@ -468,7 +606,7 @@ export function EnrolmentDetailsPage() {
     if (!participantId) return null;
     const appId = coreAppId?.trim() || CORE_APP_ID_FALLBACK;
     const baseUrl = coreBaseUrl?.trim() || CORE_BASE_URL_FALLBACK;
-    return `${baseUrl}?appid=${encodeURIComponent(appId)}&pagetype=entityrecord&etn=account&id=${encodeURIComponent(participantId)}`;
+    return buildCoreEntityRecordHref(baseUrl, appId, 'account', participantId);
   }, [record, coreAppId, coreBaseUrl]);
 
   const openPartnerAccount = async (row: PartnerComparisonRow) => {
@@ -488,7 +626,7 @@ export function EnrolmentDetailsPage() {
       }
       const appId = coreAppId?.trim() || CORE_APP_ID_FALLBACK;
       const baseUrl = coreBaseUrl?.trim() || CORE_BASE_URL_FALLBACK;
-      const href = `${baseUrl}?appid=${encodeURIComponent(appId)}&pagetype=entityrecord&etn=account&id=${encodeURIComponent(accountId)}`;
+      const href = buildCoreEntityRecordHref(baseUrl, appId, 'account', accountId);
       window.open(href, '_blank', 'noopener,noreferrer');
     } catch (err) {
       setPartnerNavigationError(err instanceof Error ? err.message : 'Unable to open partner account.');
@@ -627,7 +765,7 @@ export function EnrolmentDetailsPage() {
   const executeSave = async (onSuccess?: (saved: Vsi_participantprogramyears) => void) => {
     if (!record || !formState) return;
 
-    const changedFields: EnrolmentUpdateFields = {};
+    const changedFields: NullableEnrolmentUpdateFields = {};
     const changedPartnerRows = partnerRows.filter(row => (
       !!row.partnerEnrolmentId
       && (
@@ -654,7 +792,7 @@ export function EnrolmentDetailsPage() {
       const existingValue = toDateInputValue(record[field]);
       const nextValue = formState[field];
       if (existingValue !== nextValue) {
-        changedFields[field] = nextValue || null as unknown as string;
+        changedFields[field] = nextValue || null;
       }
     }
 
@@ -670,7 +808,7 @@ export function EnrolmentDetailsPage() {
       if (Object.keys(changedFields).length > 0) {
         const mainUpdate = await Vsi_participantprogramyearsService.update(
           record.vsi_participantprogramyearid,
-          changedFields,
+          toServiceUpdatePayload(changedFields),
         );
         if (!mainUpdate.success) {
           throw new Error(mainUpdate.error?.message ?? 'Unable to save enrolment changes.');
@@ -678,7 +816,7 @@ export function EnrolmentDetailsPage() {
       }
 
       await Promise.all(changedPartnerRows.map(async row => {
-        const partnerChanges: EnrolmentUpdateFields = {};
+        const partnerChanges: NullableEnrolmentUpdateFields = {};
         if (row.enrolmentStatus !== row.originalEnrolmentStatus && row.enrolmentStatus != null) {
           Object.assign(
             partnerChanges,
@@ -689,12 +827,12 @@ export function EnrolmentDetailsPage() {
           );
         }
         if (row.enrolmentFeesPaidDate !== row.originalEnrolmentFeesPaidDate) {
-          partnerChanges.vsi_enrolmentfeespaiddate = row.enrolmentFeesPaidDate || null as unknown as string;
+          partnerChanges.vsi_enrolmentfeespaiddate = row.enrolmentFeesPaidDate || null;
         }
 
         const partnerUpdate = await Vsi_participantprogramyearsService.update(
           row.partnerEnrolmentId,
-          partnerChanges,
+          toServiceUpdatePayload(partnerChanges),
         );
         if (!partnerUpdate.success) {
           throw new Error(
@@ -936,18 +1074,6 @@ export function EnrolmentDetailsPage() {
             </div>
 
             <div className="details-field">
-              <label htmlFor="opt-out-date" className="details-label">Program Year Opt-Out Date</label>
-              <input
-                id="opt-out-date"
-                type="date"
-                className="details-date"
-                value={formState.vsi_programyearoptoutdate}
-                onChange={updateDateField('vsi_programyearoptoutdate')}
-                disabled={saving || !canEdit}
-              />
-            </div>
-
-            <div className="details-field">
               <label htmlFor="enrol-fees-paid-date" className="details-label">Enrolment Fees Paid Date</label>
               <input
                 id="enrol-fees-paid-date"
@@ -957,6 +1083,26 @@ export function EnrolmentDetailsPage() {
                 onChange={updateDateField('vsi_enrolmentfeespaiddate')}
                 disabled={saving || !canEdit}
               />
+            </div>
+
+            <div className="details-field">
+              <div className="details-optout-row">
+                <div className="details-optout-item details-optout-item-flag">
+                  <span className="details-label">Opt-Out</span>
+                  <span className="details-optout-flag"><strong>{isParticipantOptedOut ? 'Yes' : 'No'}</strong></span>
+                </div>
+                <div className="details-optout-item details-optout-item-date">
+                  <label htmlFor="opt-out-date" className="details-label">Program Year Opt-Out Date</label>
+                  <input
+                    id="opt-out-date"
+                    type="date"
+                    className="details-date"
+                    value={formState.vsi_programyearoptoutdate}
+                    onChange={updateDateField('vsi_programyearoptoutdate')}
+                    disabled={saving || !canEdit}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -1090,11 +1090,14 @@ export function EnrolmentCalculationPage() {
         (new Date(pauseDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24),
       );
       const newStartDate = new Date(Date.now() - elapsedAtPause * 24 * 60 * 60 * 1000).toISOString();
-      const resumeResult = await Vsi_participantprogramyearsService.update(resolvedEnrolmentId, {
-        vsi_fortyfivedaycounterpaused: false,
-        vsi_fortyfivedayletterstartdate: newStartDate,
-        vsi_fortyfivedaypausedate: null as unknown as string,
-      });
+      const resumeResult = await Vsi_participantprogramyearsService.update(
+        resolvedEnrolmentId,
+        {
+          vsi_fortyfivedaycounterpaused: false,
+          vsi_fortyfivedayletterstartdate: newStartDate,
+          vsi_fortyfivedaypausedate: null,
+        } as unknown as Parameters<typeof Vsi_participantprogramyearsService.update>[1],
+      );
       if (!resumeResult.success) throw new Error(resumeResult.error?.message ?? 'Failed to resume counter.');
       const patch: Partial<Vsi_participantprogramyears> = {
         vsi_fortyfivedaycounterpaused: false,

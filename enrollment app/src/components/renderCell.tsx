@@ -6,15 +6,16 @@ import {
   Vsi_participantprogramyearsvsi_enrollmentregionaloffice,
   Vsi_participantprogramyearsvsi_farmingsector,
 } from '../generated/models/Vsi_participantprogramyearsModel';
+import { CORE_APP_ID_FALLBACK, CORE_BASE_URL_FALLBACK } from '../constants/config';
 import type { SortKey } from '../types/enrollment';
+import { getEnrolmentEnFeeVarianceThreshold } from '../constants/varianceThreshold';
 import {
   getEnrolmentStatusLabel, getTaskStatusLabel, taskStatusIcon,
   formatCurrency, getInitials, getAvatarColor,
   getVarianceClass, formatVariancePercent, formatEnrolmentStatusDisplay,
 } from '../utils/helpers';
 
-const CORE_APP_ID_FALLBACK = '88c024d9-9fd5-ec11-a7b5-002248ada475';
-const CORE_BASE_URL_FALLBACK = 'https://aff-brmb-crm-dev.crm3.dynamics.com/main.aspx';
+type RowWithSource = Vsi_participantprogramyears & { _source?: string };
 
 export function renderCell(
   key: SortKey,
@@ -29,10 +30,9 @@ export function renderCell(
   const enumLabel = (map: Record<number, string>, v: unknown) =>
     v != null ? map[Number(v)] ?? String(v) : '';
   const fmtDate = (v: unknown) => { if (!v) return ''; try { return new Date(v as string).toLocaleDateString(); } catch { return String(v); } };
+  const source = (row as RowWithSource)._source ?? 'dashboard';
   switch (key) {
     case 'pin': {
-      // Determine source for navigation: allow row._source override, else default to 'dashboard'
-      const source = (row as any)._source || 'dashboard';
       return (
         <td key={key} className="cell-pin">
           {row.vsi_participantprogramyearid
@@ -90,7 +90,6 @@ export function renderCell(
       const variance = row.vsi_enrolmentfee != null && row.vsi_variancecalculation != null ? row.vsi_variancecalculation * 100 : null;
       const varianceClass = getVarianceClass(variance);
       const varianceText = formatVariancePercent(variance);
-      const source = (row as any)._source || 'dashboard';
 
       return (
         <td key={key} className="cell-fee">
@@ -131,7 +130,7 @@ export function renderCell(
     case 'latePay': return <td key={key} className="cell-fee">{formatCurrency(row.vsi_latepaymentfee)}</td>;
     case 'flagged': {
       const variance = row.vsi_variancecalculation != null ? row.vsi_variancecalculation * 100 : null;
-      const isFlagged = (variance != null && Math.abs(variance) > 20)
+      const isFlagged = (variance != null && Math.abs(variance) > getEnrolmentEnFeeVarianceThreshold())
         || row.vsi_prevyearpartnotverified === true
         || (row.vsi_enrolmentfee != null && row.vsi_previousyearcalculatedenfee == null);
       return <td key={key} className="cell-flag">{isFlagged ? <Flag size={14} color="#dc2626" fill="#dc2626" aria-label="Flagged" /> : null}</td>;
@@ -170,6 +169,7 @@ export function renderCell(
     case 'isNewParticipant': return <td key={key}>{yesNo(row.vsi_isnewparticipant)}</td>;
     case 'lateParticipant': return <td key={key}>{yesNo(row.vsi_fullyprovinciallyfunded)}</td>;
     case 'enrolNoticeDate': return <td key={key}>{fmtDate(row.vsi_enrolmentnoticesentdate)}</td>;
+    case 'enrolmentOptedOutDate': return <td key={key}>{fmtDate(row.vsi_programyearoptoutdate)}</td>;
     case 'fileReceivedDate': return <td key={key}>{fmtDate(row.vsi_filereceiveddate)}</td>;
     case 'feesPaidDate': return <td key={key}>{fmtDate(row.vsi_enrolmentfeespaiddate)}</td>;
     default: return <td key={key}></td>;

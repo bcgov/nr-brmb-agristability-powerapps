@@ -6,6 +6,7 @@ import {
 } from "../generated/models/Vsi_participantprogramyearsModel";
 import type { Vsi_participantprogramyears } from "../generated/models/Vsi_participantprogramyearsModel";
 import type { SortKey } from '../types/enrollment';
+import { getEnrolmentEnFeeVarianceThreshold } from '../constants/varianceThreshold';
 
 // ---------------------------------------------------------------------------
 // Navigation guard singleton — lets EnrolmentDetailsPage block nav-bar links
@@ -92,7 +93,7 @@ export function calculateVariance(currentFee: unknown, previousFee: unknown): nu
 
 export function getVarianceClass(variance: number | null): 'neutral' | 'alert' | 'positive' {
   if (variance == null) return 'neutral';
-  if (Math.abs(variance) >= 20) return 'alert';
+  if (Math.abs(variance) >= getEnrolmentEnFeeVarianceThreshold()) return 'alert';
   return variance > 0 ? 'positive' : 'neutral';
 }
 
@@ -156,7 +157,7 @@ export function getSortValue(row: Vsi_participantprogramyears, key: SortKey): st
     case 'modifiedOn': return row.modifiedon ?? '';
     case 'flagged': {
       const v = row.vsi_variancecalculation != null ? row.vsi_variancecalculation * 100 : null;
-      return v != null && Math.abs(v) > 20 ? 1 : 0;
+      return v != null && Math.abs(v) > getEnrolmentEnFeeVarianceThreshold() ? 1 : 0;
     }
     case 'regionalOffice': return Vsi_participantprogramyearsvsi_enrollmentregionaloffice[row.vsi_enrollmentregionaloffice as keyof typeof Vsi_participantprogramyearsvsi_enrollmentregionaloffice] ?? '';
     case 'farmingSector': return Vsi_participantprogramyearsvsi_farmingsector[row.vsi_farmingsector as keyof typeof Vsi_participantprogramyearsvsi_farmingsector] ?? '';
@@ -168,6 +169,7 @@ export function getSortValue(row: Vsi_participantprogramyears, key: SortKey): st
     case 'broughtForward': return row.vsi_broughtforward === true ? 1 : 0;
     case 'manualReview': return row.vsi_manualreview === true ? 1 : 0;
     case 'enrolNoticeDate': return row.vsi_enrolmentnoticesentdate ?? '';
+    case 'enrolmentOptedOutDate': return row.vsi_programyearoptoutdate ?? '';
     case 'fileReceivedDate': return row.vsi_filereceiveddate ?? '';
     case 'feesPaidDate': return row.vsi_enrolmentfeespaiddate ?? '';
     default: return '';

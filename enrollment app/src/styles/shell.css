@@ -83,7 +83,9 @@
   flex: 1;
   min-width: 0;
   height: 100%;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
   display: flex;
   flex-direction: column;
   padding: 0 0.65rem;

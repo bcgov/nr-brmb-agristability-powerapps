@@ -23,10 +23,9 @@ import type {
   QuickFilterState,
 } from '../types/enrollment';
 import { ADV_FIELD_OPTIONS } from '../constants/columns';
+import { getEnrolmentEnFeeVarianceThreshold, setEnrolmentEnFeeVarianceThreshold } from '../constants/varianceThreshold';
 import { getEnrolmentStatusLabel, getTaskStatusLabel, getSortValue } from '../utils/helpers';
 import { isNodeActive } from '../utils/filterTree';
-
-const FLAGGED_VARIANCE_THRESHOLD = 20;
 
 function normalizeCoreBaseUrl(url: string | null | undefined) {
   const trimmed = url?.trim();
@@ -78,7 +77,7 @@ export function useEnrolmentData() {
     try {
       const result = await Vsi_armsconfigurationsService.getAll({
         maxPageSize: 50,
-        select: ['cr4dd_coreappid', 'vsi_coreenvironmenturl'],
+        select: ['cr4dd_coreappid', 'vsi_coreenvironmenturl', 'vsi_enrolmentenfeevariancethreshold'],
       });
       const configRows = result.data ?? [];
       const nextCoreAppId = configRows
@@ -87,8 +86,12 @@ export function useEnrolmentData() {
       const nextCoreBaseUrl = configRows
         .map(row => normalizeCoreBaseUrl(row.vsi_coreenvironmenturl))
         .find((candidate): candidate is string => !!candidate) ?? null;
+      const nextVarianceThreshold = configRows
+        .map(row => row.vsi_enrolmentenfeevariancethreshold)
+        .find((candidate): candidate is number => Number.isFinite(candidate as number));
       setCoreAppId(nextCoreAppId);
       setCoreBaseUrl(nextCoreBaseUrl);
+      setEnrolmentEnFeeVarianceThreshold(nextVarianceThreshold);
       coreAppIdCache = nextCoreAppId;
       coreBaseUrlCache = nextCoreBaseUrl;
       dataverseOrgUrlCache = normalizeOrgUrl(configRows.map(r => r.vsi_coreenvironmenturl).find(u => !!u?.trim()));
@@ -99,6 +102,7 @@ export function useEnrolmentData() {
         setCoreBaseUrl(null);
         coreAppIdCache = null;
         coreBaseUrlCache = null;
+        setEnrolmentEnFeeVarianceThreshold(null);
         coreAppIdLoaded = true;
       }
     }
@@ -139,6 +143,7 @@ export function useEnrolmentData() {
           'vsi_broughtforward',
           'vsi_manualreview',
           'vsi_enrolmentnoticesentdate',
+          'vsi_programyearoptoutdate',
           'vsi_fortyfivedayletterstartdate',
           'vsi_fortyfivedaycounterpaused',
           'vsi_fortyfivedaypausedate',
@@ -344,7 +349,7 @@ export function useSortedAndFilteredRows(
     if (row.vsi_enrolmentfee != null && row.vsi_previousyearcalculatedenfee == null) return true;
     const variance = row.vsi_variancecalculation != null ? row.vsi_variancecalculation * 100 : null;
     if (variance == null) return false;
-    return Math.abs(variance) >= FLAGGED_VARIANCE_THRESHOLD;
+    return Math.abs(variance) >= getEnrolmentEnFeeVarianceThreshold();
   }, []);
 
   const filteredRows = useMemo(() => {
