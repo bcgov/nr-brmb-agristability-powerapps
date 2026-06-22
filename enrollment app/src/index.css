@@ -325,13 +325,13 @@ button:focus-visible {
 
 .calc-workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 19rem;
+  grid-template-columns: minmax(0, 1fr) 22rem;
   align-items: start;
   gap: 0.9rem;
 }
 
 .calc-workspace:not(.calc-workspace-panel-pinned) {
-  grid-template-columns: minmax(0, 1fr) 18rem;
+  grid-template-columns: minmax(0, 1fr) 21rem;
 }
 
 .calc-legacy-workflow {
@@ -348,6 +348,7 @@ button:focus-visible {
   flex-direction: column;
   gap: 0.75rem;
   min-width: 0;
+  max-width: 100%;
 }
 
 .calc-legacy-panel {
@@ -598,7 +599,11 @@ button:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  min-width: 0;
+  max-width: 100%;
   min-height: 18rem;
+  overflow: hidden;
+  box-sizing: border-box;
   border: 1px solid #cbd5e1;
   border-radius: 6px;
   background: #e2e8f0;
@@ -766,6 +771,8 @@ button:focus-visible {
 
 .calc-combined-farm-table {
   width: 100%;
+  max-width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   color: #111827;
   font-size: 0.74rem;
@@ -773,11 +780,20 @@ button:focus-visible {
 
 .calc-combined-farm-table th,
 .calc-combined-farm-table td {
+  min-width: 0;
   border: 2px solid #ffffff;
-  padding: 0.24rem 0.35rem;
+  padding: 0.24rem 0.3rem;
+  overflow-wrap: anywhere;
+  word-break: normal;
   text-align: left;
   vertical-align: middle;
 }
+
+.calc-combined-farm-table th:nth-child(1) { width: 19%; }
+.calc-combined-farm-table th:nth-child(2) { width: 20%; }
+.calc-combined-farm-table th:nth-child(3) { width: 25%; }
+.calc-combined-farm-table th:nth-child(4) { width: 17%; }
+.calc-combined-farm-table th:nth-child(5) { width: 19%; }
 
 .calc-combined-farm-table th {
   background: #6699cc;
@@ -789,6 +805,43 @@ button:focus-visible {
   background: #d9d9d9;
   font-weight: 700;
 }
+
+.calc-combined-farm-calculation-cell {
+  text-align: center !important;
+}
+
+.calc-combined-farm-pin-link {
+  max-width: 100%;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: #004b9b;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.calc-combined-farm-pin-link:disabled {
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.calc-combined-farm-name-link {
+  max-width: 100%;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: #004b9b;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+  text-align: left;
+  text-decoration: none;
+}
+
 
 .calc-partner-list {
   display: flex;
@@ -817,6 +870,22 @@ button:focus-visible {
   line-height: 1.25;
 }
 
+.calc-partner-name-link {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: #004b9b;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: none;
+}
+
+.calc-partner-name-link:disabled {
+  color: #64748b;
+  cursor: not-allowed;
+}
+
 .calc-partner-pin {
   margin-top: 0.15rem;
   color: #475569;
@@ -829,16 +898,56 @@ button:focus-visible {
   border: 0;
   background: transparent;
   padding: 0;
-  color: #1d4ed8;
+  color: #004b9b;
   cursor: pointer;
   font: inherit;
   font-weight: 800;
-  text-decoration: underline;
+  text-decoration: none;
 }
 
 .calc-partner-pin-link:disabled {
   color: #64748b;
   cursor: not-allowed;
+}
+
+.calc-partner-calculation-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.125rem;
+  height: 2.125rem;
+  padding: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.calc-partner-calculation-btn:hover:not(:disabled) {
+  border-color: #93c5fd;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.calc-partner-calculation-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.calc-partner-calculation-btn.calc-combined-farm-calculation-btn {
+  width: 1.5rem;
+  height: 2.125rem;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #64748b;
+}
+
+.calc-partner-calculation-btn.calc-combined-farm-calculation-btn:hover:not(:disabled) {
+  border: 0;
+  background: transparent;
+  color: #1d4ed8;
 }
 
 .calc-partner-farms-link {

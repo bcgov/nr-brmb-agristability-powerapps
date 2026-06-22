@@ -260,6 +260,41 @@
   font-weight: 600;
 }
 
+.details-combined-farm-pin-link {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: #2b6cb0;
+  cursor: pointer;
+  font-size: 1.02rem;
+  font-weight: 700;
+  text-align: left;
+  text-decoration: none;
+}
+
+.details-combined-farm-pin-link:disabled {
+  color: #6b7280;
+  cursor: default;
+}
+
+.details-combined-farm-name-link {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: #2b6cb0;
+  cursor: pointer;
+  font-size: 1.02rem;
+  font-weight: 700;
+  text-align: left;
+  text-decoration: none;
+}
+
+.details-combined-farm-name-link:hover {
+  color: #1a4f8b;
+}
+
 .details-value-strong {
   color: #111827;
   font-size: 1.02rem;
@@ -705,6 +740,17 @@
   margin: 0 0 0.5rem;
 }
 
+.details-combined-farm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.details-combined-farm-grid + .details-combined-farm-grid {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 0.75rem;
+}
+
 .details-partner-list {
   display: flex;
   flex-direction: column;
@@ -745,12 +791,17 @@
 .details-partner-enrolment-link {
   font-size: 0.82rem;
   font-weight: 700;
+  text-decoration: none;
 }
 
-.details-partner-title-link:hover:not(:disabled),
-.details-partner-enrolment-link:hover:not(:disabled) {
+.details-partner-title-link:hover:not(:disabled) {
   color: #1a4f8b;
   text-decoration: underline;
+}
+
+.details-partner-enrolment-link:hover:not(:disabled) {
+  color: #1a4f8b;
+  text-decoration: none;
 }
 
 .details-partner-title-link:disabled,
@@ -765,6 +816,10 @@
   grid-template-columns: repeat(5, minmax(0, 1fr)) 44px;
   align-items: end;
   gap: 0.75rem 1rem;
+}
+
+.details-combined-farm-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) 44px;
 }
 
 .details-partner-summary-grid > div,

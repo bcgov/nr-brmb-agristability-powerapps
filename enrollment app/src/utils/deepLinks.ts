@@ -41,6 +41,15 @@ export function normalizeEnrolmentId(value: string | null | undefined): string {
   return normalized.replace(/[{}]/g, '').trim();
 }
 
+export function buildCoreEntityRecordHref(
+  baseUrl: string,
+  appId: string,
+  entityName: string,
+  recordId: string,
+): string {
+  return `${baseUrl}?appid=${encodeURIComponent(appId)}&pagetype=entityrecord&etn=${encodeURIComponent(entityName)}&id=${encodeURIComponent(recordId)}`;
+}
+
 function getFirstIdParam(params: URLSearchParams): string {
   for (const name of ID_PARAM_NAMES) {
     const value = params.get(name);

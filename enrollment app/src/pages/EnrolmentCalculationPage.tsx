@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
-import { CircleCheck, ExternalLink, PanelRightClose, PanelRightOpen, Pin, RefreshCw, Send } from 'lucide-react';
+import { Calculator, CircleCheck, ExternalLink, PanelRightClose, PanelRightOpen, Pin, RefreshCw, Send } from 'lucide-react';
 import sharepointIconUrl from '/icons/sharepoint.svg?url';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ApprovalErrorModal } from '../components/ApprovalErrorModal';
@@ -12,20 +12,22 @@ import { useRole } from '../context/RoleContext';
 import type { Vsi_participantprogramyears } from '../generated/models/Vsi_participantprogramyearsModel';
 import { MicrosoftDataverseService } from '../generated/services/MicrosoftDataverseService';
 import { ProcessEnrolmentActionService } from '../generated/services/ProcessEnrolmentActionService';
-import { AccountsService } from '../generated/services/AccountsService';
 import { Vsi_armsconfigurationsService } from '../generated/services/Vsi_armsconfigurationsService';
 import { Vsi_participantprogramyearsService } from '../generated/services/Vsi_participantprogramyearsService';
 import { Vsi_programyearsService } from '../generated/services/Vsi_programyearsService';
 import { farmsApi } from '../services/farmsApi';
 import {
-  getCombinedFarmSummaryFromResponse,
+  enrichCombinedFarmSummaries,
+  getCombinedFarmSummariesFromResponse,
   getPartnerRowsFromResponse,
+  resolvePartnerAccountId,
+  resolvePartnerEnrolmentId,
   type CombinedFarmSummary,
   type EnrolmentPartnerListRsrc,
   type PartnerComparisonRow,
 } from '../services/enrolmentPartners';
 import { resolveCurrentSystemUser } from '../utils/currentUser';
-import { normalizeEnrolmentId, openInNewTab } from '../utils/deepLinks';
+import { buildCoreEntityRecordHref, normalizeEnrolmentId, openInNewTab } from '../utils/deepLinks';
 import { formatCurrencyOr, getAvatarColor, getInitials, getTaskStatusLabel } from '../utils/helpers';
 import { CORE_APP_ID_FALLBACK, CORE_BASE_URL_FALLBACK, DATAVERSE_ORG_URL_FALLBACK } from '../constants/config';
 
@@ -225,40 +227,6 @@ function buildFarmsScenarioUrl(baseUrl: string, pinValue: string, scenarioProgra
   return `${baseUrl}/farm800.do?${params.toString()}`;
 }
 
-function escapeODataString(value: string): string {
-  return value.replace(/'/g, "''");
-}
-
-async function resolvePartnerEnrolmentId(partnerPin: string, enrolmentProgramYear: number | null): Promise<string | null> {
-  const pin = partnerPin.trim();
-  if (!pin || !enrolmentProgramYear) return null;
-
-  const escapedPin = escapeODataString(pin);
-  const accountResult = await AccountsService.getAll({
-    select: ['accountid', 'vsi_pin', 'accountnumber'],
-    filter: `(vsi_pin eq '${escapedPin}' or accountnumber eq '${escapedPin}') and statecode eq 0`,
-    maxPageSize: 1,
-  });
-  const accountId = accountResult.data?.[0]?.accountid?.replace(/[{}]/g, '');
-  if (!accountId) return null;
-
-  const programYearResult = await Vsi_programyearsService.getAll({
-    select: ['vsi_programyearid', 'vsi_year'],
-    filter: `vsi_year eq '${enrolmentProgramYear}' and statecode eq 0`,
-    maxPageSize: 1,
-  });
-  const programYearId = programYearResult.data?.[0]?.vsi_programyearid?.replace(/[{}]/g, '');
-  if (!programYearId) return null;
-
-  const enrolmentResult = await Vsi_participantprogramyearsService.getAll({
-    select: ['vsi_participantprogramyearid'],
-    filter: `_vsi_participantid_value eq '${accountId}' and _vsi_programyearid_value eq '${programYearId}' and statecode eq 0`,
-    maxPageSize: 1,
-  });
-
-  return enrolmentResult.data?.[0]?.vsi_participantprogramyearid?.replace(/[{}]/g, '') ?? null;
-}
-
 function getHistoricalComparisonRows(
   rows: Vsi_participantprogramyears[],
   currentProgramYear: number,
@@ -438,7 +406,7 @@ function HistoricalComparisonPanel({
 
 function PartnerViewPanel({
   rows,
-  combinedFarm,
+  combinedFarms,
   loading,
   error,
   enrolmentProgramYear,
@@ -448,11 +416,15 @@ function PartnerViewPanel({
   pinned,
   onToggleOpen,
   onTogglePinned,
+  onOpenCombinedFarmEnrolment,
+  onOpenCombinedFarmCalculation,
+  onOpenCombinedFarmAccount,
+  onOpenPartnerAccount,
   onOpenPartnerDetails,
   onOpenPartnerCalculation,
 }: {
   rows: PartnerComparisonRow[];
-  combinedFarm: CombinedFarmSummary | null;
+  combinedFarms: CombinedFarmSummary[];
   loading: boolean;
   error: string | null;
   enrolmentProgramYear: number | null;
@@ -462,6 +434,10 @@ function PartnerViewPanel({
   pinned: boolean;
   onToggleOpen: () => void;
   onTogglePinned: () => void;
+  onOpenCombinedFarmEnrolment: (combinedFarm: CombinedFarmSummary) => Promise<void>;
+  onOpenCombinedFarmCalculation: (combinedFarm: CombinedFarmSummary) => Promise<void>;
+  onOpenCombinedFarmAccount: (combinedFarm: CombinedFarmSummary) => void;
+  onOpenPartnerAccount: (row: PartnerComparisonRow) => Promise<void>;
   onOpenPartnerDetails: (row: PartnerComparisonRow) => Promise<void>;
   onOpenPartnerCalculation: (row: PartnerComparisonRow) => Promise<void>;
 }) {
@@ -473,7 +449,7 @@ function PartnerViewPanel({
       || row.partnershipName.length > 0
     )
   ));
-  const hasCombinedFarm = !!combinedFarm;
+  const hasCombinedFarm = combinedFarms.length > 0;
 
   if (!open) {
     return (
@@ -510,23 +486,63 @@ function PartnerViewPanel({
       {error && <p className="calc-panel-state calc-panel-state-error">{error}</p>}
       {partnerNavigationError && <p className="calc-panel-state calc-panel-state-error">{partnerNavigationError}</p>}
       {!loading && !error && !visibleRows.length && !hasCombinedFarm && <p className="calc-panel-state">No partner data found.</p>}
-      {!loading && !error && combinedFarm && (
+      {!loading && !error && combinedFarms.length > 0 && (
         <div className="calc-combined-farm">
           <h3>Combined farm</h3>
           <table className="calc-combined-farm-table">
             <thead>
               <tr>
                 <th scope="col">PIN</th>
+                <th scope="col">Name</th>
                 <th scope="col">Combined Farm Number</th>
                 <th scope="col">Scenario</th>
+                <th scope="col" aria-label="Calculation"></th>
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td>{combinedFarm.participantPin || '-'}</td>
-                <td>{combinedFarm.combinedFarmNumber || '-'}</td>
-                <td>{combinedFarm.scenarioNumber || '-'}</td>
-              </tr>
+              {combinedFarms.map(combinedFarm => (
+                <tr key={`${combinedFarm.participantPin}-${combinedFarm.scenarioNumber}`}>
+                  <td>
+                    {combinedFarm.participantPin ? (
+                      <button
+                        className="calc-combined-farm-pin-link"
+                        type="button"
+                        onClick={() => void onOpenCombinedFarmEnrolment(combinedFarm)}
+                        disabled={!enrolmentProgramYear || openingPartnerPin === combinedFarm.participantPin}
+                        title={enrolmentProgramYear ? `Open ${enrolmentProgramYear} deadlines and fees` : 'Program year is unavailable'}
+                      >
+                        {combinedFarm.participantPin}
+                      </button>
+                    ) : '-'}
+                  </td>
+                  <td>
+                    {combinedFarm.participantName && combinedFarm.participantAccountId ? (
+                      <button
+                        className="calc-combined-farm-name-link"
+                        type="button"
+                        onClick={() => onOpenCombinedFarmAccount(combinedFarm)}
+                        title={`Open CORE account for ${combinedFarm.participantName}`}
+                      >
+                        {combinedFarm.participantName}
+                      </button>
+                    ) : combinedFarm.participantName || '-'}
+                  </td>
+                  <td>{combinedFarm.combinedFarmNumber || '-'}</td>
+                  <td>{combinedFarm.scenarioNumber || '-'}</td>
+                  <td className="calc-combined-farm-calculation-cell">
+                    <button
+                      className="calc-partner-calculation-btn calc-combined-farm-calculation-btn"
+                      type="button"
+                      onClick={() => void onOpenCombinedFarmCalculation(combinedFarm)}
+                      disabled={!combinedFarm.participantPin || !enrolmentProgramYear || openingPartnerPin === combinedFarm.participantPin}
+                      title={enrolmentProgramYear ? `Open ${enrolmentProgramYear} calculation` : 'Program year is unavailable'}
+                      aria-label={`Open calculation for PIN ${combinedFarm.participantPin}`}
+                    >
+                      <Calculator size={20} aria-hidden="true" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -541,7 +557,19 @@ function PartnerViewPanel({
               <div className="calc-partner-card" key={`${row.operation}-${row.partnerParticipantPin}-${row.firstName}-${row.lastName}`}>
                 <div className="calc-partner-card-top">
                   <div>
-                    <div className="calc-partner-name">{displayName || '-'}</div>
+                    {displayName && partnerPin ? (
+                      <button
+                        className="calc-partner-name calc-partner-name-link"
+                        type="button"
+                        onClick={() => void onOpenPartnerAccount(row)}
+                        disabled={openingPartner}
+                        title={`Open CORE account for ${displayName}`}
+                      >
+                        {displayName}
+                      </button>
+                    ) : (
+                      <div className="calc-partner-name">{displayName || '-'}</div>
+                    )}
                     <div className="calc-partner-pin">
                       PIN{' '}
                       {partnerPin ? (
@@ -558,15 +586,14 @@ function PartnerViewPanel({
                   </div>
                   <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
                     <button
-                      className="calc-outline-btn calc-partner-calculation-btn"
+                      className="calc-partner-calculation-btn"
                       type="button"
                       onClick={() => void onOpenPartnerCalculation(row)}
                       disabled={!partnerPin || !enrolmentProgramYear || openingPartner}
                       title={enrolmentProgramYear ? `Open ${enrolmentProgramYear} calculation` : 'Program year is unavailable'}
                       aria-label={`Open calculation for PIN ${partnerPin}`}
                     >
-                      <ExternalLink size={14} aria-hidden="true" />
-                      {openingPartner ? 'Opening…' : 'Open Calculation'}
+                      <Calculator size={20} aria-hidden="true" />
                     </button>
                   </div>
                 </div>
@@ -582,16 +609,6 @@ function PartnerViewPanel({
                   <div>
                     <dt>Enrolment Fee</dt>
                     <dd>{formatCurrencyBlank(row.enrolmentFee)}</dd>
-                  </div>
-                  <div className="calc-partner-detail-row">
-                    <div>
-                      <dt>First Name</dt>
-                      <dd>{row.firstName || '-'}</dd>
-                    </div>
-                    <div>
-                      <dt>Last Name</dt>
-                      <dd>{row.lastName || '-'}</dd>
-                    </div>
                   </div>
                   <div>
                     <dt>Partnership Name</dt>
@@ -657,7 +674,7 @@ export function EnrolmentCalculationPage() {
   const [counterActionLoading, setCounterActionLoading] = useState(false);
   const [counterActionError, setCounterActionError] = useState<string | null>(null);
   const [partnerRows, setPartnerRows] = useState<PartnerComparisonRow[]>([]);
-  const [combinedFarmSummary, setCombinedFarmSummary] = useState<CombinedFarmSummary | null>(null);
+  const [combinedFarmRows, setCombinedFarmRows] = useState<CombinedFarmSummary[]>([]);
   const [partnerRowsLoading, setPartnerRowsLoading] = useState(false);
   const [partnerRowsError, setPartnerRowsError] = useState<string | null>(null);
   const [openingPartnerPin, setOpeningPartnerPin] = useState<string | null>(null);
@@ -910,7 +927,7 @@ export function EnrolmentCalculationPage() {
   useEffect(() => {
     if (!participantPin || !farmsScenarioProgramYear) {
       setPartnerRows([]);
-      setCombinedFarmSummary(null);
+      setCombinedFarmRows([]);
       setPartnerRowsError(null);
       setPartnerRowsLoading(false);
       return;
@@ -918,7 +935,7 @@ export function EnrolmentCalculationPage() {
 
     let cancelled = false;
     setPartnerRows([]);
-    setCombinedFarmSummary(null);
+    setCombinedFarmRows([]);
     setPartnerRowsError(null);
     setPartnerRowsLoading(true);
 
@@ -926,18 +943,22 @@ export function EnrolmentCalculationPage() {
       participantPin,
       farmsScenarioProgramYear,
     )
-      .then((result) => {
+      .then(async (result) => {
         if (cancelled) return;
         if (!result.success) {
           throw new Error(result.error?.message ?? 'Unable to load FARMS enrolment partners.');
         }
+        const combinedFarms = await enrichCombinedFarmSummaries(
+          getCombinedFarmSummariesFromResponse(result.data),
+        );
+        if (cancelled) return;
         setPartnerRows(getPartnerRowsFromResponse(result.data));
-        setCombinedFarmSummary(getCombinedFarmSummaryFromResponse(result.data));
+        setCombinedFarmRows(combinedFarms);
       })
       .catch((err) => {
         if (cancelled) return;
         setPartnerRows([]);
-        setCombinedFarmSummary(null);
+        setCombinedFarmRows([]);
         setPartnerRowsError(err instanceof Error ? err.message : 'Unable to load FARMS enrolment partners.');
       })
       .finally(() => {
@@ -966,7 +987,7 @@ export function EnrolmentCalculationPage() {
     if (!participantId) return null;
     const appId = coreAppId?.trim() || CORE_APP_ID_FALLBACK;
     const baseUrl = coreBaseUrl?.trim() || CORE_BASE_URL_FALLBACK;
-    return `${baseUrl}?appid=${encodeURIComponent(appId)}&pagetype=entityrecord&etn=account&id=${encodeURIComponent(participantId)}`;
+    return buildCoreEntityRecordHref(baseUrl, appId, 'account', participantId);
   }, [record, coreAppId, coreBaseUrl]);
   const fallbackBenefitYears = useMemo(() => {
     return Array.from({ length: BENEFIT_MARGIN_COUNT }, (_, index) => (
@@ -1041,6 +1062,82 @@ export function EnrolmentCalculationPage() {
       void openInNewTab(`#/${target === 'details' ? 'enrolment' : 'calculation'}/${routeSource}/${partnerEnrolmentId}`);
     } catch (err) {
       setPartnerNavigationError(err instanceof Error ? err.message : 'Unable to open partner enrolment.');
+    } finally {
+      setOpeningPartnerPin(null);
+    }
+  };
+
+  const openCombinedFarmEnrolment = async (
+    combinedFarm: CombinedFarmSummary,
+    target: 'details' | 'calculation',
+  ) => {
+    const combinedFarmPin = combinedFarm.participantPin.trim();
+    if (!combinedFarmPin || !programYear) {
+      setPartnerNavigationError('Combined-farm PIN or enrolment year is missing.');
+      return;
+    }
+
+    setOpeningPartnerPin(combinedFarmPin);
+    setPartnerNavigationError(null);
+    try {
+      const combinedFarmEnrolmentId = await resolvePartnerEnrolmentId(combinedFarmPin, programYear);
+      if (!combinedFarmEnrolmentId) {
+        setPartnerNavigationError(`No ${programYear} enrolment found for combined-farm PIN ${combinedFarmPin}.`);
+        return;
+      }
+      const route = target === 'details' ? 'enrolment' : 'calculation';
+      void openInNewTab(`#/${route}/${routeSource}/${combinedFarmEnrolmentId}`);
+    } catch (err) {
+      const fallback = target === 'details'
+        ? 'Unable to open combined-farm enrolment.'
+        : 'Unable to open combined-farm calculation.';
+      setPartnerNavigationError(err instanceof Error ? err.message : fallback);
+    } finally {
+      setOpeningPartnerPin(null);
+    }
+  };
+
+  const handleOpenCombinedFarmEnrolment = (combinedFarm: CombinedFarmSummary) => (
+    openCombinedFarmEnrolment(combinedFarm, 'details')
+  );
+
+  const handleOpenCombinedFarmCalculation = (combinedFarm: CombinedFarmSummary) => (
+    openCombinedFarmEnrolment(combinedFarm, 'calculation')
+  );
+
+  const handleOpenCombinedFarmAccount = (combinedFarm: CombinedFarmSummary) => {
+    if (!combinedFarm.participantAccountId) {
+      setPartnerNavigationError(`No CORE account found for combined-farm PIN ${combinedFarm.participantPin}.`);
+      return;
+    }
+    setPartnerNavigationError(null);
+    const appId = coreAppId?.trim() || CORE_APP_ID_FALLBACK;
+    const baseUrl = coreBaseUrl?.trim() || CORE_BASE_URL_FALLBACK;
+    const href = buildCoreEntityRecordHref(baseUrl, appId, 'account', combinedFarm.participantAccountId);
+    window.open(href, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleOpenPartnerAccount = async (row: PartnerComparisonRow) => {
+    const partnerPin = row.partnerParticipantPin.trim();
+    if (!partnerPin) {
+      setPartnerNavigationError('Partner PIN is missing.');
+      return;
+    }
+
+    setOpeningPartnerPin(partnerPin);
+    setPartnerNavigationError(null);
+    try {
+      const accountId = row.partnerAccountId || await resolvePartnerAccountId(partnerPin);
+      if (!accountId) {
+        setPartnerNavigationError(`No CORE account found for partner PIN ${partnerPin}.`);
+        return;
+      }
+      const appId = coreAppId?.trim() || CORE_APP_ID_FALLBACK;
+      const baseUrl = coreBaseUrl?.trim() || CORE_BASE_URL_FALLBACK;
+      const href = buildCoreEntityRecordHref(baseUrl, appId, 'account', accountId);
+      window.open(href, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      setPartnerNavigationError(err instanceof Error ? err.message : 'Unable to open partner account.');
     } finally {
       setOpeningPartnerPin(null);
     }
@@ -1606,7 +1703,7 @@ export function EnrolmentCalculationPage() {
 
             <PartnerViewPanel
               rows={partnerRows}
-              combinedFarm={combinedFarmSummary}
+              combinedFarms={combinedFarmRows}
               loading={partnerRowsLoading}
               error={partnerRowsError}
               enrolmentProgramYear={programYear}
@@ -1616,6 +1713,10 @@ export function EnrolmentCalculationPage() {
               pinned={partnerPanelPinned}
               onToggleOpen={() => setPartnerPanelOpen(prev => !prev)}
               onTogglePinned={() => setPartnerPanelPinned(prev => !prev)}
+              onOpenCombinedFarmEnrolment={handleOpenCombinedFarmEnrolment}
+              onOpenCombinedFarmCalculation={handleOpenCombinedFarmCalculation}
+              onOpenCombinedFarmAccount={handleOpenCombinedFarmAccount}
+              onOpenPartnerAccount={handleOpenPartnerAccount}
               onOpenPartnerDetails={handleOpenPartnerDetails}
               onOpenPartnerCalculation={handleOpenPartnerCalculation}
             />

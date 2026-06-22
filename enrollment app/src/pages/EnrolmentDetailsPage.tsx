@@ -19,11 +19,12 @@ import { getCoreConfig, normalizeCoreBaseUrl } from '../hooks/useEnrolmentData';
 import { useRole } from '../context/RoleContext';
 import { Toast, type ToastMessage, nextToastId } from '../components/Toast';
 import { EnrolmentPartnersPanel } from '../components/EnrolmentPartnersPanel';
-import { normalizeEnrolmentId, openInNewTab } from '../utils/deepLinks';
+import { buildCoreEntityRecordHref, normalizeEnrolmentId, openInNewTab } from '../utils/deepLinks';
 import { toDateInputValue } from '../utils/date';
 import { farmsApi } from '../services/farmsApi';
 import {
-  getCombinedFarmSummaryFromResponse,
+  enrichCombinedFarmSummaries,
+  getCombinedFarmSummariesFromResponse,
   getNumericProgramYear,
   getParticipantPin,
   getPartnerDataverseDetails,
@@ -257,14 +258,6 @@ const getRecordLookupLabel = (
   return label || '---';
 };
 
-const buildCoreEntityRecordHref = (
-  baseUrl: string,
-  appId: string,
-  entityName: string,
-  recordId: string,
-): string => `${baseUrl}?appid=${encodeURIComponent(appId)}&pagetype=entityrecord&etn=${encodeURIComponent(entityName)}&id=${encodeURIComponent(recordId)}`;
-
-
 export function EnrolmentDetailsPage() {
   // Read both source and enrolmentId from params
   const { source = 'dashboard', enrolmentId } = useParams<{ source?: string; enrolmentId: string }>();
@@ -279,7 +272,7 @@ export function EnrolmentDetailsPage() {
   const [formState, setFormState] = useState<DetailFormState | null>(null);
   const [participantPin, setParticipantPin] = useState('');
   const [partnerRows, setPartnerRows] = useState<PartnerComparisonRow[]>([]);
-  const [combinedFarmSummary, setCombinedFarmSummary] = useState<CombinedFarmSummary | null>(null);
+  const [combinedFarmRows, setCombinedFarmRows] = useState<CombinedFarmSummary[]>([]);
   const [partnerRowsLoading, setPartnerRowsLoading] = useState(false);
   const [partnerRowsError, setPartnerRowsError] = useState<string | null>(null);
   const [openingPartnerKey, setOpeningPartnerKey] = useState<string | null>(null);
@@ -405,7 +398,7 @@ export function EnrolmentDetailsPage() {
   useEffect(() => {
     if (!participantPin || !farmsScenarioProgramYear) {
       setPartnerRows([]);
-      setCombinedFarmSummary(null);
+      setCombinedFarmRows([]);
       setPartnerRowsError(null);
       setPartnerRowsLoading(false);
       return;
@@ -413,7 +406,7 @@ export function EnrolmentDetailsPage() {
 
     let cancelled = false;
     setPartnerRows([]);
-    setCombinedFarmSummary(null);
+    setCombinedFarmRows([]);
     setPartnerRowsError(null);
     setPartnerRowsLoading(true);
 
@@ -446,13 +439,17 @@ export function EnrolmentDetailsPage() {
           : rows;
 
         if (cancelled) return;
+        const combinedFarms = await enrichCombinedFarmSummaries(
+          getCombinedFarmSummariesFromResponse(result.data),
+        );
+        if (cancelled) return;
         setPartnerRows(enrichedRows);
-        setCombinedFarmSummary(getCombinedFarmSummaryFromResponse(result.data));
+        setCombinedFarmRows(combinedFarms);
       })
       .catch(err => {
         if (cancelled) return;
         setPartnerRows([]);
-        setCombinedFarmSummary(null);
+        setCombinedFarmRows([]);
         setPartnerRowsError(err instanceof Error ? err.message : 'Unable to load FARMS enrolment partners.');
       })
       .finally(() => {
@@ -608,6 +605,71 @@ export function EnrolmentDetailsPage() {
     const baseUrl = coreBaseUrl?.trim() || CORE_BASE_URL_FALLBACK;
     return buildCoreEntityRecordHref(baseUrl, appId, 'account', participantId);
   }, [record, coreAppId, coreBaseUrl]);
+
+  const openCombinedFarmEnrolment = async (
+    combinedFarm: CombinedFarmSummary,
+    target: 'details' | 'calculation',
+  ) => {
+    const combinedFarmPin = combinedFarm.participantPin.trim();
+    if (!combinedFarmPin || !enrolmentProgramYear) {
+      setPartnerNavigationError('Combined-farm PIN or enrolment year is missing.');
+      return;
+    }
+
+    setOpeningPartnerKey(`${target}:${combinedFarmPin}`);
+    setPartnerNavigationError(null);
+    try {
+      const combinedFarmEnrolmentId = await resolvePartnerEnrolmentId(combinedFarmPin, enrolmentProgramYear);
+      if (!combinedFarmEnrolmentId) {
+        setPartnerNavigationError(`No ${enrolmentProgramYear} enrolment found for combined-farm PIN ${combinedFarmPin}.`);
+        return;
+      }
+      const route = target === 'details' ? 'enrolment' : 'calculation';
+      void openInNewTab(`#/${route}/${routeSource}/${combinedFarmEnrolmentId}`);
+    } catch (err) {
+      const fallback = target === 'details'
+        ? 'Unable to open combined-farm enrolment.'
+        : 'Unable to open combined-farm calculation.';
+      setPartnerNavigationError(err instanceof Error ? err.message : fallback);
+    } finally {
+      setOpeningPartnerKey(null);
+    }
+  };
+
+  const openCombinedFarmAccount = async (combinedFarm: CombinedFarmSummary) => {
+    const combinedFarmPin = combinedFarm.participantPin.trim();
+
+    if (!combinedFarmPin) {
+      setPartnerNavigationError('Combined-farm PIN is missing.');
+      return;
+    }
+
+    setOpeningPartnerKey(`account:${combinedFarmPin}`);
+    setPartnerNavigationError(null);
+
+    try {
+      const accountId =
+        combinedFarm.participantAccountId ||
+        await resolvePartnerAccountId(combinedFarmPin);
+
+      if (!accountId) {
+        setPartnerNavigationError(`No CORE account found for combined-farm PIN ${combinedFarmPin}.`);
+        return;
+      }
+
+      const appId = coreAppId?.trim() || CORE_APP_ID_FALLBACK;
+      const baseUrl = coreBaseUrl?.trim() || CORE_BASE_URL_FALLBACK;
+      const href = buildCoreEntityRecordHref(baseUrl, appId, 'account', accountId);
+
+      window.open(href, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      setPartnerNavigationError(
+        err instanceof Error ? err.message : 'Unable to open combined-farm CORE account.',
+      );
+    } finally {
+      setOpeningPartnerKey(null);
+    }
+  };
 
   const openPartnerAccount = async (row: PartnerComparisonRow) => {
     const partnerPin = row.partnerParticipantPin.trim();
@@ -1284,7 +1346,7 @@ export function EnrolmentDetailsPage() {
 
         <EnrolmentPartnersPanel
           rows={partnerRows}
-          combinedFarm={combinedFarmSummary}
+          combinedFarms={combinedFarmRows}
           loading={partnerRowsLoading}
           error={partnerRowsError}
           navigationError={partnerNavigationError}
@@ -1294,6 +1356,9 @@ export function EnrolmentDetailsPage() {
           saving={saving}
           canEdit={canEdit}
           formatCurrency={formatCad}
+          onOpenCombinedFarmEnrolment={combinedFarm => { void openCombinedFarmEnrolment(combinedFarm, 'details'); }}
+          onOpenCombinedFarmCalculation={combinedFarm => { void openCombinedFarmEnrolment(combinedFarm, 'calculation'); }}
+          onOpenCombinedFarmAccount={openCombinedFarmAccount}
           onOpenAccount={row => { void openPartnerAccount(row); }}
           onOpenEnrolment={(row, target) => { void openPartnerEnrolment(row, target); }}
           onStatusChange={onPartnerStatusChange}

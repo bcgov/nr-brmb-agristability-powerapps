@@ -9,7 +9,7 @@ type StatusOption = {
 
 type Props = {
   rows: PartnerComparisonRow[];
-  combinedFarm: CombinedFarmSummary | null;
+  combinedFarms: CombinedFarmSummary[];
   loading: boolean;
   error: string | null;
   navigationError: string | null;
@@ -19,6 +19,9 @@ type Props = {
   saving: boolean;
   canEdit: boolean;
   formatCurrency: (value: unknown) => string;
+  onOpenCombinedFarmEnrolment: (combinedFarm: CombinedFarmSummary) => void;
+  onOpenCombinedFarmCalculation: (combinedFarm: CombinedFarmSummary) => void;
+  onOpenCombinedFarmAccount: (combinedFarm: CombinedFarmSummary) => void;
   onOpenAccount: (row: PartnerComparisonRow) => void;
   onOpenEnrolment: (row: PartnerComparisonRow, target: 'details' | 'calculation') => void;
   onStatusChange: (partnerEnrolmentId: string, value: EnrolmentStatusValue) => void;
@@ -27,7 +30,7 @@ type Props = {
 
 export function EnrolmentPartnersPanel({
   rows,
-  combinedFarm,
+  combinedFarms,
   loading,
   error,
   navigationError,
@@ -37,6 +40,9 @@ export function EnrolmentPartnersPanel({
   saving,
   canEdit,
   formatCurrency,
+  onOpenCombinedFarmEnrolment,
+  onOpenCombinedFarmCalculation,
+  onOpenCombinedFarmAccount,
   onOpenAccount,
   onOpenEnrolment,
   onStatusChange,
@@ -49,22 +55,68 @@ export function EnrolmentPartnersPanel({
       {error && <p className="details-partner-state details-partner-state-error">{error}</p>}
       {navigationError && <p className="details-partner-state details-partner-state-error">{navigationError}</p>}
 
-      {!loading && !error && combinedFarm && (
+      {!loading && !error && combinedFarms.length > 0 && (
         <div className="details-combined-farm">
           <h4 className="details-combined-farm-heading">Combined farm</h4>
-          <div className="details-combined-farm-grid">
-            <div>
-              <span className="details-label">PIN</span>
-              <strong className="details-value-strong">{combinedFarm.participantPin || '---'}</strong>
-            </div>
-            <div>
-              <span className="details-label">Combined Farm Number</span>
-              <strong className="details-value-strong">{combinedFarm.combinedFarmNumber || '---'}</strong>
-            </div>
-            <div>
-              <span className="details-label">Scenario</span>
-              <strong className="details-value-strong">{combinedFarm.scenarioNumber || '---'}</strong>
-            </div>
+          <div className="details-combined-farm-list">
+            {combinedFarms.map(combinedFarm => (
+              <div
+                className="details-combined-farm-grid"
+                key={`${combinedFarm.participantPin}-${combinedFarm.scenarioNumber}`}
+              >
+                <div>
+                  <span className="details-label">PIN</span>
+                  {combinedFarm.participantPin ? (
+                    <button
+                      type="button"
+                      className="details-combined-farm-pin-link"
+                      onClick={() => onOpenCombinedFarmEnrolment(combinedFarm)}
+                      disabled={!enrolmentProgramYear || openingPartnerKey === `details:${combinedFarm.participantPin}`}
+                      title={enrolmentProgramYear ? `Open ${enrolmentProgramYear} deadlines and fees` : 'Program year is unavailable'}
+                    >
+                      {combinedFarm.participantPin}
+                    </button>
+                  ) : (
+                    <strong className="details-value-strong">---</strong>
+                  )}
+                </div>
+                <div>
+                  <span className="details-label">Name</span>
+                  {combinedFarm.participantName && combinedFarm.participantAccountId ? (
+                    <button
+                      type="button"
+                      className="details-combined-farm-name-link"
+                      onClick={() => onOpenCombinedFarmAccount(combinedFarm)}
+                      title={`Open CORE account for ${combinedFarm.participantName}`}
+                    >
+                      {combinedFarm.participantName}
+                    </button>
+                  ) : (
+                    <strong className="details-value-strong">{combinedFarm.participantName || '---'}</strong>
+                  )}
+                </div>
+                <div>
+                  <span className="details-label">Combined Farm Number</span>
+                  <strong className="details-value-strong">{combinedFarm.combinedFarmNumber || '---'}</strong>
+                </div>
+                <div>
+                  <span className="details-label">Scenario</span>
+                  <strong className="details-value-strong">{combinedFarm.scenarioNumber || '---'}</strong>
+                </div>
+                <div className="details-partner-calculation">
+                  <button
+                    type="button"
+                    className="details-partner-calculation-btn"
+                    onClick={() => onOpenCombinedFarmCalculation(combinedFarm)}
+                    disabled={!combinedFarm.participantPin || !enrolmentProgramYear || openingPartnerKey === `calculation:${combinedFarm.participantPin}`}
+                    title="Open combined-farm calculation"
+                    aria-label={`Open calculation for PIN ${combinedFarm.participantPin}`}
+                  >
+                    <Calculator size={16} aria-hidden="true" />
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -175,7 +227,7 @@ export function EnrolmentPartnersPanel({
         </div>
       )}
 
-      {!loading && !error && rows.length === 0 && !combinedFarm && (
+      {!loading && !error && rows.length === 0 && combinedFarms.length === 0 && (
         <p className="details-subsection-empty">No partner or combined farm data found.</p>
       )}
     </div>

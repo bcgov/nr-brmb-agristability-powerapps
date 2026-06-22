@@ -28,8 +28,19 @@ export type PartnerComparisonRow = {
 
 export type CombinedFarmSummary = {
   participantPin: string;
+  participantName: string;
+  participantAccountId: string;
   combinedFarmNumber: string;
   scenarioNumber: string;
+};
+
+type EnrolmentCombinedFarmClientRsrc = {
+  scenarioNumber?: number | string | null;
+  participantPin?: number | string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  corporationName?: string | null;
+  dynamicProperties?: Partial<EnrolmentCombinedFarmClientRsrc>;
 };
 
 type EnrolmentPartnerRsrc = {
@@ -50,6 +61,7 @@ export type EnrolmentPartnerListRsrc = {
   scenarioNumber?: number | string | null;
   inCombinedFarm?: boolean | number | string | null;
   combinedFarmNumber?: number | string | null;
+  combinedFarmClientList?: EnrolmentCombinedFarmClientRsrc[] | null;
   enrolmentPartnerList?: EnrolmentPartnerRsrc[] | null;
   dynamicProperties?: Partial<EnrolmentPartnerListRsrc>;
 };
@@ -213,31 +225,75 @@ export function getPartnerRowsFromResponse(response: unknown): PartnerComparison
   }));
 }
 
-export function getCombinedFarmSummaryFromResponse(response: unknown): CombinedFarmSummary | null {
+export function getCombinedFarmSummariesFromResponse(response: unknown): CombinedFarmSummary[] {
   const listResponse = getEnrolmentPartnerListResponse(response);
-  if (!listResponse || !getBooleanFieldValue(listResponse.inCombinedFarm)) return null;
+  if (!listResponse || !getBooleanFieldValue(listResponse.inCombinedFarm)) return [];
 
-  return {
+  const combinedFarmNumber = formatTextBlank(listResponse.combinedFarmNumber);
+  const clients = (listResponse.combinedFarmClientList ?? [])
+    .filter((client): client is EnrolmentCombinedFarmClientRsrc => !!client && typeof client === 'object')
+    .map(mergeDynamicProperties)
+    .map(client => ({
+      participantPin: formatTextBlank(client.participantPin),
+      participantName: formatTextBlank(client.corporationName)
+        || [formatTextBlank(client.firstName), formatTextBlank(client.lastName)].filter(Boolean).join(' '),
+      participantAccountId: '',
+      combinedFarmNumber,
+      scenarioNumber: formatTextBlank(client.scenarioNumber),
+    }))
+    .filter(client => client.participantPin || client.participantName);
+
+  if (clients.length > 0) return clients;
+
+  return [{
     participantPin: formatTextBlank(listResponse.participantPin),
-    combinedFarmNumber: formatTextBlank(listResponse.combinedFarmNumber),
+    participantName: '',
+    participantAccountId: '',
+    combinedFarmNumber,
     scenarioNumber: formatTextBlank(listResponse.scenarioNumber),
-  };
+  }];
 }
 
 function escapeODataString(value: string): string {
   return value.replace(/'/g, "''");
 }
 
-export async function resolvePartnerAccountId(partnerPin: string): Promise<string | null> {
-  const pin = partnerPin.trim();
+export async function resolveAccountDetailsByPin(pinValue: string): Promise<{
+  accountId: string;
+  name: string;
+} | null> {
+  const pin = pinValue.trim();
   if (!pin) return null;
   const escapedPin = escapeODataString(pin);
   const accountResult = await AccountsService.getAll({
-    select: ['accountid', 'vsi_pin', 'accountnumber'],
+    select: ['accountid', 'name', 'vsi_pin', 'accountnumber'],
     filter: `(vsi_pin eq '${escapedPin}' or accountnumber eq '${escapedPin}') and statecode eq 0`,
     maxPageSize: 1,
   });
-  return accountResult.data?.[0]?.accountid?.replace(/[{}]/g, '') ?? null;
+  const account = accountResult.data?.[0];
+  const accountId = account?.accountid?.replace(/[{}]/g, '') ?? '';
+  if (!accountId) return null;
+  return { accountId, name: account?.name?.trim() ?? '' };
+}
+
+export async function resolvePartnerAccountId(partnerPin: string): Promise<string | null> {
+  return (await resolveAccountDetailsByPin(partnerPin))?.accountId ?? null;
+}
+
+export async function enrichCombinedFarmSummaries(
+  summaries: CombinedFarmSummary[],
+): Promise<CombinedFarmSummary[]> {
+  return Promise.all(summaries.map(async summary => {
+    if (!summary.participantPin) return summary;
+    const account = await resolveAccountDetailsByPin(summary.participantPin);
+    return account
+      ? {
+          ...summary,
+          participantName: summary.participantName || account.name,
+          participantAccountId: account.accountId,
+        }
+      : summary;
+  }));
 }
 
 export async function resolveProgramYearId(enrolmentProgramYear: number): Promise<string | null> {
