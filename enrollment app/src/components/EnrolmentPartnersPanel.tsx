@@ -37,8 +37,6 @@ export function EnrolmentPartnersPanel({
   openingPartnerKey,
   enrolmentProgramYear,
   statusOptions,
-  saving,
-  canEdit,
   formatCurrency,
   onOpenCombinedFarmEnrolment,
   onOpenCombinedFarmCalculation,
@@ -50,7 +48,7 @@ export function EnrolmentPartnersPanel({
 }: Props) {
   return (
     <div className="details-content-section">
-      <h3 className="details-subsection-title">Partnerships &amp; Combined Partners</h3>
+      <h3 className="details-subsection-title">Partnerships and Combined Farms</h3>
       {loading && <p className="details-partner-state">Loading partners...</p>}
       {error && <p className="details-partner-state details-partner-state-error">{error}</p>}
       {navigationError && <p className="details-partner-state details-partner-state-error">{navigationError}</p>}
@@ -173,7 +171,7 @@ export function EnrolmentPartnersPanel({
                         row.partnerEnrolmentId,
                         Number(event.target.value) as EnrolmentStatusValue,
                       )}
-                      disabled={saving || !canEdit || !row.partnerEnrolmentId}
+                      disabled
                     >
                       {row.enrolmentStatus == null && <option value="" />}
                       {statusOptions.map(option => (
@@ -195,7 +193,7 @@ export function EnrolmentPartnersPanel({
                       className="details-date details-partner-control"
                       value={row.enrolmentFeesPaidDate}
                       onChange={event => onPaidDateChange(row.partnerEnrolmentId, event.target.value)}
-                      disabled={saving || !canEdit || !row.partnerEnrolmentId}
+                      disabled
                     />
                   </div>
                   <div>

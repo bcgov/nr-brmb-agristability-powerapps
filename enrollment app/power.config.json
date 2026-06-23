@@ -192,6 +192,18 @@
         "programyears": {
           "entitySetName": "vsi_programyears",
           "logicalName": "vsi_programyear"
+        },
+        "fieldpermissions": {
+          "entitySetName": "fieldpermissions",
+          "logicalName": "fieldpermission"
+        },
+        "systemuserprofiles": {
+          "entitySetName": "systemuserprofilescollection",
+          "logicalName": "systemuserprofiles"
+        },
+        "teamprofiles": {
+          "entitySetName": "teamprofilescollection",
+          "logicalName": "teamprofiles"
         }
       },
       "version": "v9.0",

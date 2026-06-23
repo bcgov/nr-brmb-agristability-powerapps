@@ -386,13 +386,17 @@ export async function checkHasDataverseSystemAdminRole(): Promise<boolean> {
 }
 
 /**
- * Returns true if the current Dataverse user is a member of any queue
- * whose name contains both "Supervisor" and "Approval".
+ * Returns true if the current Dataverse user qualifies for the Supervisor role.
+ * Requires BOTH:
+ *   1. Membership in any queue whose name contains "Supervisor" and "Approval", AND
+ *   2. Membership in any "Operations Supervisor Team - *" team
+ *      OR the System Administrator Dataverse security role.
  * Throws on connection/resolution errors.
  */
 export async function checkIsSupervisorQueueMember(): Promise<boolean> {
   const userId = await resolveCurrentUserIdForValidation();
 
+  // Condition 1: Supervisor Approval queue membership
   const queuesResult = await QueuesService.getAll({
     select: ['queueid'],
     filter: `contains(name,'Supervisor') and contains(name,'Approval')`,
@@ -400,11 +404,37 @@ export async function checkIsSupervisorQueueMember(): Promise<boolean> {
   });
   if (!queuesResult.success || !queuesResult.data?.length) return false;
 
+  let inApprovalQueue = false;
   for (const q of queuesResult.data) {
     if (!q.queueid) continue;
     const memberResult = await QueuemembershipsService.getAll({
       select: ['queuemembershipid'],
       filter: `queueid eq '${q.queueid}' and systemuserid eq '${userId}'`,
+      top: 1,
+    });
+    if (memberResult.success && memberResult.data?.length) {
+      inApprovalQueue = true;
+      break;
+    }
+  }
+  if (!inApprovalQueue) return false;
+
+  // Condition 2a: System Administrator role
+  if (await checkHasDataverseSystemAdminRole()) return true;
+
+  // Condition 2b: Member of any "Operations Supervisor Team - *" team
+  const opsTeamsResult = await TeamsService.getAll({
+    select: ['teamid'],
+    filter: `contains(name,'Operations Supervisor Team')`,
+    maxPageSize: 10,
+  });
+  if (!opsTeamsResult.success || !opsTeamsResult.data?.length) return false;
+
+  for (const team of opsTeamsResult.data) {
+    if (!team.teamid) continue;
+    const memberResult = await TeammembershipsService.getAll({
+      select: ['teammembershipid'],
+      filter: `teamid eq '${team.teamid}' and systemuserid eq '${userId}'`,
       top: 1,
     });
     if (memberResult.success && memberResult.data?.length) return true;

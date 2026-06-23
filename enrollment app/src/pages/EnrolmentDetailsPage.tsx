@@ -16,6 +16,7 @@ import { type Vsi_enrolmenthistories } from '../generated/models/Vsi_enrolmenthi
 import { CORE_APP_ID_FALLBACK, CORE_BASE_URL_FALLBACK } from '../constants/config';
 import { formatEnrolmentStatusDisplay, getAvatarColor, getInitials, getTaskStatusLabel, navGuard } from '../utils/helpers';
 import { getCoreConfig, normalizeCoreBaseUrl } from '../hooks/useEnrolmentData';
+import { useFieldPermissions, canEditField } from '../hooks/useFieldPermissions';
 import { useRole } from '../context/RoleContext';
 import { Toast, type ToastMessage, nextToastId } from '../components/Toast';
 import { EnrolmentPartnersPanel } from '../components/EnrolmentPartnersPanel';
@@ -264,6 +265,8 @@ export function EnrolmentDetailsPage() {
   const navigate = useNavigate();
   const { activeRole } = useRole();
   const canEdit = activeRole === 'SystemAdmin' || activeRole === 'Supervisor';
+  const { fieldPerms } = useFieldPermissions('vsi_participantprogramyear', activeRole === 'Supervisor');
+  const cef = (attr: string) => canEditField(fieldPerms, attr, canEdit);
   const resolvedEnrolmentId = normalizeEnrolmentId(enrolmentId);
   const routeSource = source === 'supervisor' ? 'supervisor' : 'dashboard';
 
@@ -972,7 +975,7 @@ export function EnrolmentDetailsPage() {
               </div>
               <div className="details-info-stat-divider" />
               <div className="details-info-stat">
-                {canEdit
+                {cef('vsi_fullyprovinciallyfunded')
                   ? (
                     <label className="details-info-value details-info-checkbox-label">
                       <input
@@ -1112,7 +1115,7 @@ export function EnrolmentDetailsPage() {
                 value={formState.enrolmentStatus}
                 onChange={onStatusChange}
                 className="details-select"
-                disabled={saving || !canEdit}
+                disabled={saving || !cef('vsi_enrolmentstatus')}
               >
                 {statusOptions.map(option => (
                   <option key={option.value} value={option.value}>{option.label}</option>
@@ -1131,23 +1134,6 @@ export function EnrolmentDetailsPage() {
             </div>
 
             <div className="details-field">
-              <span className="details-label">Total Fees Paid</span>
-              <strong className="details-money">{formatCad(record.vsi_totalfeespaid)}</strong>
-            </div>
-
-            <div className="details-field">
-              <label htmlFor="enrol-fees-paid-date" className="details-label">Enrolment Fees Paid Date</label>
-              <input
-                id="enrol-fees-paid-date"
-                type="date"
-                className="details-date"
-                value={formState.vsi_enrolmentfeespaiddate}
-                onChange={updateDateField('vsi_enrolmentfeespaiddate')}
-                disabled={saving || !canEdit}
-              />
-            </div>
-
-            <div className="details-field">
               <div className="details-optout-row">
                 <div className="details-optout-item details-optout-item-flag">
                   <span className="details-label">Opt-Out</span>
@@ -1161,10 +1147,27 @@ export function EnrolmentDetailsPage() {
                     className="details-date"
                     value={formState.vsi_programyearoptoutdate}
                     onChange={updateDateField('vsi_programyearoptoutdate')}
-                    disabled={saving || !canEdit}
+                    disabled={saving || !cef('vsi_programyearoptoutdate')}
                   />
                 </div>
               </div>
+            </div>
+
+            <div className="details-field">
+              <span className="details-label">Total Fees Paid</span>
+              <strong className="details-money">{formatCad(record.vsi_totalfeespaid)}</strong>
+            </div>
+
+            <div className="details-field">
+              <label htmlFor="enrol-fees-paid-date" className="details-label">Enrolment Fees Paid Date</label>
+              <input
+                id="enrol-fees-paid-date"
+                type="date"
+                className="details-date"
+                value={formState.vsi_enrolmentfeespaiddate}
+                onChange={updateDateField('vsi_enrolmentfeespaiddate')}
+                disabled={saving || !cef('vsi_enrolmentfeespaiddate')}
+              />
             </div>
           </div>
         </div>
@@ -1247,7 +1250,7 @@ export function EnrolmentDetailsPage() {
                 className="details-date"
                 value={formState.vsi_enrolmentnoticesentdate}
                 onChange={updateDateField('vsi_enrolmentnoticesentdate')}
-                disabled={saving || !canEdit}
+                disabled={saving || !cef('vsi_enrolmentnoticesentdate')}
               />
             </div>
 
@@ -1259,7 +1262,7 @@ export function EnrolmentDetailsPage() {
                 className="details-date"
                 value={formState.vsi_enrolmentfeesnonpenaltyduedate}
                 onChange={updateDateField('vsi_enrolmentfeesnonpenaltyduedate')}
-                disabled={saving || !canEdit}
+                disabled={saving || !cef('vsi_enrolmentfeesnonpenaltyduedate')}
               />
             </div>
 
@@ -1285,7 +1288,7 @@ export function EnrolmentDetailsPage() {
                 className="details-date"
                 value={formState.vsi_enrolmentfeesfinaldeadlinedate}
                 onChange={updateDateField('vsi_enrolmentfeesfinaldeadlinedate')}
-                disabled={saving || !canEdit}
+                disabled={saving || !cef('vsi_enrolmentfeesfinaldeadlinedate')}
               />
             </div>
 
@@ -1309,7 +1312,7 @@ export function EnrolmentDetailsPage() {
                 className="details-date"
                 value={formState.vsi_lateenrolmentnoticesentdate}
                 onChange={updateDateField('vsi_lateenrolmentnoticesentdate')}
-                disabled={saving || !canEdit}
+                disabled={saving || !cef('vsi_lateenrolmentnoticesentdate')}
               />
             </div>
 
@@ -1324,7 +1327,7 @@ export function EnrolmentDetailsPage() {
                 className="details-date"
                 value={formState.vsi_lateenrolmentfeesfinaldeadlinedate}
                 onChange={updateDateField('vsi_lateenrolmentfeesfinaldeadlinedate')}
-                disabled={saving || !canEdit || syncingLateDeadline}
+                disabled={saving || !cef('vsi_lateenrolmentfeesfinaldeadlinedate') || syncingLateDeadline}
               />
             </div>
 
