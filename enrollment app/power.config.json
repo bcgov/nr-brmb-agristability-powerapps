@@ -82,18 +82,6 @@
         "workflowName": "dd07b3ca-e3fb-0e25-d293-a836fd06f355"
       }
     },
-    "f4cbde1c-f39e-4251-8ae1-45505bbe78ba": {
-      "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
-      "displayName": "Logic flows",
-      "dataSources": [
-        "approveenrolment"
-      ],
-      "workflowDetails": {
-        "workflowEntityId": "36e27ea1-d65e-f111-a826-7c1e5254c5ff",
-        "workflowDisplayName": "Approve Enrolment",
-        "workflowName": "853b30ce-cc79-4dc6-0bbd-4f30e9115e09"
-      }
-    },
     "e572896a-862b-4929-bce4-df199f6f3859": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
       "displayName": "Logic flows",
@@ -204,6 +192,10 @@
         "teamprofiles": {
           "entitySetName": "teamprofilescollection",
           "logicalName": "teamprofiles"
+        },
+        "automaticemailaudits": {
+          "entitySetName": "vsi_automaticemailaudits",
+          "logicalName": "vsi_automaticemailaudit"
         }
       },
       "version": "v9.0",

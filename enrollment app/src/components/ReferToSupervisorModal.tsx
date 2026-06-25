@@ -50,7 +50,7 @@ export function ReferToSupervisorModal({
         text: rowsToProcess.map(r => r.vsi_participantprogramyearid).join(','),
         text_1: 'refer',
         text_2: currentUser.systemUserId,
-      });
+      }, '2015-02-01-preview');
 
       if (!result.success) {
         const msg = (result.error as { message?: string } | undefined)?.message ?? 'Failed to refer to supervisor';

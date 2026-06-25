@@ -5,7 +5,6 @@
 
 // Models
 export * as AccountsModel from './models/AccountsModel';
-export * as ApproveEnrolmentModel from './models/ApproveEnrolmentModel';
 export * as CommonModels from './models/CommonModels';
 export * as CompleteENCalculationModel from './models/CompleteENCalculationModel';
 export * as FARMSAPIModel from './models/FARMSAPIModel';
@@ -30,13 +29,13 @@ export * as TeamprofilescollectionModel from './models/TeamprofilescollectionMod
 export * as TeamsModel from './models/TeamsModel';
 export * as UserqueriesModel from './models/UserqueriesModel';
 export * as Vsi_armsconfigurationsModel from './models/Vsi_armsconfigurationsModel';
+export * as Vsi_automaticemailauditsModel from './models/Vsi_automaticemailauditsModel';
 export * as Vsi_enrolmenthistoriesModel from './models/Vsi_enrolmenthistoriesModel';
 export * as Vsi_participantprogramyearsModel from './models/Vsi_participantprogramyearsModel';
 export * as Vsi_programyearsModel from './models/Vsi_programyearsModel';
 
 // Services
 export * from './services/AccountsService';
-export * from './services/ApproveEnrolmentService';
 export * from './services/CompleteENCalculationService';
 export * from './services/FARMSAPIService';
 export * from './services/FieldpermissionsService';
@@ -60,6 +59,7 @@ export * from './services/TeamprofilescollectionService';
 export * from './services/TeamsService';
 export * from './services/UserqueriesService';
 export * from './services/Vsi_armsconfigurationsService';
+export * from './services/Vsi_automaticemailauditsService';
 export * from './services/Vsi_enrolmenthistoriesService';
 export * from './services/Vsi_participantprogramyearsService';
 export * from './services/Vsi_programyearsService';

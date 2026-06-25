@@ -14,15 +14,14 @@ export class ReferToSupervisorService {
 
   private static readonly client = getClient(dataSourcesInfo);
 
-  public static async Run(input: ManualTriggerInput): Promise<IOperationResult<ResponseActionOutput>> {
-    const params: { input: ManualTriggerInput } = { input };
-    const allParams = { ...params, "api-version": "2015-02-01-preview" };
-    const result = await ReferToSupervisorService.client.executeAsync<{ input: ManualTriggerInput }, ResponseActionOutput>(
+  public static async Run(input: ManualTriggerInput, api_version: string): Promise<IOperationResult<ResponseActionOutput>> {
+    const params: { input: ManualTriggerInput, "api-version": string } = { input, "api-version": api_version };
+    const result = await ReferToSupervisorService.client.executeAsync<{ input: ManualTriggerInput, "api-version": string }, ResponseActionOutput>(
       {
         connectorOperation: {
           tableName: ReferToSupervisorService.dataSourceName,
           operationName: 'Run',
-          parameters: allParams
+          parameters: params
         },
       });
     return result;

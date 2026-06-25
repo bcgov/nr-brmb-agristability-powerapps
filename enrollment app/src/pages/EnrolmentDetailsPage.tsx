@@ -9,10 +9,12 @@ import {
   type Vsi_participantprogramyearsvsi_enrolmentstatus as EnrolmentStatusValue,
 } from '../generated/models/Vsi_participantprogramyearsModel';
 import { AccountsService } from '../generated/services/AccountsService';
+import { Vsi_automaticemailauditsService } from '../generated/services/Vsi_automaticemailauditsService';
 import { Vsi_participantprogramyearsService } from '../generated/services/Vsi_participantprogramyearsService';
 import { Vsi_armsconfigurationsService } from '../generated/services/Vsi_armsconfigurationsService';
 import { Vsi_enrolmenthistoriesService } from '../generated/services/Vsi_enrolmenthistoriesService';
 import { type Vsi_enrolmenthistories } from '../generated/models/Vsi_enrolmenthistoriesModel';
+import { type Vsi_automaticemailaudits } from '../generated/models/Vsi_automaticemailauditsModel';
 import { CORE_APP_ID_FALLBACK, CORE_BASE_URL_FALLBACK } from '../constants/config';
 import { formatEnrolmentStatusDisplay, getAvatarColor, getInitials, getTaskStatusLabel, navGuard } from '../utils/helpers';
 import { getCoreConfig, normalizeCoreBaseUrl } from '../hooks/useEnrolmentData';
@@ -115,9 +117,6 @@ const DETAIL_SELECT = [
   'vsi_nonpenaltydeadlinedaysleft',
   'vsi_finaldeadlinedaysdiff',
   'vsi_latefinaldeadlinedaysdiff',
-  'vsi_nonpenaltydeadlineremindersent',
-  'vsi_finaldeadlineremindersent',
-  'vsi_latefinaldeadlineremindersent',
   'vsi_administrativecostsharingfee',
   'vsi_latepaymentfee',
   'vsi_adjustedlateenrolmentfee',
@@ -138,6 +137,55 @@ const yesNoText = (value: unknown): string => {
   if (value === true || value === 1 || value === '1') return 'Yes';
   if (value === false || value === 0 || value === '0') return 'No';
   return '---';
+};
+
+const AUTOMATIC_EMAIL_TYPE = {
+  NonPenaltyReminder: 865520001,
+  FinalDeadlineReminder: 865520002,
+  LateEnrolmentReminder: 865520003,
+} as const;
+
+const AUTOMATIC_EMAIL_SENDSTATUS_SENT = 865520001;
+
+const toChoiceValue = (value: unknown): number | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim().length > 0) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return null;
+};
+
+type EmailReminderAuditState = {
+  nonPenalty: boolean | null;
+  finalDeadline: boolean | null;
+  lateFinalDeadline: boolean | null;
+};
+
+const getEmailReminderAuditState = (rows: Vsi_automaticemailaudits[] | null): EmailReminderAuditState => {
+  if (rows === null) {
+    return {
+      nonPenalty: null,
+      finalDeadline: null,
+      lateFinalDeadline: null,
+    };
+  }
+
+  const sentTypes = new Set<number>();
+
+  for (const row of rows) {
+    if (toChoiceValue(row.vsi_sendstatus) !== AUTOMATIC_EMAIL_SENDSTATUS_SENT) continue;
+    const emailType = toChoiceValue(row.vsi_emailtype);
+    if (emailType !== null) {
+      sentTypes.add(emailType);
+    }
+  }
+
+  return {
+    nonPenalty: sentTypes.has(AUTOMATIC_EMAIL_TYPE.NonPenaltyReminder),
+    finalDeadline: sentTypes.has(AUTOMATIC_EMAIL_TYPE.FinalDeadlineReminder),
+    lateFinalDeadline: sentTypes.has(AUTOMATIC_EMAIL_TYPE.LateEnrolmentReminder),
+  };
 };
 
 const toBooleanFlag = (value: unknown): boolean | null => {
@@ -303,6 +351,7 @@ export function EnrolmentDetailsPage() {
 
   const [showHistory, setShowHistory] = useState(false);
   const [historyRecords, setHistoryRecords] = useState<Vsi_enrolmenthistories[]>([]);
+  const [emailAuditRows, setEmailAuditRows] = useState<Vsi_automaticemailaudits[] | null>(null);
 
   useEffect(() => {
     if (!resolvedEnrolmentId) return;
@@ -321,6 +370,33 @@ export function EnrolmentDetailsPage() {
         setHistoryRecords(rows);
       })
       .catch(() => {});
+  }, [resolvedEnrolmentId]);
+
+  useEffect(() => {
+    if (!resolvedEnrolmentId) {
+      setEmailAuditRows(null);
+      return;
+    }
+
+    let cancelled = false;
+    setEmailAuditRows(null);
+
+    Vsi_automaticemailauditsService.getAll({
+      select: ['vsi_objectid', 'vsi_emailtype', 'vsi_sendstatus', 'vsi_senton', 'vsi_templateid', 'vsi_templatename'],
+      filter: `vsi_objectid eq '${resolvedEnrolmentId}'`,
+      maxPageSize: 200,
+    })
+      .then(result => {
+        if (cancelled) return;
+        setEmailAuditRows(result.data ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setEmailAuditRows(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [resolvedEnrolmentId]);
 
   useEffect(() => {
@@ -526,6 +602,11 @@ export function EnrolmentDetailsPage() {
       label: formatEnrolmentStatusDisplay(label),
     })),
     [],
+  );
+
+  const emailReminderAuditState = useMemo(
+    () => getEmailReminderAuditState(emailAuditRows),
+    [emailAuditRows],
   );
 
   const baseline = useMemo(() => (record ? initialFormFromRecord(record) : null), [record]);
@@ -1275,7 +1356,7 @@ export function EnrolmentDetailsPage() {
 
             <div className="details-field">
               <span className="details-label">Reminder Sent</span>
-              <strong className="details-value-strong">{yesNoText(record.vsi_nonpenaltydeadlineremindersent)}</strong>
+              <strong className="details-value-strong">{yesNoText(emailReminderAuditState.nonPenalty)}</strong>
             </div>
 
             <div className="details-field details-field-spacer" aria-hidden="true" />
@@ -1301,7 +1382,7 @@ export function EnrolmentDetailsPage() {
 
             <div className="details-field">
               <span className="details-label">Reminder Sent</span>
-              <strong className="details-value-strong">{yesNoText(record.vsi_finaldeadlineremindersent)}</strong>
+              <strong className="details-value-strong">{yesNoText(emailReminderAuditState.finalDeadline)}</strong>
             </div>
 
             <div className="details-field">
@@ -1340,7 +1421,7 @@ export function EnrolmentDetailsPage() {
 
             <div className="details-field">
               <span className="details-label">Reminder Sent</span>
-              <strong className="details-value-strong">{yesNoText(record.vsi_latefinaldeadlineremindersent)}</strong>
+              <strong className="details-value-strong">{yesNoText(emailReminderAuditState.lateFinalDeadline)}</strong>
             </div>
           </div>
         </div>
