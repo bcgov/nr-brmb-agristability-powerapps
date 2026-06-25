@@ -105,14 +105,6 @@
         "workflowDisplayName": "Process Enrolment Action",
         "workflowName": "8689572a-0028-59a4-6c76-579622dddbfb"
       }
-    },
-    "e39a5c0b-0281-4fe5-b315-1d5dfd13fa76": {
-      "id": "/providers/Microsoft.PowerApps/apis/shared_powerbi",
-      "displayName": "Power BI",
-      "dataSources": [
-        "powerbi"
-      ],
-      "dataSets": {}
     }
   },
   "databaseReferences": {
