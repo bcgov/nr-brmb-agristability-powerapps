@@ -581,7 +581,7 @@ export function SupervisorApprovalPage() {
     if (ids.length === 0) return;
 
     const user = await resolveCurrentUser();
-    const result = await ProcessEnrolmentActionService.Run({ text: ids.join(','), text_1: 'approve', text_2: user.systemUserId });
+    const result = await ProcessEnrolmentActionService.Run({ text: ids.join(','), text_1: 'approve', text_2: user.systemUserId }, '2015-02-01-preview');
     if (!result.success) {
       const msg = (result.error as { message?: string } | undefined)?.message ?? 'Failed to approve enrolments';
       throw new Error(msg);
@@ -1136,7 +1136,7 @@ export function SupervisorApprovalPage() {
                     text: rowsToManual.filter(r => r.itemId).map(r => r.itemId!).join(','),
                     text_1: 'manual',
                     text_2: manualUser.systemUserId,
-                  });
+                  }, '2015-02-01-preview');
                   if (!manualResult.success) {
                     const msg = (manualResult.error as { message?: string } | undefined)?.message ?? 'Manual action failed';
                     throw new Error(msg);
@@ -1427,7 +1427,7 @@ export function SupervisorApprovalPage() {
                   text: rowsToUpdate.map(r => r.itemId).join(','),
                   text_1: 'assign',
                   text_2: workerId,
-                });
+                }, '2015-02-01-preview');
                 if (!assignResult.success) {
                   const msg = (assignResult.error as { message?: string } | undefined)?.message ?? 'Assign partially failed';
                   throw new Error(msg);

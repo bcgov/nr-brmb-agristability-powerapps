@@ -112,9 +112,9 @@ export class PowerBIService {
    * Get a goal
    * Gets the specified Power BI goal on a scorecard.
    */
-  public static async GetGoal(groupid: string, scorecardId: string, goalId: string, pbi_source?: string, $expand?: string): Promise<IOperationResult<FetchedGoal>> {
-    const params: { groupid: string, scorecardId: string, goalId: string, pbi_source?: string, $expand?: string } = { groupid, scorecardId, goalId, pbi_source, $expand };
-    const result = await PowerBIService.client.executeAsync<{ groupid: string, scorecardId: string, goalId: string, pbi_source?: string, $expand?: string }, FetchedGoal>(
+  public static async GetGoal(groupid: string, scorecardId: string, goalId: string, pbi_source?: string, $expand: string): Promise<IOperationResult<FetchedGoal>> {
+    const params: { groupid: string, scorecardId: string, goalId: string, pbi_source?: string, $expand: string } = { groupid, scorecardId, goalId, pbi_source, $expand };
+    const result = await PowerBIService.client.executeAsync<{ groupid: string, scorecardId: string, goalId: string, pbi_source?: string, $expand: string }, FetchedGoal>(
       {
         connectorOperation: {
           tableName: PowerBIService.dataSourceName,

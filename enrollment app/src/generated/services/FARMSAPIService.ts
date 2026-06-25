@@ -13,23 +13,6 @@ export class FARMSAPIService {
   private static readonly client = getClient(dataSourcesInfo);
 
   /**
-   * Get Enrolment Notice Workflow Calculation
-   * Get calculation data for the enrolment notice workflow.
-   */
-  public static async GetEnrolmentNoticeWorkflowCalculation(participantPin: string, programYear: number): Promise<IOperationResult<void>> {
-    const params: { participantPin: string, programYear: number } = { participantPin, programYear };
-    const result = await FARMSAPIService.client.executeAsync<{ participantPin: string, programYear: number }, void>(
-      {
-        connectorOperation: {
-          tableName: FARMSAPIService.dataSourceName,
-          operationName: 'GetEnrolmentNoticeWorkflowCalculation',
-          parameters: params
-        },
-      });
-    return result;
-  }
-
-  /**
    * Get All CodeTables
    * Get All CodeTables
    */
