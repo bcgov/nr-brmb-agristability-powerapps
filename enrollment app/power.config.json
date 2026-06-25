@@ -82,18 +82,6 @@
         "workflowName": "dd07b3ca-e3fb-0e25-d293-a836fd06f355"
       }
     },
-    "e572896a-862b-4929-bce4-df199f6f3859": {
-      "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
-      "displayName": "Logic flows",
-      "dataSources": [
-        "completeencalculation"
-      ],
-      "workflowDetails": {
-        "workflowEntityId": "5c0a7dff-dc5e-f111-a826-7c1e5254cc04",
-        "workflowDisplayName": "Complete EN Calculation",
-        "workflowName": "1c63a06d-33ff-3910-6ae9-d7116ceccd6d"
-      }
-    },
     "933ca746-6029-4dff-bf7e-741a70c5bf3c": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
       "displayName": "Logic flows",
