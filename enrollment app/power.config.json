@@ -19,6 +19,17 @@
       "sharedConnectionId": "/providers/Microsoft.PowerApps/apis/shared_farms-20api-5fe39d1efd21a19d13-5f571039b465579741/connections/7f0dbaddf90e498e82c553b27272a705",
       "dataSets": {}
     },
+    "8f9e4c88-4c6f-4cdd-a9f0-6f6f6e6dd331": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
+      "displayName": "Logic flows",
+      "dataSources": [
+        "bulkupdateenrolmentrecords"
+      ],
+      "workflowDetails": {
+        "workflowDisplayName": "Bulk Update Enrolment Records",
+        "workflowName": "e3f5031f-0d21-4b4e-90ad-bf43d6d496cd"
+      }
+    },
     "c246c6d9-1ba9-45b3-a6c8-aea93ebb3b41": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
       "displayName": "Microsoft Dataverse",
