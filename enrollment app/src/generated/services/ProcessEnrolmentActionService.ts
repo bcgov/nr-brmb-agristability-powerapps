@@ -14,14 +14,15 @@ export class ProcessEnrolmentActionService {
 
   private static readonly client = getClient(dataSourcesInfo);
 
-  public static async Run(input: ManualTriggerInput, api_version: string): Promise<IOperationResult<ResponseActionOutput>> {
-    const params: { input: ManualTriggerInput, "api-version": string } = { input, "api-version": api_version };
-    const result = await ProcessEnrolmentActionService.client.executeAsync<{ input: ManualTriggerInput, "api-version": string }, ResponseActionOutput>(
+  public static async Run(input: ManualTriggerInput): Promise<IOperationResult<ResponseActionOutput>> {
+    const params: { input: ManualTriggerInput } = { input };
+    const allParams = { ...params, "api-version": "2015-02-01-preview" };
+    const result = await ProcessEnrolmentActionService.client.executeAsync<{ input: ManualTriggerInput }, ResponseActionOutput>(
       {
         connectorOperation: {
           tableName: ProcessEnrolmentActionService.dataSourceName,
           operationName: 'Run',
-          parameters: params
+          parameters: allParams
         },
       });
     return result;

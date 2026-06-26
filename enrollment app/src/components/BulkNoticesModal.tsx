@@ -70,7 +70,7 @@ export function BulkNoticesModal({
                       date: bulkSentDate,
                       date_1: bulkFeeDate,
                       boolean: bulkMergedPdf,
-                    }, '2015-02-01-preview');
+                    });
                     if (!result.success) {
                       const msg = result.error instanceof Error
                         ? result.error.message

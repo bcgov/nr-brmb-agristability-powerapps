@@ -5,9 +5,20 @@ import { FARMSAPIService } from '../generated/services/FARMSAPIService';
 
 type FarmsApiResult<T = unknown> = IOperationResult<T>;
 
-const FARMS_API_DATA_SOURCE_NAME = 'farms_20api_5fe39d1efd21a19d13_5f571039b465579741';
+const FARMS_API_DATA_SOURCE_PRIMARY = 'vsi_5ffarms_20api_5f4155bcad29d5d05a';
+const FARMS_API_DATA_SOURCE_LEGACY = 'farms_20api_5fe39d1efd21a19d13_5f571039b465579741';
 const GET_ENROLMENT_NOTICE_WORKFLOW_CALCULATION = 'GetEnrolmentNoticeWorkflowCalculation';
 const GET_ENROLMENT_PARTNERS = 'GetEnrolmentPartners';
+
+function resolveFarmsDataSourceName() {
+  const sources = dataSourcesInfo as Record<string, unknown>;
+  if (FARMS_API_DATA_SOURCE_PRIMARY in sources) {
+    return FARMS_API_DATA_SOURCE_PRIMARY;
+  }
+  return FARMS_API_DATA_SOURCE_LEGACY;
+}
+
+const FARMS_API_DATA_SOURCE_NAME = resolveFarmsDataSourceName();
 
 function ensureFarmsApiMetadata() {
   const sources = dataSourcesInfo as Record<string, { apis?: Record<string, unknown> } | undefined>;

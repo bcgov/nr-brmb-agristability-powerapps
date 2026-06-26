@@ -73,7 +73,7 @@ export function Send45DayLetterModal({ enrolmentId, enrolmentName, programYear, 
         date: letterDate,
         text_1: programYear,
         text_2: missingText,
-      }, '2015-02-01-preview');
+      });
       if (result.error) {
         const code = (result.error as { code?: number | string }).code;
         const inner = (result.error as { innerError?: { error?: { message?: string } } }).innerError?.error?.message;

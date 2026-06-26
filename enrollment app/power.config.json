@@ -1,15 +1,16 @@
 {
+  "version": "1.0",
   "appId": "f19458f1-ddb2-438a-9089-82ba678268a1",
   "appDisplayName": "Enrollment App",
-  "description": null,
+  "region": "prod",
   "environmentId": "dcd88fe8-d919-ee82-8313-8376a1e413f4",
+  "description": " ",
   "buildPath": "./dist",
   "buildEntryPoint": "index.html",
+  "localAppUrl": "http://localhost:3000",
   "logoPath": "Default",
-  "localAppUrl": "http://localhost:3000/",
-  "region": "prod",
   "connectionReferences": {
-    "7c4f6926-b8a7-479c-bb62-014dcfd9bd48": {
+    "a98c811a-38d1-4a69-bbb7-e0dae015de0a": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_farms-20api-5fe39d1efd21a19d13-5f571039b465579741",
       "displayName": "FARMS API",
       "dataSources": [
@@ -19,35 +20,37 @@
       "sharedConnectionId": "/providers/Microsoft.PowerApps/apis/shared_farms-20api-5fe39d1efd21a19d13-5f571039b465579741/connections/7f0dbaddf90e498e82c553b27272a705",
       "dataSets": {}
     },
-    "8f9e4c88-4c6f-4cdd-a9f0-6f6f6e6dd331": {
+    "25e10742-3193-4faf-9762-dc91bfa7bd84": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+      "displayName": "Microsoft Dataverse",
+      "dataSources": [
+        "commondataserviceforapps"
+      ],
+      "authenticationType": "ServicePrincipalOauth",
+      "sharedConnectionId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps/connections/b05319f6f3244385ac9d9959391a2970",
+      "dataSets": {}
+    },
+    "0cc85d86-9ec5-436f-9308-e55c6373e582": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
       "displayName": "Logic flows",
       "dataSources": [
         "bulkupdateenrolmentrecords"
       ],
       "workflowDetails": {
+        "workflowEntityId": "5ab20d40-9471-f111-ab0e-70a8a5109786",
         "workflowDisplayName": "Bulk Update Enrolment Records",
         "workflowName": "e3f5031f-0d21-4b4e-90ad-bf43d6d496cd"
       }
     },
-    "c246c6d9-1ba9-45b3-a6c8-aea93ebb3b41": {
-      "id": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
-      "displayName": "Microsoft Dataverse",
-      "dataSources": [
-        "commondataserviceforapps"
-      ],
-      "dataSets": {}
+    "aed8dd16-b4ca-4275-927b-d581ae8570a6": {
+      "id": "/providers/microsoft.powerapps/apis/shared_sharepointonline",
+      "displayName": "SharePoint"
     },
-    "b784f6d1-e4ea-400e-8700-d43fca654a3c": {
-      "id": "/providers/Microsoft.PowerApps/apis/shared_farms-20api-5fe39d1efd21a19d13-5f571039b465579741",
-      "displayName": "FARMS API",
-      "dataSources": [
-        "farms_20api_5fe39d1efd21a19d13_5f571039b465579741"
-      ],
-      "authenticationType": "oAuthClientCredentials",
-      "dataSets": {}
+    "55d38b27-6bd0-47ce-ab89-c1cd0dabfbff": {
+      "id": "/providers/microsoft.powerapps/apis/shared_wordonlinebusiness",
+      "displayName": "Word Online (Business)"
     },
-    "61268f8d-adbf-40ca-9b88-573c367af652": {
+    "9dc64656-7b46-405c-bd93-8abeef4d00a4": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
       "displayName": "Logic flows",
       "dataSources": [
@@ -56,10 +59,14 @@
       "workflowDetails": {
         "workflowEntityId": "d8c39975-df4f-f111-bec6-70a8a5abd235",
         "workflowDisplayName": "Generate 45 Day Letter",
-        "workflowName": "87204e51-864d-4bfc-aae4-6440dafa5087"
+        "workflowName": "8bdef04a-3078-a8e8-bed0-89163ef5e0c4",
+        "dependencies": {
+          "shared_sharepointonline_1": "aed8dd16-b4ca-4275-927b-d581ae8570a6",
+          "shared_wordonlinebusiness_1": "55d38b27-6bd0-47ce-ab89-c1cd0dabfbff"
+        }
       }
     },
-    "3be5d05d-ec97-426e-ba6f-3a8ff094ec58": {
+    "3ed0b292-7a9a-40d6-a783-e2db96c98271": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
       "displayName": "Logic flows",
       "dataSources": [
@@ -71,17 +78,7 @@
         "workflowName": "1659a9c0-1436-b7b2-d918-2b5b3fc5e819"
       }
     },
-    "fa90f9f5-2a53-46ae-8466-275a83b3fbc7": {
-      "id": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
-      "displayName": "Microsoft Dataverse",
-      "dataSources": [
-        "commondataserviceforapps"
-      ],
-      "authenticationType": "ServicePrincipalOauth",
-      "sharedConnectionId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps/connections/b05319f6f3244385ac9d9959391a2970",
-      "dataSets": {}
-    },
-    "5c7de17b-7dce-4c39-ab9a-bbe54daf6fba": {
+    "ffe179cd-8db0-4e45-abf3-1d2a2d1c0752": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
       "displayName": "Logic flows",
       "dataSources": [
@@ -93,7 +90,7 @@
         "workflowName": "dd07b3ca-e3fb-0e25-d293-a836fd06f355"
       }
     },
-    "933ca746-6029-4dff-bf7e-741a70c5bf3c": {
+    "31fb4984-188c-4f0b-b273-ffe1f0caecd3": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
       "displayName": "Logic flows",
       "dataSources": [
@@ -112,86 +109,85 @@
       "instanceUrl": "https://aff-brmb-crm-dev.crm3.dynamics.com/",
       "webApiVersion": "v9.0",
       "dataSources": {
-        "enrolmenthistory": {
-          "entitySetName": "vsi_enrolmenthistories",
-          "logicalName": "vsi_enrolmenthistory"
+        "accounts": {
+          "entitySetName": "accounts",
+          "logicalName": "account"
         },
-        "savedviews": {
-          "entitySetName": "userqueries",
-          "logicalName": "userquery"
-        },
-        "views": {
-          "entitySetName": "savedqueries",
-          "logicalName": "savedquery"
-        },
-        "queues": {
-          "entitySetName": "queues",
-          "logicalName": "queue"
-        },
-        "queueitems": {
-          "entitySetName": "queueitems",
-          "logicalName": "queueitem"
-        },
-        "users": {
-          "entitySetName": "systemusers",
-          "logicalName": "systemuser"
-        },
-        "queuemembership": {
-          "entitySetName": "queuememberships",
-          "logicalName": "queuemembership"
-        },
-        "enrolments": {
-          "entitySetName": "vsi_participantprogramyears",
-          "logicalName": "vsi_participantprogramyear"
+        "automaticemailaudits": {
+          "entitySetName": "vsi_automaticemailaudits",
+          "logicalName": "vsi_automaticemailaudit"
         },
         "coreconfiguration": {
           "entitySetName": "vsi_armsconfigurations",
           "logicalName": "vsi_armsconfiguration"
         },
-        "teams": {
-          "entitySetName": "teams",
-          "logicalName": "team"
+        "enrolmenthistory": {
+          "entitySetName": "vsi_enrolmenthistories",
+          "logicalName": "vsi_enrolmenthistory"
         },
-        "securityroles": {
-          "entitySetName": "roles",
-          "logicalName": "role"
-        },
-        "teammembership": {
-          "entitySetName": "teammemberships",
-          "logicalName": "teammembership"
-        },
-        "systemuserroles": {
-          "entitySetName": "systemuserrolescollection",
-          "logicalName": "systemuserroles"
-        },
-        "accounts": {
-          "entitySetName": "accounts",
-          "logicalName": "account"
-        },
-        "programyears": {
-          "entitySetName": "vsi_programyears",
-          "logicalName": "vsi_programyear"
+        "enrolments": {
+          "entitySetName": "vsi_participantprogramyears",
+          "logicalName": "vsi_participantprogramyear"
         },
         "fieldpermissions": {
           "entitySetName": "fieldpermissions",
           "logicalName": "fieldpermission"
         },
+        "programyears": {
+          "entitySetName": "vsi_programyears",
+          "logicalName": "vsi_programyear"
+        },
+        "queueitems": {
+          "entitySetName": "queueitems",
+          "logicalName": "queueitem"
+        },
+        "queuemembership": {
+          "entitySetName": "queuememberships",
+          "logicalName": "queuemembership"
+        },
+        "queues": {
+          "entitySetName": "queues",
+          "logicalName": "queue"
+        },
+        "savedviews": {
+          "entitySetName": "userqueries",
+          "logicalName": "userquery"
+        },
+        "securityroles": {
+          "entitySetName": "roles",
+          "logicalName": "role"
+        },
         "systemuserprofiles": {
           "entitySetName": "systemuserprofilescollection",
           "logicalName": "systemuserprofiles"
+        },
+        "systemuserroles": {
+          "entitySetName": "systemuserrolescollection",
+          "logicalName": "systemuserroles"
+        },
+        "teammembership": {
+          "entitySetName": "teammemberships",
+          "logicalName": "teammembership"
         },
         "teamprofiles": {
           "entitySetName": "teamprofilescollection",
           "logicalName": "teamprofiles"
         },
-        "automaticemailaudits": {
-          "entitySetName": "vsi_automaticemailaudits",
-          "logicalName": "vsi_automaticemailaudit"
+        "teams": {
+          "entitySetName": "teams",
+          "logicalName": "team"
+        },
+        "users": {
+          "entitySetName": "systemusers",
+          "logicalName": "systemuser"
+        },
+        "views": {
+          "entitySetName": "savedqueries",
+          "logicalName": "savedquery"
         }
       },
       "version": "v9.0",
       "environmentVariableName": ""
     }
-  },
-  "version": "1.0"
+  }
 }

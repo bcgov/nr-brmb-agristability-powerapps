@@ -44,7 +44,7 @@ export function ApproveCalculatedFeesModal({
         text: selectedRows.map(r => r.vsi_participantprogramyearid).join(','),
         text_1: 'approve',
         text_2: currentUser.systemUserId,
-      }, '2015-02-01-preview');
+        });
       if (!result.success) {
         const msg = (result.error as { message?: string } | undefined)?.message ?? 'Failed to approve calculated fees';
         throw new Error(msg);
