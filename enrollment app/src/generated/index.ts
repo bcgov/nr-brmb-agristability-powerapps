@@ -5,6 +5,7 @@
 
 // Models
 export * as AccountsModel from './models/AccountsModel';
+export * as BulkUpdateEnrolmentRecordsModel from './models/BulkUpdateEnrolmentRecordsModel';
 export * as CommonModels from './models/CommonModels';
 export * as FARMSAPIModel from './models/FARMSAPIModel';
 export * as FieldpermissionsModel from './models/FieldpermissionsModel';
@@ -34,6 +35,7 @@ export * as Vsi_programyearsModel from './models/Vsi_programyearsModel';
 
 // Services
 export * from './services/AccountsService';
+export * from './services/BulkUpdateEnrolmentRecordsService';
 export * from './services/FARMSAPIService';
 export * from './services/FieldpermissionsService';
 export * from './services/Generate45DayLetterService';

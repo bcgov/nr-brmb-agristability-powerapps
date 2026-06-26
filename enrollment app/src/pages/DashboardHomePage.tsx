@@ -15,6 +15,7 @@ import { ViewsMenu } from '../components/ViewsMenu';
 import { EditColumnsPanel } from '../components/EditColumnsPanel';
 import { EditFiltersPanel } from '../components/EditFiltersPanel';
 import { BulkNoticesModal } from '../components/BulkNoticesModal';
+import { BulkEditEnrolmentsModal } from '../components/BulkEditEnrolmentsModal';
 import { AssignOwnerModal } from '../components/AssignOwnerModal';
 import { ReferToSupervisorModal } from '../components/ReferToSupervisorModal';
 import { ApproveCalculatedFeesModal } from '../components/ApproveCalculatedFeesModal';
@@ -92,6 +93,7 @@ export function DashboardHomePage() {
   const [showEditColumns, setShowEditColumns] = useState(false);
   const [showEditFilters, setShowEditFilters] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
+  const [showBulkEditModal, setShowBulkEditModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [showSupervisorModal, setShowSupervisorModal] = useState(false);
   const [showApproveFeesModal, setShowApproveFeesModal] = useState(false);
@@ -514,6 +516,7 @@ export function DashboardHomePage() {
                 hasSelection={selectedIds.size > 0}
                 selectedCount={selectedIds.size}
                 onOpenBulkNotices={() => setShowBulkModal(true)}
+                onOpenBulkEdit={() => setShowBulkEditModal(true)}
                 onOpenAssign={() => setShowAssignModal(true)}
                 onOpenReferToSupervisor={() => setShowSupervisorModal(true)}
                 onOpenApproveCalculatedFees={() => setShowApproveFeesModal(true)}
@@ -684,7 +687,32 @@ export function DashboardHomePage() {
           }}
         />
       )}
-      {/* Assign modal — logic to be implemented */}
+      {showBulkEditModal && (
+        <BulkEditEnrolmentsModal
+          selectedIds={selectedIds}
+          rows={rows}
+          onClose={() => setShowBulkEditModal(false)}
+          onComplete={(update) => {
+            setRows(prev => prev.map(r =>
+              update.ids.includes(r.vsi_participantprogramyearid)
+                ? {
+                    ...r,
+                    vsi_taskstatus: update.taskStatus as unknown as typeof r.vsi_taskstatus,
+                    vsi_enrolmentstatus: update.enrolmentStatus as unknown as typeof r.vsi_enrolmentstatus,
+                    vsi_enrolmentfeesfinaldeadlinedate: update.finalDeadlineDate,
+                    vsi_lateenrolmentfeesfinaldeadlinedate: update.lateFinalDeadlineDate,
+                  }
+                : r
+            ));
+            setSelectedIds(new Set());
+            clearSaCache();
+            clearEnrolmentCache();
+            void fetchEnrolments();
+            addToast(`${update.ids.length} enrolment${update.ids.length === 1 ? '' : 's'} updated successfully.`);
+          }}
+          onError={(msg) => addToast(msg, 'error')}
+        />
+      )}
       {showAssignModal && (
         <AssignOwnerModal
           selectedIds={selectedIds}

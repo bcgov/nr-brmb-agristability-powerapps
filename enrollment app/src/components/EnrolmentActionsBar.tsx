@@ -1,4 +1,4 @@
-import { FileText, UserCheck, CircleCheck, UserPlus } from 'lucide-react';
+import { FileText, UserCheck, CircleCheck, UserPlus, Pencil } from 'lucide-react';
 import { useRole } from '../context/RoleContext';
 import type { AppRole } from '../context/RoleContext';
 
@@ -8,12 +8,13 @@ type Props = {
   hasSelection: boolean;
   selectedCount: number;
   onOpenBulkNotices: () => void;
+  onOpenBulkEdit: () => void;
   onOpenAssign: () => void;
   onOpenReferToSupervisor: () => void;
   onOpenApproveCalculatedFees: () => void;
 };
 
-export function EnrolmentActionsBar({ hasSelection, selectedCount, onOpenBulkNotices, onOpenAssign, onOpenReferToSupervisor, onOpenApproveCalculatedFees }: Props) {
+export function EnrolmentActionsBar({ hasSelection, selectedCount, onOpenBulkNotices, onOpenBulkEdit, onOpenAssign, onOpenReferToSupervisor, onOpenApproveCalculatedFees }: Props) {
   const { activeRole } = useRole();
   const canAssign = ASSIGN_ROLES.includes(activeRole);
 
@@ -25,6 +26,11 @@ export function EnrolmentActionsBar({ hasSelection, selectedCount, onOpenBulkNot
       {canAssign && (
         <button className="dash-btn-secondary" onClick={onOpenBulkNotices} disabled={!hasSelection}>
           <FileText size={15} /> Bulk EN Notices
+        </button>
+      )}
+      {canAssign && (
+        <button className="dash-btn-secondary" onClick={onOpenBulkEdit} disabled={!hasSelection}>
+          <Pencil size={15} /> Bulk Edit
         </button>
       )}
       {canAssign && (
@@ -45,4 +51,3 @@ export function EnrolmentActionsBar({ hasSelection, selectedCount, onOpenBulkNot
     </div>
   );
 }
-
