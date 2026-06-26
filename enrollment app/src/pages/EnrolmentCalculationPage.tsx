@@ -1216,7 +1216,7 @@ export function EnrolmentCalculationPage() {
     setError(null);
     try {
       const currentUser = await resolveCurrentSystemUser();
-      const result = await ProcessEnrolmentActionService.Run({ text: resolvedEnrolmentId, text_1: 'complete', text_2: currentUser.systemUserId }, '2015-02-01-preview');
+      const result = await ProcessEnrolmentActionService.Run({ text: resolvedEnrolmentId, text_1: 'complete', text_2: currentUser.systemUserId });
       if (!result.success) {
         const msg = (result.error as { message?: string } | undefined)?.message ?? `Failed to complete ${resolvedEnrolmentId}.`;
         throw new Error(msg);
@@ -1272,7 +1272,7 @@ export function EnrolmentCalculationPage() {
       }
 
       const currentUser = await resolveCurrentSystemUser();
-      const result = await ProcessEnrolmentActionService.Run({ text: resolvedEnrolmentId, text_1: 'approve', text_2: currentUser.systemUserId }, '2015-02-01-preview');
+      const result = await ProcessEnrolmentActionService.Run({ text: resolvedEnrolmentId, text_1: 'approve', text_2: currentUser.systemUserId });
       if (!result.success) {
         const msg = (result.error as { message?: string } | undefined)?.message ?? 'Failed to approve enrolment';
         throw new Error(msg);

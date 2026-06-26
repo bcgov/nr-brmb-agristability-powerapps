@@ -1,8 +1,68 @@
 {
     "appName":  "Enrollment App",
+    "dataverseTableMappings":  {
+                                  "enrolmenthistory":          { "entitySetName": "vsi_enrolmenthistories",          "logicalName": "vsi_enrolmenthistory" },
+                                  "savedviews":                { "entitySetName": "userqueries",                    "logicalName": "userquery" },
+                                  "views":                     { "entitySetName": "savedqueries",                   "logicalName": "savedquery" },
+                                  "queues":                    { "entitySetName": "queues",                         "logicalName": "queue" },
+                                  "queueitems":                { "entitySetName": "queueitems",                     "logicalName": "queueitem" },
+                                  "users":                     { "entitySetName": "systemusers",                    "logicalName": "systemuser" },
+                                  "queuemembership":           { "entitySetName": "queuememberships",               "logicalName": "queuemembership" },
+                                  "enrolments":                { "entitySetName": "vsi_participantprogramyears",    "logicalName": "vsi_participantprogramyear" },
+                                  "coreconfiguration":         { "entitySetName": "vsi_armsconfigurations",         "logicalName": "vsi_armsconfiguration" },
+                                  "teams":                     { "entitySetName": "teams",                          "logicalName": "team" },
+                                  "securityroles":             { "entitySetName": "roles",                          "logicalName": "role" },
+                                  "teammembership":            { "entitySetName": "teammemberships",                "logicalName": "teammembership" },
+                                  "systemuserroles":           { "entitySetName": "systemuserrolescollection",      "logicalName": "systemuserroles" },
+                                  "accounts":                  { "entitySetName": "accounts",                      "logicalName": "account" },
+                                  "programyears":              { "entitySetName": "vsi_programyears",               "logicalName": "vsi_programyear" },
+                                  "fieldpermissions":          { "entitySetName": "fieldpermissions",               "logicalName": "fieldpermission" },
+                                  "systemuserprofiles":        { "entitySetName": "systemuserprofilescollection",   "logicalName": "systemuserprofiles" },
+                                  "teamprofiles":              { "entitySetName": "teamprofilescollection",         "logicalName": "teamprofiles" },
+                                  "automaticemailaudits":      { "entitySetName": "vsi_automaticemailaudits",       "logicalName": "vsi_automaticemailaudit" }
+                              },
+    "flowReferences":  [
+                          {
+                              "key":  "8f9e4c88-4c6f-4cdd-a9f0-6f6f6e6dd331",
+                              "id":  "/providers/Microsoft.PowerApps/apis/shared_logicflows",
+                              "displayName":  "Logic flows",
+                              "workflowDisplayName":  "Bulk Update Enrolment Records",
+                              "dataSources":  ["bulkupdateenrolmentrecords"]
+                          },
+                          {
+                              "key":  "61268f8d-adbf-40ca-9b88-573c367af652",
+                              "id":  "/providers/Microsoft.PowerApps/apis/shared_logicflows",
+                              "displayName":  "Logic flows",
+                              "workflowDisplayName":  "Generate 45 Day Letter",
+                              "dataSources":  ["generate45dayletter"]
+                          },
+                          {
+                              "key":  "3be5d05d-ec97-426e-ba6f-3a8ff094ec58",
+                              "id":  "/providers/Microsoft.PowerApps/apis/shared_logicflows",
+                              "displayName":  "Logic flows",
+                              "workflowDisplayName":  "Generate Bulk Enrolment Notices",
+                              "dataSources":  ["generatebulkenrolmentnotices"]
+                          },
+                          {
+                              "key":  "5c7de17b-7dce-4c39-ab9a-bbe54daf6fba",
+                              "id":  "/providers/Microsoft.PowerApps/apis/shared_logicflows",
+                              "displayName":  "Logic flows",
+                              "workflowDisplayName":  "Refer To Supervisor",
+                              "dataSources":  ["refertosupervisor"]
+                          },
+                          {
+                              "key":  "933ca746-6029-4dff-bf7e-741a70c5bf3c",
+                              "id":  "/providers/Microsoft.PowerApps/apis/shared_logicflows",
+                              "displayName":  "Logic flows",
+                              "workflowDisplayName":  "Process Enrolment Action",
+                              "dataSources":  ["processenrolmentaction"]
+                          }
+                      ],
     "environments":  {
                          "dev":  {
+                                     "appId":  "f19458f1-ddb2-438a-9089-82ba678268a1",
                                      "environmentId":  "dcd88fe8-d919-ee82-8313-8376a1e413f4",
+                                     "dataverseInstanceUrl": "https://aff-brmb-crm-dev.crm3.dynamics.com/",
                                      "dataSources":  [
                                                          {
                                                              "apiId":  "shared_farms-20api-5fe39d1efd21a19d13-5f571039b465579741",
@@ -11,40 +71,27 @@
                                                          {
                                                              "apiId":  "shared_commondataserviceforapps",
                                                              "connectionId":  "b05319f6f3244385ac9d9959391a2970"
-                                                         },
-                                                         {
-                                                             "apiId":  "shared_logicflows",
-                                                             "connectionId":  "replace-with-dev-logicflows-connection-id"
-                                                         },
-                                                         {
-                                                             "apiId":  "shared_powerbi",
-                                                             "connectionId":  "replace-with-dev-powerbi-connection-id"
                                                          }
                                                      ]
                                  },
                          "test":  {
-                                      "environmentId":  "dcd88fe8-d919-ee82-8313-8376a1e413f4",
+                                      "appId":  "1ff7ab6b-a1a7-46bd-9bfc-a60cf25d9391",
+                                      "environmentId":  "e0901c96-7fca-e8e1-914d-da7a82a7ecf6",
+                                      "dataverseInstanceUrl": "https://aff-brmb-crm-test.crm3.dynamics.com/",
                                       "dataSources":  [
                                                           {
-                                                              "apiId":  "shared_farms-20api-5fe39d1efd21a19d13-5f571039b465579741",
-                                                              "connectionId":  "7f0dbaddf90e498e82c553b27272a705"
+                                                              "apiId":  "shared_vsi-5ffarms-20api-5f4155bcad29d5d05a",
+                                                              "connectionId":  "2ec86b6c12194ed8b69d3770ff56ce17"
                                                           },
                                                           {
                                                               "apiId":  "shared_commondataserviceforapps",
-                                                              "connectionId":  "b05319f6f3244385ac9d9959391a2970"
-                                                          },
-                                                          {
-                                                              "apiId":  "shared_logicflows",
-                                                              "connectionId":  "replace-with-test-logicflows-connection-id"
-                                                          },
-                                                          {
-                                                              "apiId":  "shared_powerbi",
-                                                              "connectionId":  "replace-with-test-powerbi-connection-id"
+                                                              "connectionId":  "ff699992001647a89917e4ec3fd164a4"
                                                           }
                                                       ]
                                   },
                          "prod":  {
                                       "environmentId":  "replace-with-prod-environment-id",
+                                      "dataverseInstanceUrl": "replace-with-prod-dataverse-instance-url",
                                       "dataSources":  [
                                                           {
                                                               "apiId":  "shared_farms-20api-5fe39d1efd21a19d13-5f571039b465579741",
@@ -53,14 +100,6 @@
                                                           {
                                                               "apiId":  "shared_commondataserviceforapps",
                                                               "connectionId":  "replace-with-prod-dataverse-connection-id"
-                                                          },
-                                                          {
-                                                              "apiId":  "shared_logicflows",
-                                                              "connectionId":  "replace-with-prod-logicflows-connection-id"
-                                                          },
-                                                          {
-                                                              "apiId":  "shared_powerbi",
-                                                              "connectionId":  "replace-with-prod-powerbi-connection-id"
                                                           }
                                                       ]
                                   }

@@ -4,7 +4,7 @@
   "type": "Microsoft.PowerApps/apis",
   "properties": {
     "displayName": "Microsoft Dataverse",
-    "iconUri": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1807/1.0.1807.4723/commondataserviceforapps/icon.png",
+    "iconUri": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1814/1.0.1814.4754/commondataserviceforapps/icon.png",
     "iconBrandColor": "",
     "apiEnvironment": "Shared",
     "isCustomApi": false,
@@ -54,7 +54,7 @@
                 "description": "Sign in with your Microsoft Entra ID credentials",
                 "tooltip": "Provide Microsoft Entra ID credentials",
                 "constraints": {
-                  "required": "false",
+                  "required": "true",
                   "hidden": "false"
                 }
               }
@@ -154,7 +154,7 @@
                 "description": "Sign in with your Microsoft Entra ID credentials",
                 "tooltip": "Provide Microsoft Entra ID credentials",
                 "constraints": {
-                  "required": "false",
+                  "required": "true",
                   "hidden": "true"
                 }
               }
@@ -515,6 +515,12 @@
       "schemes": [
         "https"
       ],
+      "x-ms-capabilities": {
+        "testConnection": {
+          "operationId": "GetOrganizationsTest",
+          "parameters": {}
+        }
+      },
       "paths": {
         "/{connectionId}/v1.0/$metadata.json/organizations": {
           "get": {
@@ -553,6 +559,46 @@
             "x-ms-visibility": "internal",
             "externalDocs": {
               "url": "https://docs.microsoft.com/connectors/commondataserviceforapps/#get-organizations"
+            }
+          }
+        },
+        "/{connectionId}/v1.0/$metadata.json/organizationsTest": {
+          "get": {
+            "tags": [
+              "Organizations"
+            ],
+            "summary": "Get organizations test",
+            "description": "Get all organizations (test variant).",
+            "operationId": "GetOrganizationsTest",
+            "consumes": [],
+            "produces": [
+              "application/json",
+              "text/json"
+            ],
+            "parameters": [
+              {
+                "name": "connectionId",
+                "in": "path",
+                "required": true,
+                "x-ms-visibility": "internal",
+                "type": "string"
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "OK",
+                "schema": {
+                  "$ref": "#/definitions/OrganizationsDynamicValuesList"
+                }
+              },
+              "default": {
+                "description": "Operation Failed."
+              }
+            },
+            "deprecated": false,
+            "x-ms-visibility": "internal",
+            "externalDocs": {
+              "url": "https://docs.microsoft.com/connectors/commondataserviceforapps/#get-organizations-test"
             }
           }
         },
@@ -2154,7 +2200,9 @@
                   "value-title": "DisplayCollectionName/UserLocalizedLabel/Label"
                 },
                 "x-ms-summary": "Table name",
-                "type": "string"
+                "type": "string",
+                "x-ms-description-for-model": "Name of the target Dataverse table (e.g., 'contacts', 'access_rights'). Use get_tables to discover valid names.",
+                "x-ms-name-for-model": "list_rows_entityName"
               },
               {
                 "name": "$select",
@@ -2163,7 +2211,9 @@
                 "required": false,
                 "x-ms-summary": "Select columns",
                 "x-ms-visibility": "important",
-                "type": "string"
+                "type": "string",
+                "x-ms-description-for-model": "Optional. Comma-separated list of column names to return. If omitted, all columns are returned. Example: \"id,email,status\".",
+                "x-ms-name-for-model": "list_rows_$select"
               },
               {
                 "name": "$filter",
@@ -2172,7 +2222,9 @@
                 "required": false,
                 "x-ms-summary": "Filter rows",
                 "x-ms-visibility": "important",
-                "type": "string"
+                "type": "string",
+                "x-ms-description-for-model": "OData filter string. Supported operators: eq, ne, gt, ge, lt, le, and, or. Wrap all string/date values in single quotes. No functions (contains, startswith, etc.) are supported. Example: \"status eq 'Active' and system eq 'CoreBanking'\".",
+                "x-ms-name-for-model": "list_rows_$filter"
               },
               {
                 "name": "$orderby",
@@ -2181,7 +2233,9 @@
                 "required": false,
                 "x-ms-summary": "Sort By",
                 "x-ms-visibility": "important",
-                "type": "string"
+                "type": "string",
+                "x-ms-description-for-model": "Optional. Sort order as \"column_name direction\". Direction is 'asc' or 'desc' (default: asc). Example: \"granted_at desc\".",
+                "x-ms-name-for-model": "list_rows_$orderby"
               },
               {
                 "name": "$expand",
@@ -2209,7 +2263,9 @@
                 "x-ms-summary": "Row count",
                 "x-ms-visibility": "important",
                 "type": "integer",
-                "format": "int32"
+                "format": "int32",
+                "x-ms-description-for-model": "Optional. Maximum number of rows to return. Range: 1-1000, default: 1000. Set to a smaller value when you only need a few results.",
+                "x-ms-name-for-model": "list_rows_$top"
               },
               {
                 "name": "$skiptoken",
@@ -2246,6 +2302,8 @@
             "x-ms-pageable": {
               "nextLinkName": "@odata.nextLink"
             },
+            "x-ms-name-for-model": "list_rows",
+            "x-ms-description-for-model": "Lists rows from a Dataverse table with optional OData filtering, sorting, pagination, and field selection. The $filter parameter supports ONLY: comparison operators (eq, ne, gt, ge, lt, le) and boolean operators (and, or). String values in filters must be wrapped in single quotes: \"status eq 'Active'\". NOT supported: contains(), startswith(), endswith(), or any OData functions. NOT supported: bare date literals -- wrap dates in single quotes like strings: \"created_date ge '2024-01-01'\". Use get_tables to discover valid table names.",
             "externalDocs": {
               "url": "https://docs.microsoft.com/connectors/commondataserviceforapps/#list-rows"
             }
@@ -2298,7 +2356,9 @@
                 "required": false,
                 "x-ms-summary": "Return Full Metadata",
                 "x-ms-visibility": "advanced",
-                "type": "boolean"
+                "type": "boolean",
+                "x-ms-description-for-model": "Optional. If true, returns full OData metadata in the response. Defaults to false. Usually omit this parameter.",
+                "x-ms-name-for-model": "add_new_row_x-ms-odata-metadata-full"
               },
               {
                 "name": "entityName",
@@ -2314,7 +2374,9 @@
                   "value-title": "DisplayCollectionName/UserLocalizedLabel/Label"
                 },
                 "x-ms-summary": "Table name",
-                "type": "string"
+                "type": "string",
+                "x-ms-description-for-model": "Name of the target Dataverse table (e.g., 'contacts', 'access_rights'). Use get_tables to discover valid names.",
+                "x-ms-name-for-model": "add_new_row_entityName"
               },
               {
                 "name": "item",
@@ -2333,7 +2395,9 @@
                     "itemValuePath": "schema"
                   }
                 },
-                "x-ms-summary": "Row Item"
+                "x-ms-summary": "Row Item",
+                "x-ms-description-for-model": "REQUIRED. A JSON object containing ALL field values for the new row. Every column value must be inside this object -- do not pass them as top-level parameters. Keys must match the column names in the table schema exactly (case-sensitive).",
+                "x-ms-name-for-model": "add_new_row_item"
               }
             ],
             "responses": {
@@ -2358,6 +2422,8 @@
             },
             "deprecated": false,
             "x-ms-visibility": "important",
+            "x-ms-name-for-model": "add_new_row",
+            "x-ms-description-for-model": "Creates a new row in a Dataverse table. Requires exactly two parameters: 'entityName' (table name) and 'item' (a JSON object containing ALL row data). Every field for the new row MUST go inside the 'item' object -- do NOT pass row fields as top-level parameters. Example call: {\"entityName\": \"access_rights\", \"item\": {\"employee_id\": \"EMP-001\", \"status\": \"Active\"}}. Returns the created row. Use get_tables to discover valid table names. The optional 'x-ms-odata-metadata-full' parameter can usually be omitted (defaults to false).",
             "externalDocs": {
               "url": "https://docs.microsoft.com/connectors/commondataserviceforapps/#add-a-new-row"
             }
@@ -2920,7 +2986,9 @@
                   "value-title": "DisplayCollectionName/UserLocalizedLabel/Label"
                 },
                 "x-ms-summary": "Table name",
-                "type": "string"
+                "type": "string",
+                "x-ms-description-for-model": "Name of the target Dataverse table (e.g., 'contacts', 'access_rights'). Use get_tables to discover valid names.",
+                "x-ms-name-for-model": "get_row_by_id_entityName"
               },
               {
                 "name": "recordId",
@@ -2929,7 +2997,9 @@
                 "required": true,
                 "x-ms-url-encoding": "double",
                 "x-ms-summary": "Row ID",
-                "type": "string"
+                "type": "string",
+                "x-ms-description-for-model": "Primary key value of the record. Provide exactly one of 'recordId' or 'filter', not both.",
+                "x-ms-name-for-model": "get_row_by_id_recordId"
               },
               {
                 "name": "$select",
@@ -2938,7 +3008,9 @@
                 "required": false,
                 "x-ms-summary": "Select columns",
                 "x-ms-visibility": "advanced",
-                "type": "string"
+                "type": "string",
+                "x-ms-description-for-model": "Optional. Comma-separated list of column names to return. If omitted, all columns are returned. Example: \"id,email,status\".",
+                "x-ms-name-for-model": "get_row_by_id_$select"
               },
               {
                 "name": "$expand",
@@ -2987,6 +3059,8 @@
             },
             "deprecated": false,
             "x-ms-visibility": "important",
+            "x-ms-name-for-model": "get_row_by_id",
+            "x-ms-description-for-model": "Retrieves a single row from a Dataverse table by primary key or field filter. Provide exactly one of 'recordId' (primary key lookup) or 'filter' (dict of field:value pairs) -- not both. Returns one row. For querying multiple rows, use list_rows instead.",
             "externalDocs": {
               "url": "https://docs.microsoft.com/connectors/commondataserviceforapps/#get-a-row-by-id"
             }
@@ -3027,7 +3101,9 @@
                   "value-title": "DisplayCollectionName/UserLocalizedLabel/Label"
                 },
                 "x-ms-summary": "Table name",
-                "type": "string"
+                "type": "string",
+                "x-ms-description-for-model": "Name of the target Dataverse table (e.g., 'accounts'). Use get_tables to discover valid names.",
+                "x-ms-name-for-model": "delete_row_entityName"
               },
               {
                 "name": "recordId",
@@ -3036,7 +3112,9 @@
                 "required": true,
                 "x-ms-url-encoding": "double",
                 "x-ms-summary": "Row ID",
-                "type": "string"
+                "type": "string",
+                "x-ms-description-for-model": "Primary key (GUID) of the row to delete. Must be a valid ID from the table.",
+                "x-ms-name-for-model": "delete_row_recordId"
               },
               {
                 "name": "partitionId",
@@ -3045,7 +3123,9 @@
                 "required": false,
                 "x-ms-summary": "Partition Id",
                 "x-ms-visibility": "advanced",
-                "type": "string"
+                "type": "string",
+                "x-ms-description-for-model": "Optional. Partition key for NoSQL-backed tables. Omit for standard Dataverse tables.",
+                "x-ms-name-for-model": "delete_row_partitionId"
               }
             ],
             "responses": {
@@ -3058,6 +3138,8 @@
             },
             "deprecated": false,
             "x-ms-visibility": "important",
+            "x-ms-name-for-model": "delete_row",
+            "x-ms-description-for-model": "Permanently deletes a row from a Dataverse table by its primary key (GUID). This action cannot be undone. Requires 'entityName' and 'recordId'. This removes the entire row -- to change specific fields without deleting, use update_row instead.",
             "externalDocs": {
               "url": "https://docs.microsoft.com/connectors/commondataserviceforapps/#delete-a-row"
             }
@@ -3110,7 +3192,9 @@
                 "required": false,
                 "x-ms-summary": "Return Full Metadata",
                 "x-ms-visibility": "advanced",
-                "type": "boolean"
+                "type": "boolean",
+                "x-ms-description-for-model": "Optional. If true, returns full OData metadata in the response. Defaults to false. Usually omit this parameter.",
+                "x-ms-name-for-model": "upsert_row_x-ms-odata-metadata-full"
               },
               {
                 "name": "entityName",
@@ -3126,7 +3210,9 @@
                   "value-title": "DisplayCollectionName/UserLocalizedLabel/Label"
                 },
                 "x-ms-summary": "Table name",
-                "type": "string"
+                "type": "string",
+                "x-ms-description-for-model": "Name of the target Dataverse table (e.g., 'contacts'). Use get_tables to discover valid names.",
+                "x-ms-name-for-model": "upsert_row_entityName"
               },
               {
                 "name": "recordId",
@@ -3135,7 +3221,9 @@
                 "required": true,
                 "x-ms-url-encoding": "double",
                 "x-ms-summary": "Row ID",
-                "type": "string"
+                "type": "string",
+                "x-ms-description-for-model": "Primary key (GUID) of the row. If a row with this ID exists, it is updated; otherwise a new row is created.",
+                "x-ms-name-for-model": "upsert_row_recordId"
               },
               {
                 "name": "item",
@@ -3154,7 +3242,9 @@
                     "itemValuePath": "schema"
                   }
                 },
-                "x-ms-summary": "Row Item"
+                "x-ms-summary": "Row Item",
+                "x-ms-description-for-model": "REQUIRED. A JSON object containing the field values to set. All field values MUST be inside this object -- do not pass them as top-level parameters. Keys must match column names exactly.",
+                "x-ms-name-for-model": "upsert_row_item"
               }
             ],
             "responses": {
@@ -3179,6 +3269,8 @@
             },
             "deprecated": false,
             "x-ms-visibility": "important",
+            "x-ms-name-for-model": "upsert_row",
+            "x-ms-description-for-model": "Updates an existing row or inserts a new one if the recordId is not found (upsert). Requires: 'entityName', 'recordId' (the primary key GUID), and 'item' (a JSON object with field values). All field values MUST go inside the 'item' object -- do NOT pass them as top-level parameters. Example: {\"entityName\": \"contacts\", \"recordId\": \"d5be32ad-...\", \"item\": {\"firstname\": \"Mary\"}}. Unlike update_row, this does NOT fail if the record doesn't exist -- it creates a new row instead.",
             "externalDocs": {
               "url": "https://docs.microsoft.com/connectors/commondataserviceforapps/#upsert-a-row"
             }
@@ -3259,7 +3351,9 @@
                   "value-title": "DisplayCollectionName/UserLocalizedLabel/Label"
                 },
                 "x-ms-summary": "Table name",
-                "type": "string"
+                "type": "string",
+                "x-ms-description-for-model": "Name of the target Dataverse table (e.g., 'contacts', 'access_rights'). Use get_tables to discover valid names.",
+                "x-ms-name-for-model": "update_row_entityName"
               },
               {
                 "name": "recordId",
@@ -3268,7 +3362,9 @@
                 "required": true,
                 "x-ms-url-encoding": "double",
                 "x-ms-summary": "Row ID",
-                "type": "string"
+                "type": "string",
+                "x-ms-description-for-model": "Primary key value of the record to update. Provide exactly one of 'recordId' or 'filter', not both. Value must match the table's primary key field.",
+                "x-ms-name-for-model": "update_row_recordId"
               },
               {
                 "name": "item",
@@ -3287,7 +3383,9 @@
                     "itemValuePath": "schema"
                   }
                 },
-                "x-ms-summary": "Row Item"
+                "x-ms-summary": "Row Item",
+                "x-ms-description-for-model": "REQUIRED. A JSON object of field-value pairs to update. All update values MUST be inside this object -- do not pass them as top-level parameters. Only include fields you want to change.",
+                "x-ms-name-for-model": "update_row_item"
               }
             ],
             "responses": {
@@ -3312,6 +3410,8 @@
             },
             "deprecated": false,
             "x-ms-visibility": "important",
+            "x-ms-name-for-model": "update_row",
+            "x-ms-description-for-model": "Updates one or more fields on an existing row in a Dataverse table. Requires: 'entityName', exactly one of 'recordId' or 'filter' to identify the target row, and 'item' containing the fields to change. All update values MUST go inside the 'item' object -- do NOT pass them as top-level parameters. Example: {\"entityName\": \"access_rights\", \"recordId\": \"AR-001\", \"item\": {\"status\": \"Revoked\"}}. Use 'recordId' when you have the primary key value; use 'filter' (a dict of field:value pairs) when matching on other fields. Provide exactly one of 'recordId' or 'filter', not both.",
             "externalDocs": {
               "url": "https://docs.microsoft.com/connectors/commondataserviceforapps/#update-a-row"
             }
@@ -4475,7 +4575,9 @@
                   "value-title": "DisplayCollectionName/UserLocalizedLabel/Label"
                 },
                 "x-ms-summary": "Table name",
-                "type": "string"
+                "type": "string",
+                "x-ms-description-for-model": "Name of the table containing the primary row (e.g., 'contacts'). Use get_tables to discover valid names.",
+                "x-ms-name-for-model": "relate_rows_entityName"
               },
               {
                 "name": "recordId",
@@ -4484,7 +4586,9 @@
                 "required": true,
                 "x-ms-url-encoding": "double",
                 "x-ms-summary": "Row ID",
-                "type": "string"
+                "type": "string",
+                "x-ms-description-for-model": "GUID (primary key) of the primary row to create the relationship from. Must be a valid ID from the entityName table.",
+                "x-ms-name-for-model": "relate_rows_recordId"
               },
               {
                 "name": "associationEntityRelationship",
@@ -4504,7 +4608,9 @@
                   "itemTitlePath": "DisplayName/UserLocalizedLabel/Label"
                 },
                 "x-ms-summary": "Relationship",
-                "type": "string"
+                "type": "string",
+                "x-ms-description-for-model": "Name of the Dataverse relationship to use (e.g., 'contact_customer_accounts'). Must be a valid relationship defined in the schema.",
+                "x-ms-name-for-model": "relate_rows_associationEntityRelationship"
               },
               {
                 "name": "item",
@@ -4527,6 +4633,8 @@
             },
             "deprecated": false,
             "x-ms-visibility": "important",
+            "x-ms-name-for-model": "relate_rows",
+            "x-ms-description-for-model": "Creates an association between two Dataverse rows via a named relationship. Supports one-to-many and many-to-many relationship types. The '@odata.id' parameter must be a URL pointing to the related row. The URL format is: https://<org>.crm.dynamics.com/api/data/v9.0/<entity_plural>(<guid>). The hostname, entity name, and GUID must match values from your Dataverse environment -- do not guess these.",
             "externalDocs": {
               "url": "https://docs.microsoft.com/connectors/commondataserviceforapps/#relate-rows"
             }
@@ -4567,7 +4675,9 @@
                   "value-title": "DisplayCollectionName/UserLocalizedLabel/Label"
                 },
                 "x-ms-summary": "Table name",
-                "type": "string"
+                "type": "string",
+                "x-ms-description-for-model": "Name of the table containing the primary row (e.g., 'contacts'). Use get_tables to discover valid names.",
+                "x-ms-name-for-model": "unrelate_rows_entityName"
               },
               {
                 "name": "recordId",
@@ -4576,7 +4686,9 @@
                 "required": true,
                 "x-ms-url-encoding": "double",
                 "x-ms-summary": "Row ID",
-                "type": "string"
+                "type": "string",
+                "x-ms-description-for-model": "GUID (primary key) of the primary row to remove the relationship from. Must be a valid ID from the entityName table.",
+                "x-ms-name-for-model": "unrelate_rows_recordId"
               },
               {
                 "name": "associationEntityRelationship",
@@ -4595,7 +4707,9 @@
                   "itemTitlePath": "DisplayName/UserLocalizedLabel/Label"
                 },
                 "x-ms-summary": "Relationship",
-                "type": "string"
+                "type": "string",
+                "x-ms-description-for-model": "Name of the Dataverse relationship to remove (e.g., 'contact_customer_accounts'). Must be a valid relationship defined in the schema.",
+                "x-ms-name-for-model": "unrelate_rows_associationEntityRelationship"
               },
               {
                 "name": "$id",
@@ -4603,7 +4717,9 @@
                 "description": "Enter the row URL using OData ID from a previous step or typing the full URL (eg. https://org0.crm.dynamics.com/api/data/v9.0/faxes(3ce6c728-3c8a-4b55-a4ee-a251b253c3ee)",
                 "required": true,
                 "x-ms-summary": "Unrelate with",
-                "type": "string"
+                "type": "string",
+                "x-ms-description-for-model": "OData URL of the related row to unrelate. Format: https://<org>.crm.dynamics.com/api/data/v9.0/<entity_plural>(<guid>). The hostname, entity name, and GUID must come from your environment data -- do not guess or use placeholder values.",
+                "x-ms-name-for-model": "unrelate_rows_$id"
               }
             ],
             "responses": {
@@ -4616,6 +4732,8 @@
             },
             "deprecated": false,
             "x-ms-visibility": "important",
+            "x-ms-name-for-model": "unrelate_rows",
+            "x-ms-description-for-model": "Removes an existing association between two Dataverse rows. The inverse of relate_rows -- disconnects a relationship without deleting either row. The '$id' parameter must be a URL pointing to the related row. The URL format is: https://<org>.crm.dynamics.com/api/data/v9.0/<entity_plural>(<guid>). The hostname, entity name, and GUID must match values from your Dataverse environment -- do not guess these.",
             "externalDocs": {
               "url": "https://docs.microsoft.com/connectors/commondataserviceforapps/#unrelate-rows"
             }
@@ -7134,6 +7252,8 @@
             },
             "deprecated": false,
             "x-ms-visibility": "important",
+            "x-ms-name-for-model": "search_rows_preview",
+            "x-ms-description-for-model": "Full-text search across one or more Dataverse tables using Relevance Search. Returns rows ranked by relevance score. Unlike list_rows (which uses structured OData filters), this tool performs keyword/text matching across all fields. Use this for keyword searches; use list_rows for structured field-value filtering.",
             "externalDocs": {
               "url": "https://docs.microsoft.com/connectors/commondataserviceforapps/#search-rows-(preview)"
             }
@@ -8198,7 +8318,8 @@
             "tags": [
               "agentic",
               "Action",
-              "Connector-MCP"
+              "Connector-MCP",
+              "deprecated"
             ],
             "summary": "Dynamics 365 ERP MCP (Deprecated)",
             "description": "Dynamics 365 ERP MCP with tools",
@@ -8255,7 +8376,7 @@
               "agentic",
               "Action",
               "Connector-MCP",
-              "deprecated"
+              "Deprecated"
             ],
             "summary": "Dataverse MCP Server (Deprecated)",
             "description": "Dataverse MCP Server. This server can be used to get information from Dataverse as well as get knowledge from Dataverse and various other tabular sources. To check what all sources this server can access, use the list_knowledge_sources tool. list_knowledge_sources responsds with the source and tables that this server can access. ",
@@ -8954,7 +9075,9 @@
             "@odata.id": {
               "type": "string",
               "description": "Enter the row URL using OData ID from a previous step or typing the full URL (eg. https://org0.crm.dynamics.com/api/data/v9.0/faxes(3ce6c728-3c8a-4b55-a4ee-a251b253c3ee)",
-              "x-ms-summary": "Relate with"
+              "x-ms-summary": "Relate with",
+              "x-ms-description-for-model": "OData URL of the related row. Format: https://<org>.crm.dynamics.com/api/data/v9.0/<entity_plural>(<guid>). The hostname, entity name, and GUID must come from your environment data -- do not guess or use placeholder values.",
+              "x-ms-name-for-model": "relate_rows_@odata.id"
             }
           }
         },
@@ -9076,31 +9199,41 @@
               "x-ms-summary": "Search term",
               "description": "Enter a search term, eg. Contoso. Searches modifiers like boolean operators, wildcards, fuzzy search, proximity search etc. require the search type full",
               "type": "string",
-              "x-ms-visibility": "important"
+              "x-ms-visibility": "important",
+              "x-ms-description-for-model": "The search term or keywords to find. Matches against all text fields in the target tables. Example: 'Contoso' or 'active policy'.",
+              "x-ms-name-for-model": "search_rows_preview_search"
             },
             "searchtype": {
               "x-ms-summary": "Search type",
               "description": "Enter whether simple or full search syntax should be used (default is simple)",
               "type": "string",
-              "x-ms-visibility": "important"
+              "x-ms-visibility": "important",
+              "x-ms-description-for-model": "Optional. Search syntax mode: 'simple' (default) or 'full' (Lucene query syntax).",
+              "x-ms-name-for-model": "search_rows_preview_searchtype"
             },
             "searchmode": {
               "x-ms-summary": "Search mode",
               "description": "Enter whether any or all of the search terms must be matched (default is any)",
               "type": "string",
-              "x-ms-visibility": "important"
+              "x-ms-visibility": "important",
+              "x-ms-description-for-model": "Optional. 'any' (default): match if any term matches. 'all': all terms must match.",
+              "x-ms-name-for-model": "search_rows_preview_searchmode"
             },
             "top": {
               "x-ms-summary": "Row count",
               "description": "Enter the number of search results to be listed (default = 50)",
               "type": "integer",
-              "x-ms-visibility": "important"
+              "x-ms-visibility": "important",
+              "x-ms-description-for-model": "Optional. Maximum number of search results to return. Default: 50. Set to a smaller value (e.g., 10) when you only need a few results.",
+              "x-ms-name-for-model": "search_rows_preview_top"
             },
             "filter": {
               "x-ms-summary": "Row filter",
               "description": "Enter an Odata style filter expression to narrow the search",
               "type": "string",
-              "x-ms-visibility": "advanced"
+              "x-ms-visibility": "advanced",
+              "x-ms-description-for-model": "Optional. OData-style filter to further restrict search results. Example: \"statecode eq 0\".",
+              "x-ms-name-for-model": "search_rows_preview_filter"
             },
             "entities": {
               "x-ms-summary": "Table filter",
@@ -9110,7 +9243,9 @@
                 "type": "string",
                 "description": "Enter a table unique name to be searched (default is all tables)"
               },
-              "x-ms-visibility": "advanced"
+              "x-ms-visibility": "advanced",
+              "x-ms-description-for-model": "Optional. List of table names to restrict the search to. If omitted, searches all tables. Example: [\"contacts\", \"accounts\"].",
+              "x-ms-name-for-model": "search_rows_preview_entities"
             },
             "orderby": {
               "x-ms-summary": "Sort by",
@@ -9120,7 +9255,9 @@
                 "type": "string",
                 "description": "Enter a column unique name followed by asc or desc"
               },
-              "x-ms-visibility": "advanced"
+              "x-ms-visibility": "advanced",
+              "x-ms-description-for-model": "Optional. List of sort expressions. Each is \"column_name direction\" where direction is 'asc' or 'desc'. Example: [\"createdon desc\"].",
+              "x-ms-name-for-model": "search_rows_preview_orderby"
             },
             "facets": {
               "x-ms-summary": "Facet query",
@@ -9130,19 +9267,25 @@
                 "type": "string",
                 "description": "Enter a facet query to narrow the search"
               },
-              "x-ms-visibility": "advanced"
+              "x-ms-visibility": "advanced",
+              "x-ms-description-for-model": "Optional. Facet fields for grouping results. Example: [\"address1_city\"].",
+              "x-ms-name-for-model": "search_rows_preview_facets"
             },
             "skip": {
               "x-ms-summary": "Skip rows",
               "description": "Enter the number of search results to be skipped",
               "type": "integer",
-              "x-ms-visibility": "advanced"
+              "x-ms-visibility": "advanced",
+              "x-ms-description-for-model": "Optional. Number of results to skip for pagination. Default: 0.",
+              "x-ms-name-for-model": "search_rows_preview_skip"
             },
             "returntotalrecordcount": {
               "x-ms-summary": "Return row count",
               "description": "Choose an option",
               "type": "boolean",
-              "x-ms-visibility": "advanced"
+              "x-ms-visibility": "advanced",
+              "x-ms-description-for-model": "Optional. If true, includes total_row_count in the response. Default: false.",
+              "x-ms-name-for-model": "search_rows_preview_returntotalrecordcount"
             }
           }
         },
@@ -9444,14 +9587,14 @@
       "brandColor": "",
       "useNewApimVersion": "true",
       "version": {
-        "previous": "releases/v1.0.1802\\1.0.1802.4638",
-        "current": "releases/v1.0.1807\\1.0.1807.4723"
+        "previous": "releases/v1.0.1811\\1.0.1811.4743",
+        "current": "releases/v1.0.1814\\1.0.1814.4754"
       },
       "OperationIcons": {
-        "mcp_ContactCenterMCPServer": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1807/1.0.1807.4723/commondataserviceforapps/icon_mcp_ContactCenterMCPServer.png",
-        "mcp_ERPMCPServer": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1807/1.0.1807.4723/commondataserviceforapps/icon_mcp_ERPMCPServer.png",
-        "mcp_SalesMCPServer": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1807/1.0.1807.4723/commondataserviceforapps/icon_mcp_SalesMCPServer.png",
-        "mcp_ServiceMCPServer": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1807/1.0.1807.4723/commondataserviceforapps/icon_mcp_ServiceMCPServer.png"
+        "mcp_ContactCenterMCPServer": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1814/1.0.1814.4754/commondataserviceforapps/icon_mcp_ContactCenterMCPServer.png",
+        "mcp_ERPMCPServer": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1814/1.0.1814.4754/commondataserviceforapps/icon_mcp_ERPMCPServer.png",
+        "mcp_SalesMCPServer": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1814/1.0.1814.4754/commondataserviceforapps/icon_mcp_SalesMCPServer.png",
+        "mcp_ServiceMCPServer": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1814/1.0.1814.4754/commondataserviceforapps/icon_mcp_ServiceMCPServer.png"
       }
     },
     "capabilities": [
@@ -9461,7 +9604,7 @@
     "interfaces": {},
     "description": "Provides access to Microsoft Dataverse actions and triggers for Power Platform environments.",
     "createdTime": "2019-03-15T22:52:03.5485869Z",
-    "changedTime": "2026-04-16T19:17:24.1990058Z",
+    "changedTime": "2026-06-23T18:01:38.0304794Z",
     "releaseTag": "Production",
     "tier": "Premium",
     "publisher": "Microsoft",

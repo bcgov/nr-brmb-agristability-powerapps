@@ -13,6 +13,7 @@ export * as Generate45DayLetterModel from './models/Generate45DayLetterModel';
 export * as GenerateBulkEnrolmentNoticesModel from './models/GenerateBulkEnrolmentNoticesModel';
 export * as MicrosoftDataverseModel from './models/MicrosoftDataverseModel';
 export * as Office365UsersModel from './models/Office365UsersModel';
+export * as PowerBIModel from './models/PowerBIModel';
 export * as ProcessEnrolmentActionModel from './models/ProcessEnrolmentActionModel';
 export * as QueueitemsModel from './models/QueueitemsModel';
 export * as QueuemembershipsModel from './models/QueuemembershipsModel';
