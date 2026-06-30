@@ -10,7 +10,7 @@ import { getCoreConfig, normalizeCoreBaseUrl, patchEnrolmentCache, clearEnrolmen
 import { removeSaItemsFromCache, clearSaCache } from './SupervisorApprovalPage';
 import { useRole } from '../context/RoleContext';
 import type { Vsi_participantprogramyears } from '../generated/models/Vsi_participantprogramyearsModel';
-import { MicrosoftDataverseService } from '../generated/services/MicrosoftDataverseService';
+import { AccountsService } from '../generated/services/AccountsService';
 import { ProcessEnrolmentActionService } from '../generated/services/ProcessEnrolmentActionService';
 import { Vsi_armsconfigurationsService } from '../generated/services/Vsi_armsconfigurationsService';
 import { Vsi_participantprogramyearsService } from '../generated/services/Vsi_participantprogramyearsService';
@@ -29,7 +29,7 @@ import {
 import { resolveCurrentSystemUser } from '../utils/currentUser';
 import { buildCoreEntityRecordHref, normalizeEnrolmentId, openInNewTab } from '../utils/deepLinks';
 import { formatCurrencyOr, getAvatarColor, getInitials, getTaskStatusLabel } from '../utils/helpers';
-import { CORE_APP_ID_FALLBACK, CORE_BASE_URL_FALLBACK, DATAVERSE_ORG_URL_FALLBACK } from '../constants/config';
+import { CORE_APP_ID_FALLBACK, CORE_BASE_URL_FALLBACK } from '../constants/config';
 
 const BENEFIT_MARGIN_COUNT = 5;
 const APPROVABLE_STATUSES = new Set([865520005, 865520006]);
@@ -157,19 +157,18 @@ async function getAccountPinFromXrm(accountId: string): Promise<string> {
   return pin;
 }
 
-async function getAccountPin(accountId: string, orgUrl: string): Promise<string> {
-  const genericAccount = await MicrosoftDataverseService.GetItemWithOrganization(
-    '',
-    'application/json',
-    orgUrl,
-    'accounts',
-    accountId,
-    false,
-    false,
-    'vsi_pin,accountnumber,name',
-  );
-  let pin = getStringField(genericAccount.data, 'vsi_pin');
-  if (!pin) pin = getStringField(genericAccount.data, 'accountnumber');
+async function getAccountPin(accountId: string): Promise<string> {
+  let account: unknown = null;
+  try {
+    account = (await AccountsService.get(accountId, {
+      select: ['vsi_pin', 'accountnumber', 'name'],
+    })).data;
+  } catch {
+    account = null;
+  }
+
+  let pin = getStringField(account, 'vsi_pin');
+  if (!pin) pin = getStringField(account, 'accountnumber');
   if (pin) return pin;
 
   return getAccountPinFromXrm(accountId);
@@ -772,8 +771,7 @@ export function EnrolmentCalculationPage() {
         if (participantId) {
           setParticipantPinLoading(true);
           try {
-            const orgUrl = getCoreConfig().dataverseOrgUrl ?? DATAVERSE_ORG_URL_FALLBACK;
-            const pin = await getAccountPin(participantId, orgUrl);
+            const pin = await getAccountPin(participantId);
             if (!cancelled) setParticipantPin(pin);
           } catch {
             if (!cancelled) setParticipantPin('');
