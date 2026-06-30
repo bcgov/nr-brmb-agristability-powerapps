@@ -1,0 +1,30 @@
+Environment Switch Commands (Enrollment App)
+
+Run these from:
+C:\agristability\nr-brmb-agristability-powerapps\enrollment app
+
+Switch to DEV:
+powershell -ExecutionPolicy Bypass -File .\scripts\post-deploy-powerapps.ps1 -Stage dev -ConfigPath .\scripts\powerapps-deploy.config.json
+
+Switch to TEST:
+powershell -ExecutionPolicy Bypass -File .\scripts\post-deploy-powerapps.ps1 -Stage test -ConfigPath .\scripts\powerapps-deploy.config.json
+
+Faster switch (skip build, still rebinds + pushes):
+
+DEV (fast):
+powershell -ExecutionPolicy Bypass -File .\scripts\post-deploy-powerapps.ps1 -Stage dev -ConfigPath .\scripts\powerapps-deploy.config.json -SkipBuild
+
+TEST (fast):
+powershell -ExecutionPolicy Bypass -File .\scripts\post-deploy-powerapps.ps1 -Stage test -ConfigPath .\scripts\powerapps-deploy.config.json -SkipBuild
+
+If PAC auth points to wrong tenant/account, reselect environment by URL:
+
+DEV org select:
+pac org select --environment https://aff-brmb-crm-dev.crm3.dynamics.com/
+
+TEST org select:
+pac org select --environment https://aff-brmb-crm-test.crm3.dynamics.com/
+
+Useful checks:
+pac auth list
+pac org who
