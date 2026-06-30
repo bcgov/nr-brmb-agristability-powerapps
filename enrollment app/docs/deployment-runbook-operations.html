@@ -140,7 +140,8 @@
   <div class="wrap">
     <h1>Enrollment App Deployment Runbook (Operations Edition)</h1>
     <p class="meta">Repository: nr-brmb-agristability-powerapps/enrollment app</p>
-    <p class="meta">Last updated: 2026-06-18</p>
+    <p class="meta">Last updated: 2026-06-26</p>
+    <p class="meta">Quick command refs: <a href="./environment-switch-commands.txt">environment-switch-commands.txt</a> | <a href="./environment-switch-commands-quick.txt">environment-switch-commands-quick.txt</a></p>
 
     <h2>Release Record (Fill Before and After Deployment)</h2>
     <table>
@@ -270,14 +271,19 @@
       <li>Repo checked out locally with dependencies installed.</li>
       <li>Access to target connector <code>connectionId</code> values.</li>
       <li>Permission to add/rebind Power Apps data sources.</li>
+      <li>New/updated flows must be in a solution and discoverable via <code>npx power-apps list-flows</code> in the target stage.</li>
     </ul>
 
     <h2>Command Pack (Copy/Paste)</h2>
+    <p>For a condensed command-only handoff, use <a href="./environment-switch-commands-quick.txt">environment-switch-commands-quick.txt</a>. For full notes and troubleshooting commands, use <a href="./environment-switch-commands.txt">environment-switch-commands.txt</a>.</p>
     <h3>Open repo root</h3>
     <pre>cd "c:\agristability\nr-brmb-agristability-powerapps\enrollment app"</pre>
 
     <h3>Optional: sync stage config from power.config.json</h3>
     <pre>.\scripts\sync-deploy-config-from-powerconfig.ps1 -Stage test -PowerConfigPath .\power.config.json -DeployConfigPath .\scripts\powerapps-deploy.config.json -AllowOverwrite</pre>
+
+    <h3>Run full post-deploy (Dev)</h3>
+    <pre>.\scripts\post-deploy-powerapps.ps1 -Stage dev -ConfigPath .\scripts\powerapps-deploy.config.json</pre>
 
     <h3>Run full post-deploy (Test)</h3>
     <pre>.\scripts\post-deploy-powerapps.ps1 -Stage test -ConfigPath .\scripts\powerapps-deploy.config.json</pre>
@@ -350,6 +356,8 @@
     <ol>
       <li><code>pac code init -n &lt;appName&gt; -env &lt;environmentId&gt;</code></li>
       <li>For each data source in stage config: <code>pac code add-data-source -a &lt;apiId&gt; -c &lt;connectionId&gt;</code></li>
+      <li>Injects Dataverse table mappings from <code>dataverseTableMappings</code> into <code>power.config.json</code></li>
+      <li>Resolves flow IDs in the stage with <code>npx power-apps list-flows --json</code> and binds them with <code>npx power-apps add-flow -f &lt;workflowId&gt;</code></li>
       <li><code>npm.cmd run build</code> (unless <code>-SkipBuild</code>)</li>
       <li><code>npx.cmd power-apps push</code></li>
     </ol>
@@ -369,6 +377,16 @@
 
     <h3>Logic Flows/Power BI connection IDs not auto-synced</h3>
     <p>Expected in some environments if <code>sharedConnectionId</code> is not present in <code>power.config.json</code>. Enter those IDs manually in stage config.</p>
+
+    <h3>PAC cannot find the target environment by GUID</h3>
+    <p>Usually wrong tenant/account is active in PAC. Re-auth and select by URL:</p>
+    <pre>pac auth list
+  pac auth create --deviceCode
+  pac org select --environment https://aff-brmb-crm-test.crm3.dynamics.com/</pre>
+
+    <h3>Flow still skipped by script</h3>
+    <p>The flow is not yet discoverable as a solution cloud flow invokable from Power Apps in that stage. Verify with:</p>
+    <pre>npx power-apps list-flows --search "&lt;flow name&gt;" --json --no-color</pre>
 
     <h3>Deep links fail after successful push</h3>
     <p>Verify active core config has valid <code>vsi_coreenvironmentid</code> and <code>vsi_tenantid</code>.</p>

@@ -100,10 +100,11 @@
   <div class="page">
     <h1>Enrollment App Deployment Runbook</h1>
     <p class="small">Repository: nr-brmb-agristability-powerapps/enrollment app</p>
-    <p class="small">Generated: 2026-06-18</p>
+    <p class="small">Generated: 2026-06-26</p>
+    <p class="small">Quick command refs: <a href="./environment-switch-commands.txt">environment-switch-commands.txt</a> | <a href="./environment-switch-commands-quick.txt">environment-switch-commands-quick.txt</a></p>
 
     <h2>1. Purpose</h2>
-    <p>This runbook defines the full deployment process for Test and Prod, including pipeline release, required Dataverse core configuration fields, and the post-deploy PowerShell scripts used to bind environment-specific connectors and push the app.</p>
+    <p>This runbook defines the full deployment process for Dev, Test, and Prod, including pipeline release, required Dataverse core configuration fields, and the post-deploy PowerShell scripts used to bind environment-specific connectors and push the app.</p>
 
     <h2>2. High-Level Release Flow</h2>
     <ol>
@@ -199,7 +200,7 @@
     <ul>
       <li><code>scripts/powerapps-deploy.config.json</code>: stage-specific environment IDs and datasource connection IDs.</li>
       <li><code>scripts/sync-deploy-config-from-powerconfig.ps1</code>: copies discovered values from <code>power.config.json</code> into a selected stage in deploy config.</li>
-      <li><code>scripts/post-deploy-powerapps.ps1</code>: runs <code>pac code init</code>, <code>pac code add-data-source</code>, optional build, and <code>npx power-apps push</code>.</li>
+      <li><code>scripts/post-deploy-powerapps.ps1</code>: runs <code>pac code init</code>, <code>pac code add-data-source</code>, injects Dataverse table mappings, resolves/adds stage flows via <code>npx power-apps list-flows</code>/<code>add-flow</code>, optional build, and <code>npx power-apps push</code>.</li>
     </ul>
 
     <h2>7. Step-by-Step Execution</h2>
@@ -216,6 +217,10 @@
     <p>This can auto-fill environment ID and connector IDs where <code>sharedConnectionId</code> is present in <code>power.config.json</code>.</p>
 
     <h3>7.4 Run full post-deploy workflow</h3>
+    <p>For Dev:</p>
+    <pre>.\scripts\post-deploy-powerapps.ps1 -Stage dev -ConfigPath .\scripts\powerapps-deploy.config.json</pre>
+
+    <p>For Test:</p>
     <pre>.\scripts\post-deploy-powerapps.ps1 -Stage test -ConfigPath .\scripts\powerapps-deploy.config.json</pre>
 
     <p>For Prod:</p>
@@ -228,6 +233,8 @@
     <ol>
       <li><code>pac code init -n &lt;appName&gt; -env &lt;environmentId&gt;</code></li>
       <li>For each datasource: <code>pac code add-data-source -a &lt;apiId&gt; -c &lt;connectionId&gt;</code> (plus optional table/dataset parameters if configured)</li>
+      <li>Injects Dataverse mappings from <code>dataverseTableMappings</code> into <code>power.config.json</code></li>
+      <li>Lists invokable flows and runs <code>npx power-apps add-flow -f &lt;workflowId&gt;</code> for each configured <code>flowReferences</code> item found in the stage</li>
       <li><code>npm.cmd run build</code> (unless <code>-SkipBuild</code>)</li>
       <li><code>npx.cmd power-apps push</code></li>
     </ol>
@@ -250,6 +257,16 @@
 
     <h3>Issue: schema still shows old environment GUID</h3>
     <p>Expected until connectors are rebound in target environment. Re-run post-deploy process for the target stage.</p>
+
+    <h3>Issue: PAC cannot find environment ID</h3>
+    <p>Usually caused by wrong tenant/account in PAC auth profile. Re-auth as the correct account and select by URL:</p>
+    <pre>pac auth list
+  pac auth create --deviceCode
+  pac org select --environment https://aff-brmb-crm-dev.crm3.dynamics.com/</pre>
+
+    <h3>Issue: new flow not added by script</h3>
+    <p>The flow must be a solution cloud flow and invokable from Power Apps in that stage. Verify it appears in:</p>
+    <pre>npx power-apps list-flows --search "&lt;flow name&gt;" --json --no-color</pre>
 
     <h3>Issue: deep links fail</h3>
     <p>Check active core config row has valid <code>vsi_coreenvironmentid</code> and <code>vsi_tenantid</code>.</p>

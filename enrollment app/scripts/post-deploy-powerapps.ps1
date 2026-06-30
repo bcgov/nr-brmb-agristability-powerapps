@@ -107,6 +107,50 @@ function Test-HasProperty {
   return $null -ne ($Object | Get-Member -Name $PropertyName -MemberType NoteProperty, Property, AliasProperty -ErrorAction SilentlyContinue)
 }
 
+function Get-DataSourceNameVariants {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$Name
+  )
+
+  if ([string]::IsNullOrWhiteSpace($Name)) {
+    return @()
+  }
+
+  $variants = New-Object 'System.Collections.Generic.List[string]'
+
+  $trimmed = $Name.Trim()
+  $variants.Add($trimmed)
+
+  $withoutShared = $trimmed
+  if ($withoutShared.StartsWith('shared_')) {
+    $withoutShared = $withoutShared.Substring(7)
+  }
+
+  $variants.Add($withoutShared)
+  $variants.Add(($withoutShared -replace '-', '_'))
+
+  $hyphenated = $withoutShared -replace '_', '-'
+  $variants.Add($hyphenated)
+  $variants.Add("shared_$hyphenated")
+
+  $seen = @{}
+  $deduped = New-Object 'System.Collections.Generic.List[string]'
+  foreach ($value in $variants) {
+    if ([string]::IsNullOrWhiteSpace($value)) {
+      continue
+    }
+
+    $key = $value.ToLowerInvariant()
+    if (-not $seen.ContainsKey($key)) {
+      $seen[$key] = $true
+      $deduped.Add($value)
+    }
+  }
+
+  return @($deduped)
+}
+
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $powerConfigPath = Join-Path $repoRoot 'power.config.json'
 
@@ -146,6 +190,11 @@ if ($null -eq $target.dataSources -or $target.dataSources.Count -eq 0) {
 Write-Host "Starting post-deploy setup for stage '$Stage'." -ForegroundColor Green
 Write-Host "App Name: $appName" -ForegroundColor Green
 Write-Host "Environment: $environmentId" -ForegroundColor Green
+
+if ($Stage -eq 'prod' -and $SkipBuild.IsPresent) {
+  throw "-SkipBuild is not allowed for prod deployments. Run without -SkipBuild to ensure the pushed bundle is rebuilt against the current normalized power.config.json."
+}
+
 if ($PreserveSchemas) {
   Write-Host "  Mode: Update existing environment (preserving local schemas)" -ForegroundColor Yellow
 } else {
@@ -260,6 +309,73 @@ if ($null -ne $config.dataverseTableMappings -and (Test-Path -LiteralPath $power
 
   $powerConfig | ConvertTo-Json -Depth 100 | Set-Content -LiteralPath $powerConfigPath
   Write-Host "Injected $($mappingNames.Count) Dataverse table mapping(s) into power.config.json." -ForegroundColor Green
+}
+
+# Normalize FARMS connection-reference datasource keys so runtime lookups succeed across naming variants.
+if (Test-Path -LiteralPath $powerConfigPath) {
+  $powerConfig = Get-Content -LiteralPath $powerConfigPath -Raw | ConvertFrom-Json
+
+  if ((Test-HasProperty -Object $powerConfig -PropertyName 'connectionReferences') -and $null -ne $powerConfig.connectionReferences) {
+    $updatedFarmsRefs = 0
+    $connectionRefNames = @($powerConfig.connectionReferences | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name)
+
+    foreach ($refName in $connectionRefNames) {
+      $ref = $powerConfig.connectionReferences.$refName
+      if ($null -eq $ref) {
+        continue
+      }
+
+      $idValue = ''
+      if (Test-HasProperty -Object $ref -PropertyName 'id') {
+        $idValue = [string]$ref.id
+      }
+
+      if (-not $idValue.ToLowerInvariant().Contains('farms')) {
+        continue
+      }
+
+      $allNames = New-Object 'System.Collections.Generic.List[string]'
+
+      if ((Test-HasProperty -Object $ref -PropertyName 'dataSources') -and $null -ne $ref.dataSources) {
+        foreach ($dataSourceName in @($ref.dataSources)) {
+          foreach ($variant in (Get-DataSourceNameVariants -Name ([string]$dataSourceName))) {
+            $allNames.Add($variant)
+          }
+        }
+      }
+
+      if (-not [string]::IsNullOrWhiteSpace($idValue)) {
+        $apiName = $idValue.Split('/')[-1]
+        foreach ($variant in (Get-DataSourceNameVariants -Name $apiName)) {
+          $allNames.Add($variant)
+        }
+      }
+
+      $seen = @{}
+      $dedupedNames = New-Object 'System.Collections.Generic.List[string]'
+      foreach ($name in $allNames) {
+        if ([string]::IsNullOrWhiteSpace($name)) {
+          continue
+        }
+
+        $key = $name.ToLowerInvariant()
+        if (-not $seen.ContainsKey($key)) {
+          $seen[$key] = $true
+          $dedupedNames.Add($name)
+        }
+      }
+
+      if ($dedupedNames.Count -gt 0) {
+        $ref.dataSources = @($dedupedNames)
+        $updatedFarmsRefs++
+      }
+    }
+
+    if ($updatedFarmsRefs -gt 0) {
+      $powerConfig | ConvertTo-Json -Depth 100 | Set-Content -LiteralPath $powerConfigPath
+      Write-Host "Normalized FARMS datasource keys on $updatedFarmsRefs connection reference(s)." -ForegroundColor Green
+    }
+  }
 }
 
 # Add flow connection references using the current environment's workflow IDs.

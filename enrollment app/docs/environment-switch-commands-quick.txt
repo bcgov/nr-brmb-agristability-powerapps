@@ -1,0 +1,16 @@
+Quick Environment Switch (Enrollment App)
+
+From folder:
+C:\agristability\nr-brmb-agristability-powerapps\enrollment app
+
+DEV:
+powershell -ExecutionPolicy Bypass -File .\scripts\post-deploy-powerapps.ps1 -Stage dev -ConfigPath .\scripts\powerapps-deploy.config.json
+
+TEST:
+powershell -ExecutionPolicy Bypass -File .\scripts\post-deploy-powerapps.ps1 -Stage test -ConfigPath .\scripts\powerapps-deploy.config.json
+
+Fast (skip build): add -SkipBuild
+
+If PAC auth is wrong tenant:
+pac org select --environment https://aff-brmb-crm-dev.crm3.dynamics.com/
+pac org select --environment https://aff-brmb-crm-test.crm3.dynamics.com/
