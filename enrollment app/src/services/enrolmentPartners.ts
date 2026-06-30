@@ -3,11 +3,8 @@ import type {
   Vsi_participantprogramyearsvsi_enrolmentstatus as EnrolmentStatusValue,
 } from '../generated/models/Vsi_participantprogramyearsModel';
 import { AccountsService } from '../generated/services/AccountsService';
-import { MicrosoftDataverseService } from '../generated/services/MicrosoftDataverseService';
 import { Vsi_participantprogramyearsService } from '../generated/services/Vsi_participantprogramyearsService';
 import { Vsi_programyearsService } from '../generated/services/Vsi_programyearsService';
-import { getCoreConfig } from '../hooks/useEnrolmentData';
-import { DATAVERSE_ORG_URL_FALLBACK } from '../constants/config';
 import { toDateInputValue } from '../utils/date';
 
 export type PartnerComparisonRow = {
@@ -105,22 +102,20 @@ async function getAccountFromXrm(accountId: string): Promise<Record<string, unkn
 }
 
 export async function getParticipantPin(accountId: string): Promise<string> {
-  const orgUrl = getCoreConfig().dataverseOrgUrl ?? DATAVERSE_ORG_URL_FALLBACK;
-  const genericAccount = await MicrosoftDataverseService.GetItemWithOrganization(
-    '',
-    'application/json',
-    orgUrl,
-    'accounts',
-    accountId,
-    false,
-    false,
-    'vsi_pin,accountnumber,name',
-  );
-  let pin = getStringField(genericAccount.data, 'vsi_pin');
-  if (!pin) pin = getStringField(genericAccount.data, 'accountnumber');
+  let account: unknown = null;
+  try {
+    account = (await AccountsService.get(accountId, {
+      select: ['vsi_pin', 'accountnumber', 'name'],
+    })).data;
+  } catch {
+    account = null;
+  }
+
+  let pin = getStringField(account, 'vsi_pin');
+  if (!pin) pin = getStringField(account, 'accountnumber');
   if (pin) return pin;
 
-  const account = await getAccountFromXrm(accountId);
+  account = await getAccountFromXrm(accountId);
   pin = getStringField(account, 'vsi_pin');
   if (!pin) pin = getStringField(account, 'accountnumber');
   return pin;
