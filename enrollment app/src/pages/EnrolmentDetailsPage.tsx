@@ -298,6 +298,13 @@ const getNormalizedParticipantId = (record: Vsi_participantprogramyears | null):
 const getRecordDateOptOutFallback = (record: Vsi_participantprogramyears | null): boolean =>
   hasDateValue(record?.vsi_programyearoptoutdate);
 
+function getParticipantPinFromEnrolmentName(value: string | null | undefined): string {
+  const text = value?.trim() ?? '';
+  if (!text) return '';
+  const numericTokens = text.match(/\b\d{4,}\b/g);
+  return numericTokens?.at(-1) ?? text;
+}
+
 const getRecordLookupLabel = (
   record: Vsi_participantprogramyears,
   directValue: string | null | undefined,
@@ -316,7 +323,7 @@ export function EnrolmentDetailsPage() {
   const { fieldPerms } = useFieldPermissions('vsi_participantprogramyear', activeRole === 'Supervisor');
   const cef = (attr: string) => canEditField(fieldPerms, attr, canEdit);
   const resolvedEnrolmentId = normalizeEnrolmentId(enrolmentId);
-  const routeSource = source === 'supervisor' ? 'supervisor' : 'dashboard';
+  const routeSource = source === 'supervisor' || source === 'deadline-reminders' ? source : 'dashboard';
 
   const [record, setRecord] = useState<Vsi_participantprogramyears | null>(null);
   const [isParticipantOptedOut, setIsParticipantOptedOut] = useState(false);
@@ -400,7 +407,12 @@ export function EnrolmentDetailsPage() {
   }, [resolvedEnrolmentId]);
 
   useEffect(() => {
+    const enrolmentPin = getParticipantPinFromEnrolmentName(record?.vsi_name);
     const participantId = getNormalizedParticipantId(record);
+    if (enrolmentPin) {
+      setParticipantPin(enrolmentPin);
+      return;
+    }
     if (!participantId) {
       setParticipantPin('');
       return;
@@ -1026,6 +1038,9 @@ export function EnrolmentDetailsPage() {
   if (routeSource === 'supervisor') {
     backPath = '/supervisor-approval';
     backLabel = 'Back to Supervisor Approval';
+  } else if (routeSource === 'deadline-reminders') {
+    backPath = '/deadline-reminders';
+    backLabel = 'Back to Deadline Reminders';
   }
 
   if (error || !record || !formState) {
@@ -1561,4 +1576,3 @@ export function EnrolmentDetailsPage() {
     </section>
   );
 }
-

@@ -124,6 +124,13 @@ function normalizeUrlBase(value: string): string {
   return value.replace(/\/+$/, '');
 }
 
+function getParticipantPinFromEnrolmentName(value: string | null | undefined): string {
+  const text = value?.trim() ?? '';
+  if (!text) return '';
+  const numericTokens = text.match(/\b\d{4,}\b/g);
+  return numericTokens?.at(-1) ?? text;
+}
+
 async function getFarmsLegacyBaseUrl(): Promise<string | null> {
   const result = await Vsi_armsconfigurationsService.getAll({
     maxPageSize: 50,
@@ -647,9 +654,9 @@ export function EnrolmentCalculationPage() {
   const { enrolmentId, source } = useParams<{ enrolmentId: string; source: string }>();
   const navigate = useNavigate();
   const { activeRole } = useRole();
-  const routeSource = source === 'supervisor' ? 'supervisor' : 'dashboard';
-  const backTo = routeSource === 'supervisor' ? '/supervisor-approval' : '/dashboard-home';
-  const backLabel = routeSource === 'supervisor' ? 'Back to Supervisor Approval' : 'Back to Enrolments';
+  const routeSource = source === 'supervisor' || source === 'deadline-reminders' ? source : 'dashboard';
+  const backTo = routeSource === 'supervisor' ? '/supervisor-approval' : routeSource === 'deadline-reminders' ? '/deadline-reminders' : '/dashboard-home';
+  const backLabel = routeSource === 'supervisor' ? 'Back to Supervisor Approval' : routeSource === 'deadline-reminders' ? 'Back to Deadline Reminders' : 'Back to Enrolments';
   const resolvedEnrolmentId = normalizeEnrolmentId(enrolmentId);
   const [record, setRecord] = useState<Vsi_participantprogramyears | null>(null);
   const [participantPin, setParticipantPin] = useState('');
@@ -767,8 +774,9 @@ export function EnrolmentCalculationPage() {
         setRecord(result.data);
 
         const participantId = result.data._vsi_participantid_value?.replace(/[{}]/g, '');
-        setParticipantPin('');
-        if (participantId) {
+        const enrolmentPin = getParticipantPinFromEnrolmentName(result.data.vsi_name);
+        setParticipantPin(enrolmentPin);
+        if (!enrolmentPin && participantId) {
           setParticipantPinLoading(true);
           try {
             const pin = await getAccountPin(participantId);
