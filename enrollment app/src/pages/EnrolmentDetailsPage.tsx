@@ -400,7 +400,12 @@ export function EnrolmentDetailsPage() {
   }, [resolvedEnrolmentId]);
 
   useEffect(() => {
+    const enrolmentPin = record?.vsi_name?.trim() ?? '';
     const participantId = getNormalizedParticipantId(record);
+    if (enrolmentPin) {
+      setParticipantPin(enrolmentPin);
+      return;
+    }
     if (!participantId) {
       setParticipantPin('');
       return;

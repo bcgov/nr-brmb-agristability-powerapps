@@ -767,8 +767,9 @@ export function EnrolmentCalculationPage() {
         setRecord(result.data);
 
         const participantId = result.data._vsi_participantid_value?.replace(/[{}]/g, '');
-        setParticipantPin('');
-        if (participantId) {
+        const enrolmentPin = result.data.vsi_name?.trim() ?? '';
+        setParticipantPin(enrolmentPin);
+        if (!enrolmentPin && participantId) {
           setParticipantPinLoading(true);
           try {
             const pin = await getAccountPin(participantId);
