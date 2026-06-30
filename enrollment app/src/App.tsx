@@ -4,6 +4,7 @@ import { ClipboardCheck, ExternalLink, Home, LayoutDashboard, Menu } from 'lucid
 
 import { DashboardHomePage } from './pages/DashboardHomePage';
 import { SupervisorApprovalPage } from './pages/SupervisorApprovalPage';
+import { DeadlineReminderPage } from './pages/DeadlineReminderPage';
 import { EnrolmentDetailsPage } from './pages/EnrolmentDetailsPage';
 import { EnrolmentCalculationPage } from './pages/EnrolmentCalculationPage';
 import { EnrolmentHistoryPage } from './pages/EnrolmentHistoryPage';
@@ -161,6 +162,7 @@ function AppShell() {
           <Route path="/enrolment/:enrolmentId" element={<EnrolmentDetailsPage />} />
           <Route path="/enrolment/:source/:enrolmentId" element={<EnrolmentDetailsPage />} />
           <Route path="/supervisor-approval" element={<ProtectedRoute allowedRoles={SUPERVISOR_APPROVAL_ROLES}><SupervisorApprovalPage /></ProtectedRoute>} />
+          <Route path="/deadline-reminders" element={<DeadlineReminderPage />} />
           <Route path="/calculation/:enrolmentId" element={<ProtectedRoute allowedRoles={CALCULATION_ROLES}><EnrolmentCalculationPage /></ProtectedRoute>} />
           <Route path="/calculation/:source/:enrolmentId" element={<ProtectedRoute allowedRoles={CALCULATION_ROLES}><EnrolmentCalculationPage /></ProtectedRoute>} />
           <Route path="/calculation" element={<Navigate to="/dashboard-home" replace />} />

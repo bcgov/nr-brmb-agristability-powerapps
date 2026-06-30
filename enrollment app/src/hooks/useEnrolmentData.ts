@@ -128,6 +128,7 @@ export function useEnrolmentData() {
           'vsi_previousyearcalculatedenfee',
           'vsi_administrativecostsharingfee',
           'vsi_enrolmentfeecalculated',
+          'vsi_totalfeesowed',
           'vsi_totalfeesowedcalculated',
           'vsi_totalfeespaid',
           'vsi_enrolmentfee',
@@ -143,6 +144,10 @@ export function useEnrolmentData() {
           'vsi_broughtforward',
           'vsi_manualreview',
           'vsi_enrolmentnoticesentdate',
+          'vsi_enrolmentfeesnonpenaltyduedate',
+          'vsi_enrolmentfeesfinaldeadlinedate',
+          'vsi_nonpenaltydeadlineremindersent',
+          'vsi_finaldeadlineremindersent',
           'vsi_programyearoptoutdate',
           'vsi_fortyfivedayletterstartdate',
           'vsi_fortyfivedaycounterpaused',
@@ -417,4 +422,3 @@ export function useSortedAndFilteredRows(
 
   return { filteredRows, taskStatusOptions, enrolStatusOptions, yearOptions, ownerOptions };
 }
-

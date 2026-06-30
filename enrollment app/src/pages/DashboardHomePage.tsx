@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Columns2, Filter, FilterX, Info, RefreshCw } from 'lucide-react';
 
 import type { SortKey, SortDir, FilterOperator, AdvFilterNode, LogicOp, QuickFilterState } from '../types/enrollment';
+import type { Vsi_participantprogramyears } from '../generated/models/Vsi_participantprogramyearsModel';
 import { DEFAULT_VISIBLE_KEYS } from '../constants/columns';
 import { countActiveNodes } from '../utils/filterTree';
 import { useEnrolmentData, useSortedAndFilteredRows, clearEnrolmentCache } from '../hooks/useEnrolmentData';
@@ -28,6 +29,36 @@ import { EnrolmentDataTable } from '../components/EnrolmentDataTable';
 import { EnrolmentActionsBar } from '../components/EnrolmentActionsBar';
 
 const PAGE_SIZE = 300;
+const EN_STATUS_ENROLMENT_NOTICE_SENT = 865520007;
+const EN_STATUS_ENROLLED_NOT_PAID = 865520008;
+
+const startOfLocalDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+const calculateRemainingDays = (deadline?: string): number | null => {
+  if (!deadline) return null;
+  const deadlineDate = new Date(deadline);
+  if (Number.isNaN(deadlineDate.getTime())) return null;
+  const today = startOfLocalDay(new Date());
+  const target = startOfLocalDay(deadlineDate);
+  return Math.ceil((target.getTime() - today.getTime()) / 86_400_000);
+};
+
+const needsDeadlineReminder = (row: Vsi_participantprogramyears): boolean => {
+  const status = Number(row.vsi_enrolmentstatus);
+  const isNoticeSent = status === EN_STATUS_ENROLMENT_NOTICE_SENT;
+  const isEnrolledNotPaid = status === EN_STATUS_ENROLLED_NOT_PAID;
+  if (!isNoticeSent && !isEnrolledNotPaid) return false;
+
+  const deadline = isNoticeSent
+    ? row.vsi_enrolmentfeesnonpenaltyduedate
+    : row.vsi_enrolmentfeesfinaldeadlinedate;
+  const reminderSent = isNoticeSent
+    ? row.vsi_nonpenaltydeadlineremindersent
+    : row.vsi_finaldeadlineremindersent;
+  const remainingDays = calculateRemainingDays(deadline);
+
+  return remainingDays != null && remainingDays <= 5 && reminderSent !== true;
+};
 
 // Module-level cache — persists filter/sort/pagination state across SPA navigations.
 type DashboardFilterCache = {
@@ -52,6 +83,7 @@ let dashboardFilterCache: DashboardFilterCache | null = null;
 export function DashboardHomePage() {
   const { activeRole } = useRole();
   const { rows, setRows, loading, error, avatarUrls, fetchEnrolments, coreAppId, coreBaseUrl, fetchCoreAppId } = useEnrolmentData();
+  const deadlineReminderCount = useMemo(() => rows.filter(needsDeadlineReminder).length, [rows]);
 
   // Refresh handler is defined after useViews so reloadViews is available
 
@@ -502,6 +534,12 @@ export function DashboardHomePage() {
                   Pending supervisor&rsquo;s approval: <strong>{rows.filter(r => r.vsi_taskstatus === 865520001).length}</strong>
                 </Link>
               )}
+            </div>
+            <div className="worklist-item">
+              <Info size={14} className="worklist-icon" />
+              <Link to="/deadline-reminders" className="worklist-link">
+                Deadline reminders: <strong>{deadlineReminderCount}</strong>
+              </Link>
             </div>
           </div>
 

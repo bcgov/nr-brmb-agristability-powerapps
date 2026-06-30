@@ -323,7 +323,7 @@ export function EnrolmentDetailsPage() {
   const { fieldPerms } = useFieldPermissions('vsi_participantprogramyear', activeRole === 'Supervisor');
   const cef = (attr: string) => canEditField(fieldPerms, attr, canEdit);
   const resolvedEnrolmentId = normalizeEnrolmentId(enrolmentId);
-  const routeSource = source === 'supervisor' ? 'supervisor' : 'dashboard';
+  const routeSource = source === 'supervisor' || source === 'deadline-reminders' ? source : 'dashboard';
 
   const [record, setRecord] = useState<Vsi_participantprogramyears | null>(null);
   const [isParticipantOptedOut, setIsParticipantOptedOut] = useState(false);
@@ -1038,6 +1038,9 @@ export function EnrolmentDetailsPage() {
   if (routeSource === 'supervisor') {
     backPath = '/supervisor-approval';
     backLabel = 'Back to Supervisor Approval';
+  } else if (routeSource === 'deadline-reminders') {
+    backPath = '/deadline-reminders';
+    backLabel = 'Back to Deadline Reminders';
   }
 
   if (error || !record || !formState) {
@@ -1573,4 +1576,3 @@ export function EnrolmentDetailsPage() {
     </section>
   );
 }
-
