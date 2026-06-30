@@ -303,6 +303,9 @@ export function SupervisorApprovalPage() {
         let queueitemsSuccess = true;
         let queueitemsErrorMessage: string | undefined;
         let queueSkipToken: string | undefined;
+        const queueFilterClause = supervisorQueueIdSet.size > 0
+          ? ` and (${[...supervisorQueueIdSet].map(id => `_queueid_value eq '${id}'`).join(' or ')})`
+          : '';
 
         do {
           const queueitemsResult = await QueueitemsService.getAll({
@@ -315,7 +318,7 @@ export function SupervisorApprovalPage() {
               'workeridmodifiedon',
               'statecode',
             ],
-            filter: 'statecode eq 0',
+            filter: `statecode eq 0${queueFilterClause}`,
             maxPageSize: 5000,
             ...(queueSkipToken ? { skipToken: queueSkipToken } : {}),
           });

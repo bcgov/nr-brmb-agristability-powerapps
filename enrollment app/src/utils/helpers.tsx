@@ -5,7 +5,7 @@ import {
   Vsi_participantprogramyearsvsi_farmingsector,
 } from "../generated/models/Vsi_participantprogramyearsModel";
 import type { Vsi_participantprogramyears } from "../generated/models/Vsi_participantprogramyearsModel";
-import type { SortKey } from '../types/enrollment';
+import type { AdvFilterField, SortKey } from '../types/enrollment';
 import { getEnrolmentEnFeeVarianceThreshold } from '../constants/varianceThreshold';
 
 // ---------------------------------------------------------------------------
@@ -123,9 +123,11 @@ export function getAvatarColor(name: string): string {
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
 
-export function getChoiceOptions(field: string): string[] {
+export function getChoiceOptions(field: string, dynamicChoiceOptions?: Partial<Record<AdvFilterField, string[]>>): string[] {
   if (field === 'taskStatus') return Object.values(Vsi_participantprogramyearsvsi_taskstatus) as string[];
   if (field === 'enrolStatus') return Object.values(Vsi_participantprogramyearsvsi_enrolmentstatus) as string[];
+  if (field === 'owner') return dynamicChoiceOptions?.owner ?? [];
+  if (field === 'year') return dynamicChoiceOptions?.year ?? [];
   if (field === 'hasPartners' || field === 'inCombinedFarm' || field === 'isNewParticipant') return ['Yes', 'No'];
   return [];
 }

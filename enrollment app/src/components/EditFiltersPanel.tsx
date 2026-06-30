@@ -93,17 +93,19 @@ function AddMenu({ onAddRow, onAddGroup }: { onAddRow: () => void; onAddGroup: (
 
 function FilterRowEditor({
   row,
+  choiceOptionsByField,
   onChange,
   onDelete,
   onMakeGroup,
 }: {
   row: AdvFilterRow;
+  choiceOptionsByField?: Partial<Record<AdvFilterField, string[]>>;
   onChange: (patch: Partial<AdvFilterRow>) => void;
   onDelete: () => void;
   onMakeGroup: () => void;
 }) {
   const fieldType = row.field ? ADV_FIELD_OPTIONS[row.field] : null;
-  const choiceOpts = fieldType === 'choice' ? getChoiceOptions(row.field) : [];
+  const choiceOpts = fieldType === 'choice' ? getChoiceOptions(row.field, choiceOptionsByField) : [];
   const formatChoiceLabel = (opt: string) => row.field === 'enrolStatus' ? formatEnrolmentStatusDisplay(opt) : opt;
   const [valDropdownOpen, setValDropdownOpen] = useState(false);
   const valBtnRef = useRef<HTMLButtonElement>(null);
@@ -188,6 +190,7 @@ function FilterRowEditor({
 
 function FilterGroupEditor({
   group,
+  choiceOptionsByField,
   onUpdate,
   onRemove,
   onMakeGroup,
@@ -196,6 +199,7 @@ function FilterGroupEditor({
   onAddGroup,
 }: {
   group: AdvFilterGroup;
+  choiceOptionsByField?: Partial<Record<AdvFilterField, string[]>>;
   onUpdate: (id: number, updater: (n: AdvFilterNode) => AdvFilterNode | null) => void;
   onRemove: (id: number) => void;
   onMakeGroup: (id: number) => void;
@@ -253,6 +257,7 @@ function FilterGroupEditor({
               {child.kind === 'row' ? (
                 <FilterRowEditor
                   row={child}
+                  choiceOptionsByField={choiceOptionsByField}
                   onChange={patch => onUpdate(child.id, n => {
                     const updated = { ...n as AdvFilterRow, ...patch };
                     if (patch.field && patch.field !== (n as AdvFilterRow).field) {
@@ -268,6 +273,7 @@ function FilterGroupEditor({
               ) : (
                 <FilterGroupEditor
                   group={child}
+                  choiceOptionsByField={choiceOptionsByField}
                   onUpdate={onUpdate}
                   onRemove={onRemove}
                   onMakeGroup={onMakeGroup}
@@ -296,11 +302,13 @@ function FilterGroupEditor({
 export function EditFiltersPanel({
   filterNodes,
   logicOp,
+  choiceOptionsByField,
   onApply,
   onCancel,
 }: {
   filterNodes: AdvFilterNode[];
   logicOp: LogicOp;
+  choiceOptionsByField?: Partial<Record<AdvFilterField, string[]>>;
   onApply: (nodes: AdvFilterNode[], logic: LogicOp) => void;
   onCancel: () => void;
 }) {
@@ -353,6 +361,7 @@ export function EditFiltersPanel({
                     {node.kind === 'row' ? (
                       <FilterRowEditor
                         row={node}
+                        choiceOptionsByField={choiceOptionsByField}
                         onChange={patch => handleUpdate(node.id, n => {
                           const updated = { ...n as AdvFilterRow, ...patch };
                           if (patch.field && patch.field !== (n as AdvFilterRow).field) {
@@ -368,6 +377,7 @@ export function EditFiltersPanel({
                     ) : (
                       <FilterGroupEditor
                         group={node}
+                        choiceOptionsByField={choiceOptionsByField}
                         onUpdate={handleUpdate}
                         onRemove={handleRemove}
                         onMakeGroup={handleMakeGroup}
