@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Data Modes Query Reference</title>
+  <style>
+    :root {
+      --bg: #f7f8fa;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #4b5563;
+      --line: #d1d5db;
+      --ok: #065f46;
+      --okbg: #d1fae5;
+      --api: #1e3a8a;
+      --apibg: #dbeafe;
+    }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .wrap {
+      max-width: 1000px;
+      margin: 24px auto;
+      padding: 0 16px 24px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 18px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 1.5rem;
+    }
+    p {
+      margin: 0 0 14px;
+      color: var(--muted);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 0.95rem;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: #f3f4f6;
+      font-weight: 700;
+    }
+    .badge {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin-right: 6px;
+      margin-bottom: 4px;
+    }
+    .client {
+      color: var(--ok);
+      background: var(--okbg);
+    }
+    .server {
+      color: var(--api);
+      background: var(--apibg);
+    }
+    code {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.9em;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Dashboard Data Modes: Query Reference</h1>
+      <p>Reference for the two data modes in the Enrolments dashboard and which query work runs on the client versus server.</p>
+
+      <h2>Mode Summary</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Mode</th>
+            <th>Primary Strategy</th>
+            <th>Where Query Work Runs</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="badge client">Client-side</span></td>
+            <td>Load selected year window dataset into browser, then filter/search/sort/page locally.</td>
+            <td>Most query logic is browser-side after initial dataset fetch.</td>
+          </tr>
+          <tr>
+            <td><span class="badge server">Server-side</span></td>
+            <td>Request current page from Dataverse with filter/search/sort/order applied in query.</td>
+            <td>Most query logic is Dataverse-side; browser renders returned page.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Query Matrix</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Query Concern</th>
+            <th>Client-side Mode</th>
+            <th>Server-side Mode</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Initial data load</td>
+            <td><span class="badge client">Client</span> Fetches all records for selected years.</td>
+            <td><span class="badge server">Server</span> Fetches one page of records for selected years.</td>
+          </tr>
+          <tr>
+            <td>Search</td>
+            <td><span class="badge client">Client</span> In-memory string match on loaded rows.</td>
+            <td><span class="badge server">Server</span> OData <code>contains(vsi_name,...)</code> in Dataverse query.</td>
+          </tr>
+          <tr>
+            <td>Quick filters / column filters / edit filters</td>
+            <td><span class="badge client">Client</span> Applied in-memory.</td>
+            <td><span class="badge server">Server</span> Converted to OData and sent as <code>serverFilter</code>.</td>
+          </tr>
+          <tr>
+            <td>Program year filtering</td>
+            <td><span class="badge client">Client</span> Uses local year labels/values.</td>
+            <td><span class="badge server">Server</span> Resolved to program year IDs and filtered by lookup ID.</td>
+          </tr>
+          <tr>
+            <td>Owner filtering</td>
+            <td><span class="badge client">Client</span> Local match on owner display name.</td>
+            <td><span class="badge server">Server</span> OData owner name conditions in query filter.</td>
+          </tr>
+          <tr>
+            <td>Sorting</td>
+            <td><span class="badge client">Client</span> Browser sort on loaded rows.</td>
+            <td><span class="badge server">Server</span> Dataverse <code>orderBy</code> from selected column and direction.</td>
+          </tr>
+          <tr>
+            <td>Pagination</td>
+            <td><span class="badge client">Client</span> Slice array by page index.</td>
+            <td><span class="badge server">Server</span> Dataverse paging with skip token traversal.</td>
+          </tr>
+          <tr>
+            <td>Info-box counts (New, Pending, Reminders)</td>
+            <td><span class="badge client">Client</span> Count computed from loaded rows.</td>
+            <td><span class="badge server">Server</span> Separate Dataverse count-style queries.</td>
+          </tr>
+          <tr>
+            <td>Total pages count</td>
+            <td><span class="badge client">Client</span> Calculated from local filtered row count.</td>
+            <td><span class="badge server">Server</span> Calculated from separate server total-results query.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>
