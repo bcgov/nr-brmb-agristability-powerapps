@@ -128,7 +128,7 @@ function SideNav({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
             onClick={e => { if (navGuard.intercept('/supervisor-approval')) e.preventDefault(); }}
           >
             <ClipboardCheck size={22} />
-            {!collapsed && <span>Supervisor Approval</span>}
+            {!collapsed && <span>Supervisor Approval TEST!!</span>}
           </NavLink>
         )}
       </nav>

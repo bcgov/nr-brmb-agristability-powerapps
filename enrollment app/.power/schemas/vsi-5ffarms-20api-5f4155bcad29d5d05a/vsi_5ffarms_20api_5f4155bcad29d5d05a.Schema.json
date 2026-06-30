@@ -5,7 +5,7 @@
   "properties": {
     "xrmConnectorId": "1d81e493-7a37-4f5f-b166-9813dd183b90",
     "displayName": "FARMS API",
-    "iconUri": "https://pafeblobprodyt.blob.core.windows.net/20260625t000000zeaca040b9d4040949a9f053db1dbfd01/vsi_farms-20api_iconblob.Png?skoid=1b4c3c9e-b403-4e0f-9933-e50756645683&sktid=975f013f-7f24-47e8-a7d3-abc4752bf346&skt=2026-06-26T17%3A00%3A00Z&ske=2026-07-03T17%3A00%3A00Z&sks=b&skv=2025-07-05&sv=2025-07-05&spr=https&st=2026-06-26T17%3A08%3A28Z&se=2026-07-03T17%3A00%3A00Z&sr=c&sp=rl&scid=644af992-072e-42fe-9f9d-f4e85b28edcb&sig=k9F%2Fl3BxFD7z8f8AsALRSIPyX1bX8T%2BLINAN%2FgtnAZ0%3D",
+    "iconUri": "https://prodapiicons.cdn.powerappscdn.net/20260626t000000ze142b4d2df004dbd97b979fe4f1261e3/vsi_farms-20api_iconblob.Png",
     "iconBrandColor": "#007ee5",
     "contact": {},
     "license": {},
@@ -29,15 +29,15 @@
               "type": "oauthSetting",
               "oAuthSettings": {
                 "identityProvider": "aad",
-                "clientId": "dd331d7c-1907-4f37-83e3-9543c9242652",
+                "clientId": "0cc9576b-f1c1-46ad-83ca-ea224a40d78e",
                 "scopes": [
-                  "api://dd331d7c-1907-4f37-83e3-9543c9242652/.default"
+                  "api://0cc9576b-f1c1-46ad-83ca-ea224a40d78e/.default"
                 ],
                 "redirectMode": "GlobalPerConnector",
                 "redirectUrl": "https://global.consent.azure-apim.net/redirect/vsi-5ffarms-20api-5f4155bcad29d5d05a",
                 "properties": {
                   "IsFirstParty": "False",
-                  "AzureActiveDirectoryResourceId": "api://dd331d7c-1907-4f37-83e3-9543c9242652",
+                  "AzureActiveDirectoryResourceId": "api://0cc9576b-f1c1-46ad-83ca-ea224a40d78e",
                   "IsOnbehalfofLoginSupported": true
                 },
                 "customParameters": {
@@ -51,7 +51,7 @@
                     "value": "6fdb5200-3d0d-4a8a-b036-d3685e359adc"
                   },
                   "ResourceUri": {
-                    "value": "api://dd331d7c-1907-4f37-83e3-9543c9242652"
+                    "value": "api://0cc9576b-f1c1-46ad-83ca-ea224a40d78e"
                   },
                   "EnableOnbehalfOfLogin": {
                     "value": "false"
@@ -83,15 +83,15 @@
               "type": "oauthSetting",
               "oAuthSettings": {
                 "identityProvider": "aad",
-                "clientId": "dd331d7c-1907-4f37-83e3-9543c9242652",
+                "clientId": "0cc9576b-f1c1-46ad-83ca-ea224a40d78e",
                 "scopes": [
-                  "api://dd331d7c-1907-4f37-83e3-9543c9242652/.default"
+                  "api://0cc9576b-f1c1-46ad-83ca-ea224a40d78e/.default"
                 ],
                 "redirectMode": "GlobalPerConnector",
                 "redirectUrl": "https://global.consent.azure-apim.net/redirect/vsi-5ffarms-20api-5f4155bcad29d5d05a",
                 "properties": {
                   "IsFirstParty": "False",
-                  "AzureActiveDirectoryResourceId": "api://dd331d7c-1907-4f37-83e3-9543c9242652",
+                  "AzureActiveDirectoryResourceId": "api://0cc9576b-f1c1-46ad-83ca-ea224a40d78e",
                   "IsOnbehalfofLoginSupported": true
                 },
                 "customParameters": {
@@ -105,7 +105,7 @@
                     "value": "6fdb5200-3d0d-4a8a-b036-d3685e359adc"
                   },
                   "ResourceUri": {
-                    "value": "api://dd331d7c-1907-4f37-83e3-9543c9242652"
+                    "value": "api://0cc9576b-f1c1-46ad-83ca-ea224a40d78e"
                   },
                   "EnableOnbehalfOfLogin": {
                     "value": "false"
@@ -179,15 +179,15 @@
               "type": "oauthSetting",
               "oAuthSettings": {
                 "identityProvider": "aad",
-                "clientId": "dd331d7c-1907-4f37-83e3-9543c9242652",
+                "clientId": "0cc9576b-f1c1-46ad-83ca-ea224a40d78e",
                 "scopes": [
-                  "api://dd331d7c-1907-4f37-83e3-9543c9242652/.default"
+                  "api://0cc9576b-f1c1-46ad-83ca-ea224a40d78e/.default"
                 ],
                 "redirectMode": "GlobalPerConnector",
                 "redirectUrl": "https://global.consent.azure-apim.net/redirect/vsi-5ffarms-20api-5f4155bcad29d5d05a",
                 "properties": {
                   "IsFirstParty": "False",
-                  "AzureActiveDirectoryResourceId": "api://dd331d7c-1907-4f37-83e3-9543c9242652",
+                  "AzureActiveDirectoryResourceId": "api://0cc9576b-f1c1-46ad-83ca-ea224a40d78e",
                   "IsOnbehalfofLoginSupported": true
                 },
                 "customParameters": {
@@ -201,7 +201,7 @@
                     "value": "6fdb5200-3d0d-4a8a-b036-d3685e359adc"
                   },
                   "ResourceUri": {
-                    "value": "api://dd331d7c-1907-4f37-83e3-9543c9242652"
+                    "value": "api://0cc9576b-f1c1-46ad-83ca-ea224a40d78e"
                   },
                   "EnableOnbehalfOfLogin": {
                     "value": "false"
@@ -268,15 +268,15 @@
         "type": "oauthSetting",
         "oAuthSettings": {
           "identityProvider": "aad",
-          "clientId": "dd331d7c-1907-4f37-83e3-9543c9242652",
+          "clientId": "0cc9576b-f1c1-46ad-83ca-ea224a40d78e",
           "scopes": [
-            "api://dd331d7c-1907-4f37-83e3-9543c9242652/.default"
+            "api://0cc9576b-f1c1-46ad-83ca-ea224a40d78e/.default"
           ],
           "redirectMode": "GlobalPerConnector",
           "redirectUrl": "https://global.consent.azure-apim.net/redirect/vsi-5ffarms-20api-5f4155bcad29d5d05a",
           "properties": {
             "IsFirstParty": "False",
-            "AzureActiveDirectoryResourceId": "api://dd331d7c-1907-4f37-83e3-9543c9242652",
+            "AzureActiveDirectoryResourceId": "api://0cc9576b-f1c1-46ad-83ca-ea224a40d78e",
             "IsOnbehalfofLoginSupported": true
           },
           "customParameters": {
@@ -287,7 +287,7 @@
               "value": "6fdb5200-3d0d-4a8a-b036-d3685e359adc"
             },
             "ResourceUri": {
-              "value": "api://dd331d7c-1907-4f37-83e3-9543c9242652"
+              "value": "api://0cc9576b-f1c1-46ad-83ca-ea224a40d78e"
             },
             "EnableOnbehalfOfLogin": {
               "value": "false"
@@ -326,7 +326,8 @@
       "host": "e0901c96-7fca-e8e1-914d-da7a82a7ecf6.01.custom.canada.azure-apihub.net",
       "basePath": "/apim/vsi-5ffarms-20api-5f4155bcad29d5d05a",
       "schemes": [
-        "https"
+        "https",
+        "http"
       ],
       "consumes": [],
       "produces": [
@@ -4185,24 +4186,25 @@
         "oauth2-auth": {
           "type": "oauth2",
           "flow": "accessCode",
-          "authorizationUrl": "https://login.microsoftonline.com/common/oauth2/authorize",
           "tokenUrl": "https://login.windows.net/common/oauth2/authorize",
           "scopes": {
-            "api://dd331d7c-1907-4f37-83e3-9543c9242652/.default": "api://dd331d7c-1907-4f37-83e3-9543c9242652/.default"
-          }
+            "api://0cc9576b-f1c1-46ad-83ca-ea224a40d78e/.default": "api://0cc9576b-f1c1-46ad-83ca-ea224a40d78e/.default"
+          },
+          "authorizationUrl": "https://login.microsoftonline.com/common/oauth2/authorize"
         }
       },
       "security": [
         {
           "oauth2-auth": [
-            "api://dd331d7c-1907-4f37-83e3-9543c9242652/.default"
+            "api://0cc9576b-f1c1-46ad-83ca-ea224a40d78e/.default"
           ]
         }
       ],
       "tags": []
     },
     "runtimeUrls": [
-      "https://e0901c96-7fca-e8e1-914d-da7a82a7ecf6.01.custom.canada.azure-apihub.net/apim/vsi-5ffarms-20api-5f4155bcad29d5d05a"
+      "https://e0901c96-7fca-e8e1-914d-da7a82a7ecf6.01.custom.canada.azure-apihub.net/apim/vsi-5ffarms-20api-5f4155bcad29d5d05a",
+      "http://e0901c96-7fca-e8e1-914d-da7a82a7ecf6.01.custom.canada.azure-apihub.net/apim/vsi-5ffarms-20api-5f4155bcad29d5d05a"
     ],
     "primaryRuntimeUrl": "https://e0901c96-7fca-e8e1-914d-da7a82a7ecf6.01.custom.canada.azure-apihub.net/apim/vsi-5ffarms-20api-5f4155bcad29d5d05a",
     "doNotUseApiHubNetRuntimeUrl": "https://e0901c96-7fca-e8e1-914d-da7a82a7ecf6.01.custom.canada.azure-apihub.net/apim/vsi-5ffarms-20api-5f4155bcad29d5d05a",
@@ -4220,20 +4222,19 @@
       "parameters": {},
       "useNewApimVersion": "True",
       "createdBy": "{\"id\":\"7fd1189f-acfa-4610-918b-81f49cd5a962\",\"displayName\":\"Sargeant, Melinda WLRS:EX\",\"email\":\"Melinda.Sargeant@gov.bc.ca\",\"type\":\"User\",\"userType\":\"NotSpecified\",\"tenantId\":\"6fdb5200-3d0d-4a8a-b036-d3685e359adc\",\"userPrincipalName\":\"Melinda.Sargeant@gov.bc.ca\"}",
-      "modifiedBy": "{\"id\":\"7fd1189f-acfa-4610-918b-81f49cd5a962\",\"displayName\":\"Sargeant, Melinda WLRS:EX\",\"email\":\"Melinda.Sargeant@gov.bc.ca\",\"type\":\"User\",\"userType\":\"NotSpecified\",\"tenantId\":\"6fdb5200-3d0d-4a8a-b036-d3685e359adc\",\"userPrincipalName\":\"Melinda.Sargeant@gov.bc.ca\"}",
-      "allowSharing": false
+      "modifiedBy": "{\"id\":\"aba4c45c-05cf-4f04-b714-641ce7ce04cc\",\"displayName\":\"WORKER, AST AF:EX\",\"email\":\"ASTWORK@bcgov.onmicrosoft.com\",\"type\":\"User\",\"userType\":\"NotSpecified\",\"tenantId\":\"6fdb5200-3d0d-4a8a-b036-d3685e359adc\",\"userPrincipalName\":\"ASTWORK@gov.bc.ca\"}",
+      "allowSharing": false,
+      "rateLimit": 0
     },
-    "capabilities": [
-      "actions"
-    ],
+    "capabilities": [],
     "description": "FARMS API DEV - this is the custom connector to the FARMS API Dev Environment",
     "apiDefinitions": {
-      "originalSwaggerUrl": "https://canl001ccaext.blob.core.windows.net/api-swagger-files/vsi-5ffarms-20api-5f4155bcad29d5d05a.json_original?skoid=1480fa8b-0bc3-4897-9aea-803edfb99451&sktid=33e01921-4d64-4f8c-a055-5bdaffd5e33d&skt=2026-06-26T15%3A57%3A00Z&ske=2026-06-27T15%3A57%3A00Z&sks=b&skv=2025-01-05&sv=2025-01-05&spr=https&se=2026-06-26T18%3A09%3A28Z&sr=b&sp=r&sig=lJHAHEGenoDZ%2BXIweBDUGyuxz%2BwBKw39EVww0ygxAXk%3D",
-      "modifiedSwaggerUrl": "https://canl001ccaext.blob.core.windows.net/api-swagger-files/vsi-5ffarms-20api-5f4155bcad29d5d05a.json?skoid=1480fa8b-0bc3-4897-9aea-803edfb99451&sktid=33e01921-4d64-4f8c-a055-5bdaffd5e33d&skt=2026-06-26T15%3A57%3A00Z&ske=2026-06-27T15%3A57%3A00Z&sks=b&skv=2025-01-05&sv=2025-01-05&spr=https&se=2026-06-26T18%3A09%3A28Z&sr=b&sp=r&sig=%2FSbml9dBGVlUqI5Rcv8Cg2UdpRKtPhSecjI8JOrspeI%3D"
+      "originalSwaggerUrl": "https://canl001ccaext.blob.core.windows.net/api-swagger-files/vsi-5ffarms-20api-5f4155bcad29d5d05a.json_original?skoid=1480fa8b-0bc3-4897-9aea-803edfb99451&sktid=33e01921-4d64-4f8c-a055-5bdaffd5e33d&skt=2026-06-30T13%3A39%3A53Z&ske=2026-07-01T13%3A39%3A53Z&sks=b&skv=2025-01-05&sv=2025-01-05&spr=https&se=2026-06-30T17%3A06%3A36Z&sr=b&sp=r&sig=rbrs2xPPX8EK5DqhBWNJhyOzUqTbQd6ZDpqKpj14CiU%3D",
+      "modifiedSwaggerUrl": "https://canl001ccaext.blob.core.windows.net/api-swagger-files/vsi-5ffarms-20api-5f4155bcad29d5d05a.json?skoid=1480fa8b-0bc3-4897-9aea-803edfb99451&sktid=33e01921-4d64-4f8c-a055-5bdaffd5e33d&skt=2026-06-30T13%3A39%3A53Z&ske=2026-07-01T13%3A39%3A53Z&sks=b&skv=2025-01-05&sv=2025-01-05&spr=https&se=2026-06-30T17%3A06%3A36Z&sr=b&sp=r&sig=ClMiFG33C6aM4G1B1wGX9xbb8sKBtIe9%2FNt53TPr9BY%3D"
     },
     "policyTemplateInstances": [],
     "backendService": {
-      "serviceUrl": "https://farms-api-route-dev-e980f4-dev.apps.silver.devops.gov.bc.ca/farms-api/v1"
+      "serviceUrl": "https://farms-api-route-test-e980f4-test.apps.silver.devops.gov.bc.ca/farms-api/v1"
     },
     "createdBy": {
       "id": "7fd1189f-acfa-4610-918b-81f49cd5a962",
@@ -4245,16 +4246,16 @@
       "userPrincipalName": "Melinda.Sargeant@gov.bc.ca"
     },
     "modifiedBy": {
-      "id": "7fd1189f-acfa-4610-918b-81f49cd5a962",
-      "displayName": "Sargeant, Melinda WLRS:EX",
-      "email": "Melinda.Sargeant@gov.bc.ca",
+      "id": "aba4c45c-05cf-4f04-b714-641ce7ce04cc",
+      "displayName": "WORKER, AST AF:EX",
+      "email": "ASTWORK@bcgov.onmicrosoft.com",
       "type": "User",
       "userType": "NotSpecified",
       "tenantId": "6fdb5200-3d0d-4a8a-b036-d3685e359adc",
-      "userPrincipalName": "Melinda.Sargeant@gov.bc.ca"
+      "userPrincipalName": "ASTWORK@gov.bc.ca"
     },
     "createdTime": "2026-06-25T21:38:49.4472777Z",
-    "changedTime": "2026-06-25T22:03:39.1804815Z",
+    "changedTime": "2026-06-26T20:32:47.7237033Z",
     "environment": {
       "id": "/providers/Microsoft.PowerApps/environments/e0901c96-7fca-e8e1-914d-da7a82a7ecf6",
       "name": "e0901c96-7fca-e8e1-914d-da7a82a7ecf6"

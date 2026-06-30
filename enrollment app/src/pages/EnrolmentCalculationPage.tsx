@@ -124,6 +124,13 @@ function normalizeUrlBase(value: string): string {
   return value.replace(/\/+$/, '');
 }
 
+function getParticipantPinFromEnrolmentName(value: string | null | undefined): string {
+  const text = value?.trim() ?? '';
+  if (!text) return '';
+  const numericTokens = text.match(/\b\d{4,}\b/g);
+  return numericTokens?.at(-1) ?? text;
+}
+
 async function getFarmsLegacyBaseUrl(): Promise<string | null> {
   const result = await Vsi_armsconfigurationsService.getAll({
     maxPageSize: 50,
@@ -767,7 +774,7 @@ export function EnrolmentCalculationPage() {
         setRecord(result.data);
 
         const participantId = result.data._vsi_participantid_value?.replace(/[{}]/g, '');
-        const enrolmentPin = result.data.vsi_name?.trim() ?? '';
+        const enrolmentPin = getParticipantPinFromEnrolmentName(result.data.vsi_name);
         setParticipantPin(enrolmentPin);
         if (!enrolmentPin && participantId) {
           setParticipantPinLoading(true);

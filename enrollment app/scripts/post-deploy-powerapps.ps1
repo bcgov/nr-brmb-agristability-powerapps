@@ -265,9 +265,11 @@ if ($null -ne $config.dataverseTableMappings -and (Test-Path -LiteralPath $power
 # Add flow connection references using the current environment's workflow IDs.
 if ($null -ne $config.flowReferences -and $config.flowReferences.Count -gt 0) {
   $flowListTempPath = [System.IO.Path]::GetTempFileName()
+  $previousNpmLogLevel = $env:npm_config_loglevel
   try {
     Write-Host "`n==> List invokable flows in current environment" -ForegroundColor Cyan
     Write-Host "    npx.cmd power-apps list-flows --json --no-color" -ForegroundColor DarkGray
+    $env:npm_config_loglevel = 'error'
     & 'npx.cmd' @('power-apps', 'list-flows', '--json', '--no-color') *> $flowListTempPath
     if ($LASTEXITCODE -ne 0) {
       throw "Command failed with exit code ${LASTEXITCODE}: npx.cmd power-apps list-flows --json --no-color"
@@ -276,6 +278,11 @@ if ($null -ne $config.flowReferences -and $config.flowReferences.Count -gt 0) {
     $flowListText = Get-Content -LiteralPath $flowListTempPath -Raw
   }
   finally {
+    if ($null -eq $previousNpmLogLevel) {
+      Remove-Item Env:\npm_config_loglevel -ErrorAction SilentlyContinue
+    } else {
+      $env:npm_config_loglevel = $previousNpmLogLevel
+    }
     if (Test-Path -LiteralPath $flowListTempPath) {
       Remove-Item -LiteralPath $flowListTempPath -Force
     }

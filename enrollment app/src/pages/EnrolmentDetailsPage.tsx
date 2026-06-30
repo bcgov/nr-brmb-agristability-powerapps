@@ -298,6 +298,13 @@ const getNormalizedParticipantId = (record: Vsi_participantprogramyears | null):
 const getRecordDateOptOutFallback = (record: Vsi_participantprogramyears | null): boolean =>
   hasDateValue(record?.vsi_programyearoptoutdate);
 
+function getParticipantPinFromEnrolmentName(value: string | null | undefined): string {
+  const text = value?.trim() ?? '';
+  if (!text) return '';
+  const numericTokens = text.match(/\b\d{4,}\b/g);
+  return numericTokens?.at(-1) ?? text;
+}
+
 const getRecordLookupLabel = (
   record: Vsi_participantprogramyears,
   directValue: string | null | undefined,
@@ -400,7 +407,7 @@ export function EnrolmentDetailsPage() {
   }, [resolvedEnrolmentId]);
 
   useEffect(() => {
-    const enrolmentPin = record?.vsi_name?.trim() ?? '';
+    const enrolmentPin = getParticipantPinFromEnrolmentName(record?.vsi_name);
     const participantId = getNormalizedParticipantId(record);
     if (enrolmentPin) {
       setParticipantPin(enrolmentPin);
