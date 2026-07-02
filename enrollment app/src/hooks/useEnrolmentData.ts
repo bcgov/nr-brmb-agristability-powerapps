@@ -59,6 +59,10 @@ export function getCoreConfig(): { coreAppId: string | null; coreBaseUrl: string
 
 export { normalizeCoreBaseUrl };
 
+export function hasEnrolmentCache(): boolean {
+  return enrolmentRowsCache !== null;
+}
+
 
 // Patch specific records in the in-memory cache by enrolment ID.
 // Called by other pages (e.g. SupervisorApprovalPage) after mutating enrolment fields
