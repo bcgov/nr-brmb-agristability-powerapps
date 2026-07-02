@@ -132,6 +132,7 @@ export function DashboardHomePage() {
   const querySettingsInitializedRef = useRef(false);
   const serverInfoCountsInitializedRef = useRef(false);
   const serverTotalResultsInitializedRef = useRef(false);
+  const lastServerQueryKeyRef = useRef<string | null>(null);
 
   const taskStatusCodeByLabel = useMemo(() => {
     const entries = Object.entries(Vsi_participantprogramyearsvsi_taskstatus).map(([code, label]) => [label, Number(code)] as const);
@@ -239,7 +240,7 @@ export function DashboardHomePage() {
     if (filters.fortyFiveDayLetter) clauses.push('vsi_enrolmentstatus eq 865520010');
     if (filters.partnerships) clauses.push('(vsi_haspartners eq true or vsi_incombinedfarm eq true)');
     if (filters.flagged) {
-      clauses.push('(vsi_prevyearpartnotverified eq true or (vsi_enrolmentfee ne null and vsi_previousyearcalculatedenfee eq null) or (vsi_variancecalculation ge 0.15 or vsi_variancecalculation le -0.15))');
+      clauses.push('(vsi_prevyearpartnotverified eq true or (vsi_isnewparticipant ne true and vsi_enrolmentfee ne null and vsi_previousyearcalculatedenfee eq null) or (vsi_variancecalculation ge 0.15 or vsi_variancecalculation le -0.15))');
     }
 
     const taskCodes = [...taskStatusFilter]
@@ -401,15 +402,18 @@ export function DashboardHomePage() {
 
   useEffect(() => {
     if (demoQueryMode !== 'client') return;
-    if (hasEnrolmentCache()) return;
     void loadDashboardRows({ mode: 'client', yearsBack: demoYearsWindow });
   }, [demoQueryMode, demoYearsWindow, loadDashboardRows]);
 
   useEffect(() => {
     if (demoQueryMode !== 'server') return;
-    if (hasEnrolmentCache()) return;
+    const queryKey = [currentPage, debouncedSearchQuery, buildServerFilter, serverOrderBy.join('|'), demoYearsWindow].join('\x00');
+    if (hasEnrolmentCache() && lastServerQueryKeyRef.current === queryKey) return;
+    lastServerQueryKeyRef.current = queryKey;
+    if (hasEnrolmentCache()) clearEnrolmentCache();
+    setRows([]);
     void loadDashboardRows({ mode: 'server', page: currentPage, searchTerm: debouncedSearchQuery, yearsBack: demoYearsWindow, serverFilter: buildServerFilter, orderBy: serverOrderBy });
-  }, [demoQueryMode, demoYearsWindow, currentPage, debouncedSearchQuery, loadDashboardRows, buildServerFilter, serverOrderBy]);
+  }, [demoQueryMode, demoYearsWindow, currentPage, debouncedSearchQuery, loadDashboardRows, buildServerFilter, serverOrderBy, setRows]);
 
   const countEnrolmentsByFilter = useCallback(async (filter: string): Promise<number> => {
     const recentYearFilter = await getRecentProgramYearFilter();
@@ -495,6 +499,7 @@ export function DashboardHomePage() {
 
   const reloadFirstPage = useCallback(() => {
     clearEnrolmentCache();
+    lastServerQueryKeyRef.current = null;
     setCurrentPage(1);
     if (demoQueryMode === 'client') {
       void loadDashboardRows({ mode: 'client', yearsBack: demoYearsWindow });
@@ -517,6 +522,7 @@ export function DashboardHomePage() {
 
       latestChangeStampRef.current = latestStamp;
       clearEnrolmentCache();
+      lastServerQueryKeyRef.current = null;
 
       if (demoQueryMode === 'client') {
         await loadDashboardRows({ mode: 'client', yearsBack: demoYearsWindow });
@@ -890,9 +896,26 @@ export function DashboardHomePage() {
         return;
       }
     }
-    // If the NPP view is active and a quick filter is toggled, reset to default view first.
+    // If the NPP view is active and a quick filter is toggled, reset to default view layout first
+    // but preserve any column-header filters the user has applied.
     if (nppViewId && activeViewId === nppViewId) {
+      const prevTaskStatusFilter = taskStatusFilter;
+      const prevEnrolStatusFilter = enrolStatusFilter;
+      const prevTaskFilterOp = taskFilterOp;
+      const prevEnrolFilterOp = enrolFilterOp;
+      const prevAdvFilterNodes = advFilterNodes;
+      const prevAdvLogicOp = advLogicOp;
+      const prevYearFilter = yearFilter;
+      const prevOwnerFilter = ownerFilter;
       handleResetDefault();
+      setTaskStatusFilter(prevTaskStatusFilter);
+      setEnrolStatusFilter(prevEnrolStatusFilter);
+      setTaskFilterOp(prevTaskFilterOp);
+      setEnrolFilterOp(prevEnrolFilterOp);
+      setAdvFilterNodes(prevAdvFilterNodes);
+      setAdvLogicOp(prevAdvLogicOp);
+      setYearFilter(prevYearFilter);
+      setOwnerFilter(prevOwnerFilter);
     }
     setFilters(current => ({ ...current, [key]: !current[key] }));
     setCurrentPage(1);

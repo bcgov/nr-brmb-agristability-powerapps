@@ -135,7 +135,7 @@ export function renderCell(
       if (row.vsi_prevyearpartnotverified === true) {
         reasons.push('Previous year participant data is not verified.');
       }
-      if (row.vsi_enrolmentfee != null && row.vsi_previousyearcalculatedenfee == null) {
+      if (row.vsi_isnewparticipant !== true && row.vsi_enrolmentfee != null && row.vsi_previousyearcalculatedenfee == null) {
         reasons.push('Current enrolment fee exists, but previous year calculated EN fee is missing.');
       }
       if (variance != null && Math.abs(variance) > threshold) {
