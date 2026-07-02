@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useMemo, useState, type DragEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { Columns2, Filter, FilterX, Info, RefreshCw } from 'lucide-react';
 
 import type { SortKey, SortDir, FilterOperator, AdvFilterNode, LogicOp, QuickFilterState } from '../types/enrollment';
 import { DEFAULT_VISIBLE_KEYS, SORTKEY_TO_FIELD } from '../constants/columns';
 import { countActiveNodes } from '../utils/filterTree';
-import { useEnrolmentData, useSortedAndFilteredRows, clearEnrolmentCache } from '../hooks/useEnrolmentData';
+import { useEnrolmentData, useSortedAndFilteredRows, clearEnrolmentCache, hasEnrolmentCache } from '../hooks/useEnrolmentData';
 import { useRole } from '../context/RoleContext';
 import { resolveCurrentSystemUser } from '../utils/currentUser';
 import { clearSaCache } from './SupervisorApprovalPage';
@@ -51,7 +51,16 @@ type DashboardFilterCache = {
   advLogicOp: LogicOp;
   currentPage: number;
 };
+
+type DashboardDerivedCache = {
+  newParticipantCount: number;
+  pendingSupervisorCount: number;
+  deadlineReminderCount: number;
+  serverTotalResults: number;
+};
+
 let dashboardFilterCache: DashboardFilterCache | null = null;
+let dashboardDerivedCache: DashboardDerivedCache | null = null;
 
 function parseProgramYearStart(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) return Math.trunc(value);
@@ -113,12 +122,16 @@ export function DashboardHomePage() {
   const [showSupervisorModal, setShowSupervisorModal] = useState(false);
   const [showApproveFeesModal, setShowApproveFeesModal] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
-  const [newParticipantCount, setNewParticipantCount] = useState<number>(0);
-  const [pendingSupervisorCount, setPendingSupervisorCount] = useState<number>(0);
-  const [deadlineReminderCount, setDeadlineReminderCount] = useState<number>(0);
-  const [serverTotalResults, setServerTotalResults] = useState<number>(0);
+  const [newParticipantCount, setNewParticipantCount] = useState<number>(() => dashboardDerivedCache?.newParticipantCount ?? 0);
+  const [pendingSupervisorCount, setPendingSupervisorCount] = useState<number>(() => dashboardDerivedCache?.pendingSupervisorCount ?? 0);
+  const [deadlineReminderCount, setDeadlineReminderCount] = useState<number>(() => dashboardDerivedCache?.deadlineReminderCount ?? 0);
+  const [serverTotalResults, setServerTotalResults] = useState<number>(() => dashboardDerivedCache?.serverTotalResults ?? 0);
   const [programYearIdsByLabel, setProgramYearIdsByLabel] = useState<Record<string, string[]>>({});
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(() => dashboardFilterCache?.searchQuery ?? '');
+  const latestChangeStampRef = useRef<string | null>(null);
+  const querySettingsInitializedRef = useRef(false);
+  const serverInfoCountsInitializedRef = useRef(false);
+  const serverTotalResultsInitializedRef = useRef(false);
 
   const taskStatusCodeByLabel = useMemo(() => {
     const entries = Object.entries(Vsi_participantprogramyearsvsi_taskstatus).map(([code, label]) => [label, Number(code)] as const);
@@ -138,15 +151,14 @@ export function DashboardHomePage() {
   }, [searchQuery]);
 
   useEffect(() => {
+    if (!querySettingsInitializedRef.current) {
+      querySettingsInitializedRef.current = true;
+      return;
+    }
     clearEnrolmentCache();
     setCurrentPage(1);
     setSelectedIds(new Set());
   }, [demoQueryMode, demoYearsWindow]);
-
-  useEffect(() => {
-    if (demoQueryMode !== 'client') return;
-    void fetchEnrolments({ mode: 'client', yearsBack: demoYearsWindow });
-  }, [demoQueryMode, demoYearsWindow, fetchEnrolments]);
 
   const getRecentProgramYearMetadata = useCallback(async (): Promise<{ cutoffYear: number; ids: string[]; idsByLabel: Record<string, string[]> }> => {
     const cutoffYear = new Date().getFullYear() - (demoYearsWindow - 1);
@@ -350,10 +362,54 @@ export function DashboardHomePage() {
     buildProgramYearLookupClause,
   ]);
 
+  const getLatestEnrolmentChangeStamp = useCallback(async (): Promise<string | null> => {
+    const filters: string[] = [await getRecentProgramYearFilter()];
+
+    if (demoQueryMode === 'server' && buildServerFilter.trim()) {
+      filters.push(`(${buildServerFilter.trim()})`);
+    }
+
+    if (demoQueryMode === 'server' && debouncedSearchQuery.trim()) {
+      filters.push(`contains(vsi_name, '${escapeODataLiteral(debouncedSearchQuery.trim())}')`);
+    }
+
+    const result = await Vsi_participantprogramyearsService.getAll({
+      select: ['modifiedon'],
+      orderBy: ['modifiedon desc'],
+      filter: filters.map(clause => `(${clause})`).join(' and '),
+      maxPageSize: 1,
+    });
+
+    return result.data?.[0]?.modifiedon ?? null;
+  }, [buildServerFilter, debouncedSearchQuery, demoQueryMode, escapeODataLiteral, getRecentProgramYearFilter]);
+
+  const syncLatestEnrolmentChangeStamp = useCallback(async () => {
+    latestChangeStampRef.current = await getLatestEnrolmentChangeStamp();
+  }, [getLatestEnrolmentChangeStamp]);
+
+  const loadDashboardRows = useCallback(async (options: Parameters<typeof fetchEnrolments>[0]) => {
+    const succeeded = await fetchEnrolments(options);
+    if (succeeded) {
+      try {
+        await syncLatestEnrolmentChangeStamp();
+      } catch (e) {
+        console.error('Failed to sync enrolment change stamp:', e);
+      }
+    }
+    return succeeded;
+  }, [fetchEnrolments, syncLatestEnrolmentChangeStamp]);
+
+  useEffect(() => {
+    if (demoQueryMode !== 'client') return;
+    if (hasEnrolmentCache()) return;
+    void loadDashboardRows({ mode: 'client', yearsBack: demoYearsWindow });
+  }, [demoQueryMode, demoYearsWindow, loadDashboardRows]);
+
   useEffect(() => {
     if (demoQueryMode !== 'server') return;
-    void fetchEnrolments({ mode: 'server', page: currentPage, searchTerm: debouncedSearchQuery, yearsBack: demoYearsWindow, serverFilter: buildServerFilter, orderBy: serverOrderBy });
-  }, [demoQueryMode, demoYearsWindow, currentPage, debouncedSearchQuery, fetchEnrolments, buildServerFilter, serverOrderBy]);
+    if (hasEnrolmentCache()) return;
+    void loadDashboardRows({ mode: 'server', page: currentPage, searchTerm: debouncedSearchQuery, yearsBack: demoYearsWindow, serverFilter: buildServerFilter, orderBy: serverOrderBy });
+  }, [demoQueryMode, demoYearsWindow, currentPage, debouncedSearchQuery, loadDashboardRows, buildServerFilter, serverOrderBy]);
 
   const countEnrolmentsByFilter = useCallback(async (filter: string): Promise<number> => {
     const recentYearFilter = await getRecentProgramYearFilter();
@@ -421,11 +477,19 @@ export function DashboardHomePage() {
       setDeadlineReminderCount(rows.filter(r => r.vsi_nonpenaltydeadlineremindersent !== true || r.vsi_finaldeadlineremindersent !== true).length);
       return;
     }
+    if (!serverInfoCountsInitializedRef.current) {
+      serverInfoCountsInitializedRef.current = true;
+      if (hasEnrolmentCache() && dashboardDerivedCache) return;
+    }
     void refreshInfoCounts();
   }, [demoQueryMode, rows, refreshInfoCounts]);
 
   useEffect(() => {
     if (demoQueryMode !== 'server') return;
+    if (!serverTotalResultsInitializedRef.current) {
+      serverTotalResultsInitializedRef.current = true;
+      if (hasEnrolmentCache() && dashboardDerivedCache) return;
+    }
     void refreshServerTotalResults();
   }, [demoQueryMode, demoYearsWindow, debouncedSearchQuery, buildServerFilter, refreshServerTotalResults]);
 
@@ -433,12 +497,57 @@ export function DashboardHomePage() {
     clearEnrolmentCache();
     setCurrentPage(1);
     if (demoQueryMode === 'client') {
-      void fetchEnrolments({ mode: 'client', yearsBack: demoYearsWindow });
+      void loadDashboardRows({ mode: 'client', yearsBack: demoYearsWindow });
     } else {
-      void fetchEnrolments({ mode: 'server', page: 1, searchTerm: debouncedSearchQuery, yearsBack: demoYearsWindow, serverFilter: buildServerFilter, orderBy: serverOrderBy });
+      void loadDashboardRows({ mode: 'server', page: 1, searchTerm: debouncedSearchQuery, yearsBack: demoYearsWindow, serverFilter: buildServerFilter, orderBy: serverOrderBy });
       void refreshInfoCounts();
     }
-  }, [demoQueryMode, demoYearsWindow, debouncedSearchQuery, fetchEnrolments, refreshInfoCounts, buildServerFilter, serverOrderBy]);
+  }, [demoQueryMode, demoYearsWindow, debouncedSearchQuery, loadDashboardRows, refreshInfoCounts, buildServerFilter, serverOrderBy]);
+
+  const refreshCurrentPageIfChanged = useCallback(async () => {
+    try {
+      const latestStamp = await getLatestEnrolmentChangeStamp();
+      if (latestChangeStampRef.current == null) {
+        latestChangeStampRef.current = latestStamp;
+        return;
+      }
+      if (latestStamp === latestChangeStampRef.current) {
+        return;
+      }
+
+      latestChangeStampRef.current = latestStamp;
+      clearEnrolmentCache();
+
+      if (demoQueryMode === 'client') {
+        await loadDashboardRows({ mode: 'client', yearsBack: demoYearsWindow });
+        return;
+      }
+
+      await loadDashboardRows({ mode: 'server', page: currentPage, searchTerm: debouncedSearchQuery, yearsBack: demoYearsWindow, serverFilter: buildServerFilter, orderBy: serverOrderBy });
+      await refreshInfoCounts();
+      await refreshServerTotalResults();
+    } catch (e) {
+      console.error('Failed to probe enrolment changes on dashboard return:', e);
+    }
+  }, [buildServerFilter, currentPage, debouncedSearchQuery, demoQueryMode, demoYearsWindow, getLatestEnrolmentChangeStamp, loadDashboardRows, refreshInfoCounts, refreshServerTotalResults, serverOrderBy]);
+
+  useEffect(() => {
+    const handleFocus = () => {
+      void refreshCurrentPageIfChanged();
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void refreshCurrentPageIfChanged();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [refreshCurrentPageIfChanged]);
 
   const addToast = useCallback((message: string, type: ToastMessage['type'] = 'success') => {
     setToasts(prev => [...prev, { id: nextToastId(), message, type }]);
@@ -593,6 +702,15 @@ export function DashboardHomePage() {
   }, [visibleColumnKeys, columnWidths, sortKey, sortDir, filters, searchQuery,
     taskStatusFilter, enrolStatusFilter, yearFilter, ownerFilter,
     taskFilterOp, enrolFilterOp, advFilterNodes, advLogicOp, currentPage]);
+
+  useEffect(() => {
+    dashboardDerivedCache = {
+      newParticipantCount,
+      pendingSupervisorCount,
+      deadlineReminderCount,
+      serverTotalResults,
+    };
+  }, [newParticipantCount, pendingSupervisorCount, deadlineReminderCount, serverTotalResults]);
 
   // Refresh handler for manual reload
   const handleRefresh = useCallback(() => {
@@ -815,10 +933,10 @@ export function DashboardHomePage() {
       </div>
       {saveError && <p className="enrolment-error">{saveError}</p>}
 
-      {loading && <p className="enrolment-loading">Loading…</p>}
+      {loading && rows.length === 0 && <p className="enrolment-loading">Loading…</p>}
       {error && <p className="enrolment-error">{error}</p>}
 
-      {!loading && !error && (
+      {(!loading || rows.length > 0) && !error && (
         <>
           <div className="search-and-tools-row">
             <EnrollmentSearchBar
@@ -1072,17 +1190,16 @@ export function DashboardHomePage() {
           rows={rows}
           onClose={() => setShowBulkEditModal(false)}
           onComplete={(update) => {
-            setRows(prev => prev.map(r =>
-              update.ids.includes(r.vsi_participantprogramyearid)
-                ? {
-                    ...r,
-                    vsi_taskstatus: update.taskStatus as unknown as typeof r.vsi_taskstatus,
-                    vsi_enrolmentstatus: update.enrolmentStatus as unknown as typeof r.vsi_enrolmentstatus,
-                    vsi_enrolmentfeesfinaldeadlinedate: update.finalDeadlineDate,
-                    vsi_lateenrolmentfeesfinaldeadlinedate: update.lateFinalDeadlineDate,
-                  }
-                : r
-            ));
+            setRows(prev => prev.map(r => {
+              if (!update.ids.includes(r.vsi_participantprogramyearid)) return r;
+              return {
+                ...r,
+                ...(update.taskStatus != null ? { vsi_taskstatus: update.taskStatus as unknown as typeof r.vsi_taskstatus } : {}),
+                ...(update.enrolmentStatus != null ? { vsi_enrolmentstatus: update.enrolmentStatus as unknown as typeof r.vsi_enrolmentstatus } : {}),
+                ...(update.finalDeadlineDate != null ? { vsi_enrolmentfeesfinaldeadlinedate: update.finalDeadlineDate } : {}),
+                ...(update.lateFinalDeadlineDate != null ? { vsi_lateenrolmentfeesfinaldeadlinedate: update.lateFinalDeadlineDate } : {}),
+              };
+            }));
             setSelectedIds(new Set());
             clearSaCache();
             reloadFirstPage();

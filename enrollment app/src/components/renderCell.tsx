@@ -129,11 +129,33 @@ export function renderCell(
     case 'enrolmentFee': return <td key={key} className="cell-fee">{formatCurrency(row.vsi_enrolmentfee)}</td>;
     case 'latePay': return <td key={key} className="cell-fee">{formatCurrency(row.vsi_latepaymentfee)}</td>;
     case 'flagged': {
+      const threshold = getEnrolmentEnFeeVarianceThreshold();
       const variance = row.vsi_variancecalculation != null ? row.vsi_variancecalculation * 100 : null;
-      const isFlagged = (variance != null && Math.abs(variance) > getEnrolmentEnFeeVarianceThreshold())
-        || row.vsi_prevyearpartnotverified === true
-        || (row.vsi_enrolmentfee != null && row.vsi_previousyearcalculatedenfee == null);
-      return <td key={key} className="cell-flag">{isFlagged ? <Flag size={14} color="#dc2626" fill="#dc2626" aria-label="Flagged" /> : null}</td>;
+      const reasons: string[] = [];
+      if (row.vsi_prevyearpartnotverified === true) {
+        reasons.push('Previous year participant data is not verified.');
+      }
+      if (row.vsi_enrolmentfee != null && row.vsi_previousyearcalculatedenfee == null) {
+        reasons.push('Current enrolment fee exists, but previous year calculated EN fee is missing.');
+      }
+      if (variance != null && Math.abs(variance) > threshold) {
+        reasons.push(`EN fee variance ${formatVariancePercent(variance)} exceeds threshold ${threshold}%.`);
+      }
+
+      const isFlagged = reasons.length > 0;
+      const tooltip = isFlagged
+        ? `Flagged because:\n- ${reasons.join('\n- ')}`
+        : undefined;
+
+      return (
+        <td key={key} className="cell-flag">
+          {isFlagged ? (
+            <span title={tooltip} aria-label={tooltip}>
+              <Flag size={14} color="#dc2626" fill="#dc2626" aria-label="Flagged" />
+            </span>
+          ) : null}
+        </td>
+      );
     }
     case 'sharepoint':
       return (
