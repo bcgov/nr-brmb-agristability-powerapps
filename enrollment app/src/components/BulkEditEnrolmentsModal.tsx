@@ -7,15 +7,12 @@ import {
 import { BulkUpdateEnrolmentRecordsService } from '../generated/services/BulkUpdateEnrolmentRecordsService';
 import { formatEnrolmentStatusDisplay } from '../utils/helpers';
 
-const NO_CHANGE_NUMBER = 0;
-const NO_CHANGE_DATE = '1900-01-01';
-
 type BulkEditUpdate = {
   ids: string[];
-  taskStatus: number | null;
-  enrolmentStatus: number | null;
-  finalDeadlineDate: string | null;
-  lateFinalDeadlineDate: string | null;
+  taskStatus: number;
+  enrolmentStatus: number;
+  finalDeadlineDate: string;
+  lateFinalDeadlineDate: string;
 };
 
 type Props = {
@@ -42,8 +39,7 @@ export function BulkEditEnrolmentsModal({
 
   const selectedRows = rows.filter(r => selectedIds.has(r.vsi_participantprogramyearid));
   const noSelection = selectedRows.length === 0;
-  const hasAnyChange = Boolean(taskStatus || enrolmentStatus || finalDeadlineDate || lateFinalDeadlineDate);
-  const canSubmit = Boolean(!noSelection && hasAnyChange);
+  const canSubmit = Boolean(!noSelection && taskStatus && enrolmentStatus && finalDeadlineDate && lateFinalDeadlineDate);
 
   const taskStatusOptions = useMemo(
     () => Object.entries(Vsi_participantprogramyearsvsi_taskstatus).map(([value, label]) => ({
@@ -67,20 +63,12 @@ export function BulkEditEnrolmentsModal({
     setError(null);
     try {
       const ids = Array.from(selectedIds);
-      const update: BulkEditUpdate = {
-        ids,
-        taskStatus: taskStatus ? Number(taskStatus) : null,
-        enrolmentStatus: enrolmentStatus ? Number(enrolmentStatus) : null,
-        finalDeadlineDate: finalDeadlineDate || null,
-        lateFinalDeadlineDate: lateFinalDeadlineDate || null,
-      };
-
       const result = await BulkUpdateEnrolmentRecordsService.Run({
         text: ids.join(','),
-        number: update.taskStatus ?? NO_CHANGE_NUMBER,
-        number_1: update.enrolmentStatus ?? NO_CHANGE_NUMBER,
-        date: update.finalDeadlineDate ?? NO_CHANGE_DATE,
-        date_1: update.lateFinalDeadlineDate ?? NO_CHANGE_DATE,
+        number: Number(taskStatus),
+        number_1: Number(enrolmentStatus),
+        date: finalDeadlineDate,
+        date_1: lateFinalDeadlineDate,
       });
 
       if (!result.success) {
@@ -93,7 +81,13 @@ export function BulkEditEnrolmentsModal({
         throw new Error(flowMessage);
       }
 
-      onComplete(update);
+      onComplete({
+        ids,
+        taskStatus: Number(taskStatus),
+        enrolmentStatus: Number(enrolmentStatus),
+        finalDeadlineDate,
+        lateFinalDeadlineDate,
+      });
       onClose();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Bulk update failed';
@@ -117,28 +111,28 @@ export function BulkEditEnrolmentsModal({
           ) : (
             <>
               <p className="modal-help-text">
-                This will update {selectedIds.size} enrolment{selectedIds.size === 1 ? '' : 's'}. Leave fields blank to keep them unchanged.
+                This will update {selectedIds.size} enrolment{selectedIds.size === 1 ? '' : 's'} with the same task status, enrolment status, and deadline dates.
               </p>
               <label className="modal-field">
-                <span>Task Status</span>
+                <span><span className="modal-required">*</span> Task Status</span>
                 <select value={taskStatus} onChange={e => setTaskStatus(e.target.value)} disabled={submitting}>
-                  <option value="">No change</option>
+                  <option value="">Select task status</option>
                   {taskStatusOptions.map(option => (
                     <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
                 </select>
               </label>
               <label className="modal-field">
-                <span>Enrolment Status</span>
+                <span><span className="modal-required">*</span> Enrolment Status</span>
                 <select value={enrolmentStatus} onChange={e => setEnrolmentStatus(e.target.value)} disabled={submitting}>
-                  <option value="">No change</option>
+                  <option value="">Select enrolment status</option>
                   {enrolmentStatusOptions.map(option => (
                     <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
                 </select>
               </label>
               <label className="modal-field">
-                <span>Enrolment Fees Final Deadline Date</span>
+                <span><span className="modal-required">*</span> Enrolment Fees Final Deadline Date</span>
                 <input
                   type="date"
                   value={finalDeadlineDate}
@@ -147,7 +141,7 @@ export function BulkEditEnrolmentsModal({
                 />
               </label>
               <label className="modal-field">
-                <span>Late Enrolment Fees Final Deadline Date</span>
+                <span><span className="modal-required">*</span> Late Enrolment Fees Final Deadline Date</span>
                 <input
                   type="date"
                   value={lateFinalDeadlineDate}
@@ -155,6 +149,7 @@ export function BulkEditEnrolmentsModal({
                   disabled={submitting}
                 />
               </label>
+
             </>
           )}
         </div>
