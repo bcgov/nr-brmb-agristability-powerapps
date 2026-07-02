@@ -1072,17 +1072,16 @@ export function DashboardHomePage() {
           rows={rows}
           onClose={() => setShowBulkEditModal(false)}
           onComplete={(update) => {
-            setRows(prev => prev.map(r =>
-              update.ids.includes(r.vsi_participantprogramyearid)
-                ? {
-                    ...r,
-                    vsi_taskstatus: update.taskStatus as unknown as typeof r.vsi_taskstatus,
-                    vsi_enrolmentstatus: update.enrolmentStatus as unknown as typeof r.vsi_enrolmentstatus,
-                    vsi_enrolmentfeesfinaldeadlinedate: update.finalDeadlineDate,
-                    vsi_lateenrolmentfeesfinaldeadlinedate: update.lateFinalDeadlineDate,
-                  }
-                : r
-            ));
+            setRows(prev => prev.map(r => {
+              if (!update.ids.includes(r.vsi_participantprogramyearid)) return r;
+              return {
+                ...r,
+                ...(update.taskStatus != null ? { vsi_taskstatus: update.taskStatus as unknown as typeof r.vsi_taskstatus } : {}),
+                ...(update.enrolmentStatus != null ? { vsi_enrolmentstatus: update.enrolmentStatus as unknown as typeof r.vsi_enrolmentstatus } : {}),
+                ...(update.finalDeadlineDate != null ? { vsi_enrolmentfeesfinaldeadlinedate: update.finalDeadlineDate } : {}),
+                ...(update.lateFinalDeadlineDate != null ? { vsi_lateenrolmentfeesfinaldeadlinedate: update.lateFinalDeadlineDate } : {}),
+              };
+            }));
             setSelectedIds(new Set());
             clearSaCache();
             reloadFirstPage();
