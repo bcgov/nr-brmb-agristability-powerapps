@@ -44,13 +44,6 @@
                               "dataSources":  ["generatebulkenrolmentnotices"]
                           },
                           {
-                              "key":  "5c7de17b-7dce-4c39-ab9a-bbe54daf6fba",
-                              "id":  "/providers/Microsoft.PowerApps/apis/shared_logicflows",
-                              "displayName":  "Logic flows",
-                              "workflowDisplayName":  "Refer To Supervisor",
-                              "dataSources":  ["refertosupervisor"]
-                          },
-                          {
                               "key":  "933ca746-6029-4dff-bf7e-741a70c5bf3c",
                               "id":  "/providers/Microsoft.PowerApps/apis/shared_logicflows",
                               "displayName":  "Logic flows",

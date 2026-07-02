@@ -545,7 +545,7 @@ export function useSortedAndFilteredRows(
 
   const isFlaggedByVariance = useCallback((row: Vsi_participantprogramyears): boolean => {
     if (row.vsi_prevyearpartnotverified === true) return true;
-    if (row.vsi_enrolmentfee != null && row.vsi_previousyearcalculatedenfee == null) return true;
+    if (row.vsi_isnewparticipant !== true && row.vsi_enrolmentfee != null && row.vsi_previousyearcalculatedenfee == null) return true;
     const variance = row.vsi_variancecalculation != null ? row.vsi_variancecalculation * 100 : null;
     if (variance == null) return false;
     return Math.abs(variance) >= getEnrolmentEnFeeVarianceThreshold();
