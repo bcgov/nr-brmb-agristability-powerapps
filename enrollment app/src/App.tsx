@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { HashRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { ClipboardCheck, ExternalLink, Home, LayoutDashboard, Menu } from 'lucide-react';
 
@@ -11,11 +11,15 @@ import { EnrolmentHistoryPage } from './pages/EnrolmentHistoryPage';
 import { RoleProvider, useRole, ALL_ROLES, ROLE_LABELS, type AppRole, type DemoQueryMode, type DemoYearsWindow } from './context/RoleContext';
 import { navGuard } from './utils/helpers';
 import { normalizeInitialDeepLink, openInNewTab } from './utils/deepLinks';
+import { resolveCurrentSystemUser } from './utils/currentUser';
 import { Vsi_armsconfigurationsService } from './generated/services/Vsi_armsconfigurationsService';
 
 const SUPERVISOR_APPROVAL_ROLES: AppRole[] = ['SystemAdmin', 'Supervisor'];
 const CALCULATION_ROLES: AppRole[] = ['SystemAdmin', 'Supervisor', 'ENAdmin', 'Verifier'];
 const DASHBOARD_URL_FALLBACK = 'https://app.powerbi.com/groups/b447b3b3-d200-43ee-b3cd-eabccd22a717/reports/a14e5dfe-22ca-4974-a97b-844a5050fb64';
+
+let environmentNameCache: string | null = null;
+let environmentNameLoaded = false;
 
 normalizeInitialDeepLink();
 
@@ -38,6 +42,23 @@ function isActiveConfiguration(value: unknown): boolean {
 
 function hasPowerBiIds(row: { vsi_powerbireportgroupid?: string; vsi_powerbiendashboardreportid?: string }): boolean {
   return !!row.vsi_powerbireportgroupid?.trim() && !!row.vsi_powerbiendashboardreportid?.trim();
+}
+
+async function getEnvironmentName(): Promise<string | null> {
+  if (environmentNameLoaded) return environmentNameCache;
+
+  const result = await Vsi_armsconfigurationsService.getAll({
+    maxPageSize: 50,
+    orderBy: ['modifiedon desc'],
+    select: ['vsi_activeconfiguration', 'vsi_environment'],
+  });
+
+  const rows = result.data ?? [];
+  const activeRow = rows.find(row => isActiveConfiguration((row as { vsi_activeconfiguration?: unknown }).vsi_activeconfiguration) && row.vsi_environment?.trim());
+  const configuredRow = activeRow ?? rows.find(row => row.vsi_environment?.trim());
+  environmentNameCache = configuredRow?.vsi_environment?.trim() ?? null;
+  environmentNameLoaded = true;
+  return environmentNameCache;
 }
 
 async function getPowerBiDashboardUrl(): Promise<string> {
@@ -67,6 +88,89 @@ function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode;
     return <Navigate to="/dashboard-home" replace />;
   }
   return <>{children}</>;
+}
+
+function EnrolmentLogoMark() {
+  return (
+    <svg className="environment-banner-logo" viewBox="0 0 150 100" aria-hidden="true" focusable="false">
+      <path d="M4 12H72L88 30H22V43H56V57H22V78H72V94H4V12Z" fill="currentColor" />
+      <path d="M71 12H91L137 94H117L71 30V12Z" fill="currentColor" />
+      <path d="M124 24H146V94H124V24Z" fill="currentColor" />
+      <path d="M74 39L90 62V94H74V39Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function getUserInitials(name: string): string {
+  const parts = name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (parts.length === 0) return '';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0] ?? ''}${parts[parts.length - 1][0] ?? ''}`.toUpperCase();
+}
+
+function getEnvironmentKey(environmentName: string): 'dev' | 'test' | 'prod' | 'default' {
+  const normalized = environmentName.trim().toLowerCase();
+  if (normalized.includes('tprod') || normalized.includes('test')) return 'test';
+  if (normalized.includes('prod')) return 'prod';
+  if (normalized.includes('dev') || normalized.includes('local') || normalized.includes('sandbox')) return 'dev';
+  return 'default';
+}
+
+function getBannerTitle(environmentName: string): string {
+  const environmentKey = getEnvironmentKey(environmentName);
+  return environmentKey === 'prod' ? 'ENROLMENT' : `ENROLMENT ${environmentName.toUpperCase()}`;
+}
+
+function EnvironmentBanner() {
+  const [environmentName, setEnvironmentName] = useState<string | null>(() => (environmentNameLoaded ? environmentNameCache : null));
+  const [currentUserName, setCurrentUserName] = useState<string | null>(null);
+
+  useEffect(() => {
+    let ignore = false;
+
+    getEnvironmentName()
+      .then(name => {
+        if (!ignore) setEnvironmentName(name);
+      })
+      .catch(() => {
+        environmentNameLoaded = true;
+        environmentNameCache = null;
+        if (!ignore) setEnvironmentName(null);
+      });
+
+    resolveCurrentSystemUser()
+      .then(user => {
+        if (!ignore) setCurrentUserName(user.displayName);
+      })
+      .catch(() => {
+        if (!ignore) setCurrentUserName(null);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  if (!environmentName) return null;
+
+  const environmentKey = getEnvironmentKey(environmentName);
+  const bannerTitle = getBannerTitle(environmentName);
+  const userInitials = currentUserName ? getUserInitials(currentUserName) : '';
+
+  return (
+    <header className="environment-banner" data-environment={environmentKey} aria-label={`Environment: ${environmentName}`}>
+      <EnrolmentLogoMark />
+      <span className="environment-banner-name">{bannerTitle}</span>
+      {currentUserName && userInitials && (
+        <span className="environment-banner-user" title={currentUserName} aria-label={`Signed in as ${currentUserName}`}>
+          {userInitials}
+        </span>
+      )}
+    </header>
+  );
 }
 
 function RoleSwitcher({ collapsed }: { collapsed: boolean }) {
@@ -195,24 +299,27 @@ function AppShell() {
   const [navCollapsed, setNavCollapsed] = useState(false);
 
   return (
-    <div className="app-shell">
-      <SideNav collapsed={navCollapsed} onToggle={() => setNavCollapsed(prev => !prev)} />
-      <main className="app-shell-content">
-        <Routes>
-          <Route path="/" element={<Navigate to="/dashboard-home" replace />} />
-          <Route path="/dashboard-home" element={<DashboardHomePage />} />
-          <Route path="/enrolment/:enrolmentId" element={<EnrolmentDetailsPage />} />
-          <Route path="/enrolment/:source/:enrolmentId" element={<EnrolmentDetailsPage />} />
-          <Route path="/supervisor-approval" element={<ProtectedRoute allowedRoles={SUPERVISOR_APPROVAL_ROLES}><SupervisorApprovalPage /></ProtectedRoute>} />
-          <Route path="/deadline-reminders" element={<DeadlineReminderPage />} />
-          <Route path="/calculation/:enrolmentId" element={<ProtectedRoute allowedRoles={CALCULATION_ROLES}><EnrolmentCalculationPage /></ProtectedRoute>} />
-          <Route path="/calculation/:source/:enrolmentId" element={<ProtectedRoute allowedRoles={CALCULATION_ROLES}><EnrolmentCalculationPage /></ProtectedRoute>} />
-          <Route path="/calculation" element={<Navigate to="/dashboard-home" replace />} />
-          <Route path="/history/:historyId" element={<EnrolmentHistoryPage />} />
-          <Route path="/history/:enrolmentId/:historyId" element={<EnrolmentHistoryPage />} />
-          <Route path="*" element={<Navigate to="/dashboard-home" replace />} />
-        </Routes>
-      </main>
+    <div className="app-frame">
+      <EnvironmentBanner />
+      <div className="app-shell">
+        <SideNav collapsed={navCollapsed} onToggle={() => setNavCollapsed(prev => !prev)} />
+        <main className="app-shell-content">
+          <Routes>
+            <Route path="/" element={<Navigate to="/dashboard-home" replace />} />
+            <Route path="/dashboard-home" element={<DashboardHomePage />} />
+            <Route path="/enrolment/:enrolmentId" element={<EnrolmentDetailsPage />} />
+            <Route path="/enrolment/:source/:enrolmentId" element={<EnrolmentDetailsPage />} />
+            <Route path="/supervisor-approval" element={<ProtectedRoute allowedRoles={SUPERVISOR_APPROVAL_ROLES}><SupervisorApprovalPage /></ProtectedRoute>} />
+            <Route path="/deadline-reminders" element={<DeadlineReminderPage />} />
+            <Route path="/calculation/:enrolmentId" element={<ProtectedRoute allowedRoles={CALCULATION_ROLES}><EnrolmentCalculationPage /></ProtectedRoute>} />
+            <Route path="/calculation/:source/:enrolmentId" element={<ProtectedRoute allowedRoles={CALCULATION_ROLES}><EnrolmentCalculationPage /></ProtectedRoute>} />
+            <Route path="/calculation" element={<Navigate to="/dashboard-home" replace />} />
+            <Route path="/history/:historyId" element={<EnrolmentHistoryPage />} />
+            <Route path="/history/:enrolmentId/:historyId" element={<EnrolmentHistoryPage />} />
+            <Route path="*" element={<Navigate to="/dashboard-home" replace />} />
+          </Routes>
+        </main>
+      </div>
     </div>
   );
 }

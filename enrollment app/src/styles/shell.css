@@ -1,6 +1,77 @@
+.app-frame {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background: #f5f6f8;
+}
+
+.environment-banner {
+  position: relative;
+  flex: 0 0 auto;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0.25rem 4.75rem 0.25rem 1rem;
+  box-sizing: border-box;
+  background: #416257;
+  color: rgb(255, 255, 255);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+  font-family: "Segoe UI", "Segoe UI Web (West European)", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", sans-serif;
+}
+
+.environment-banner[data-environment="dev"],
+.environment-banner[data-environment="default"] {
+  background: #416257;
+}
+
+.environment-banner[data-environment="test"] {
+  background: #465a72;
+}
+
+.environment-banner[data-environment="prod"] {
+  background: #7b2c33;
+}
+
+.environment-banner-logo {
+  width: 52px;
+  height: 34px;
+  flex: 0 0 auto;
+  margin-right: 0.55rem;
+  color: rgb(255, 255, 255);
+}
+
+.environment-banner-name {
+  font-size: 1em;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0;
+  color: rgb(255, 255, 255);
+}
+
+.environment-banner-user {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(248, 251, 250, 0.85);
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #f8fbfa;
+  font-size: 0.9rem;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
 .app-shell {
   display: flex;
-  height: 100vh;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: hidden;
   background: #f5f6f8;
 }
@@ -127,7 +198,7 @@
   }
 }
 
-/* ── Role switcher (dev / admin only) ─────────────────────────── */
+/* Role switcher (dev / admin only) */
 .role-switcher {
   margin-top: auto;
   border-top: 1px solid #d7dbe1;

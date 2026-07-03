@@ -205,10 +205,11 @@ export async function openInNewTab(hash: string): Promise<void> {
     const params = new URLSearchParams({
       _localAppUrl: baseLocal + route,
       _localConnectionUrl: (import.meta.env.VITE_LOCAL_CONNECTION_URL as string | undefined) ?? 'http://localhost:8080',
+      hidenavbar: 'true',
     });
     window.open(`https://apps.powerapps.com/play/e/${envId}/app/local?${params}`, '_blank', 'noopener,noreferrer');
   } else {
-    const params = new URLSearchParams({ source: 'portal', tenantId });
+    const params = new URLSearchParams({ source: 'portal', tenantId, hidenavbar: 'true' });
     window.open(`https://apps.powerapps.com/play/e/${envId}/app/${powerConfig.appId}?${params}`, '_blank', 'noopener,noreferrer');
   }
 }
