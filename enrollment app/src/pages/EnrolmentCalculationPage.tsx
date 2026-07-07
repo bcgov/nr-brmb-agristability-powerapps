@@ -137,7 +137,12 @@ async function getFarmsLegacyBaseUrl(): Promise<string | null> {
   });
   const configRows = result.data ?? [];
   const farmsUrl = configRows
-    .map(row => getStringField(row, 'cr4dd_FARMSURLNEW') || getStringField(row, 'cr4dd_farmsurlnew'))
+    .map(row =>
+      getStringField(row, 'cr4dd_FARMSURLNEW') ||
+      getStringField(row, 'cr4dd_farmsurlnew') ||
+      getStringField(row, 'vsi_FARMSURL') ||
+      getStringField(row, 'vsi_farmsurl')
+    )
     .find((candidate): candidate is string => !!candidate);
   return farmsUrl ? normalizeUrlBase(farmsUrl) : null;
 }
