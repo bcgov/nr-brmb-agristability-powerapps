@@ -384,9 +384,19 @@ if ($null -ne $config.flowReferences -and $config.flowReferences.Count -gt 0) {
   try {
     Write-Host "`n==> List invokable flows in current environment" -ForegroundColor Cyan
     Write-Host "    npx.cmd power-apps list-flows --json --no-color" -ForegroundColor DarkGray
-    & 'npx.cmd' @('power-apps', 'list-flows', '--json', '--no-color') *> $flowListTempPath
-    if ($LASTEXITCODE -ne 0) {
-      throw "Command failed with exit code ${LASTEXITCODE}: npx.cmd power-apps list-flows --json --no-color"
+    $previousErrorActionPreference = $ErrorActionPreference
+    try {
+      # npm can emit harmless warnings on stderr; do not let those abort the deploy before exit code handling.
+      $ErrorActionPreference = 'Continue'
+      & 'npx.cmd' @('power-apps', 'list-flows', '--json', '--no-color') *> $flowListTempPath
+      $flowListExitCode = $LASTEXITCODE
+    }
+    finally {
+      $ErrorActionPreference = $previousErrorActionPreference
+    }
+
+    if ($flowListExitCode -ne 0) {
+      throw "Command failed with exit code ${flowListExitCode}: npx.cmd power-apps list-flows --json --no-color"
     }
 
     $flowListText = Get-Content -LiteralPath $flowListTempPath -Raw
@@ -421,3 +431,4 @@ if (-not $SkipBuild.IsPresent) {
 Invoke-CheckedCommand -FilePath 'npx.cmd' -Arguments @('power-apps', 'push') -Description 'Push app with Power Apps CLI wrapper'
 
 Write-Host "`nPost-deploy setup completed successfully for '$Stage'." -ForegroundColor Green
+
