@@ -27,11 +27,11 @@
 }
 
 .environment-banner[data-environment="test"] {
-  background: #465a72;
+  background: #7b2c33;
 }
 
 .environment-banner[data-environment="prod"] {
-  background: #7b2c33;
+  background: #465a72;
 }
 
 .environment-banner-logo {
