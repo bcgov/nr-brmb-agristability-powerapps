@@ -1243,7 +1243,7 @@ export function EnrolmentDetailsPage() {
                     className="details-date"
                     value={formState.vsi_programyearoptoutdate}
                     onChange={updateDateField('vsi_programyearoptoutdate')}
-                    disabled={saving || !cef('vsi_programyearoptoutdate')}
+                    disabled={true}
                   />
                 </div>
               </div>
