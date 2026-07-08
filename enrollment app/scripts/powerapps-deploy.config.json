@@ -64,6 +64,11 @@
                                                          {
                                                              "apiId":  "shared_commondataserviceforapps",
                                                              "connectionId":  "b05319f6f3244385ac9d9959391a2970"
+                                                         },
+                                                         {
+                                                             "apiId":  "shared_commondataserviceforapps",
+                                                             "connectionId":  "b05319f6f3244385ac9d9959391a2970",
+                                                             "table":  "vsi_automaticemailaudits"
                                                          }
                                                      ]
                                  },
@@ -79,6 +84,11 @@
                                                           {
                                                               "apiId":  "shared_commondataserviceforapps",
                                                               "connectionId":  "ff699992001647a89917e4ec3fd164a4"
+                                                          },
+                                                          {
+                                                              "apiId":  "shared_commondataserviceforapps",
+                                                              "connectionId":  "ff699992001647a89917e4ec3fd164a4",
+                                                              "table":  "vsi_automaticemailaudits"
                                                           }
                                                       ]
                                   },
@@ -93,6 +103,11 @@
                                                           {
                                                               "apiId":  "shared_commondataserviceforapps",
                                                               "connectionId":  "replace-with-prod-dataverse-connection-id"
+                                                          },
+                                                          {
+                                                              "apiId":  "shared_commondataserviceforapps",
+                                                              "connectionId":  "replace-with-prod-dataverse-connection-id",
+                                                              "table":  "vsi_automaticemailaudits"
                                                           }
                                                       ]
                                   }
