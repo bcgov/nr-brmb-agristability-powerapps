@@ -5,7 +5,7 @@ import { Columns2, Filter, FilterX, Info, RefreshCw } from 'lucide-react';
 import type { SortKey, SortDir, FilterOperator, AdvFilterNode, LogicOp, QuickFilterState } from '../types/enrollment';
 import { DEFAULT_VISIBLE_KEYS, SORTKEY_TO_FIELD } from '../constants/columns';
 import { countActiveNodes } from '../utils/filterTree';
-import { useEnrolmentData, useSortedAndFilteredRows, clearEnrolmentCache, hasEnrolmentCache } from '../hooks/useEnrolmentData';
+import { useEnrolmentData, useSortedAndFilteredRows, clearEnrolmentCache, hasEnrolmentCache, buildParticipantSearchClause } from '../hooks/useEnrolmentData';
 import { useRole } from '../context/RoleContext';
 import { resolveCurrentSystemUser } from '../utils/currentUser';
 import { clearSaCache } from './SupervisorApprovalPage';
@@ -113,6 +113,11 @@ export function DashboardHomePage() {
   const [currentPage, setCurrentPage] = useState(() => dashboardFilterCache?.currentPage ?? 1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
+  // Ref to always have the latest buildServerFilter without it becoming a useCallback dep.
+  // This prevents filter state changes from recreating loadDashboardRows and triggering
+  // unnecessary client-mode re-fetches every time a filter or view is changed.
+  const buildServerFilterRef = useRef<string>('');
+
   // Panel visibility
   const [showEditColumns, setShowEditColumns] = useState(false);
   const [showEditFilters, setShowEditFilters] = useState(false);
@@ -147,7 +152,7 @@ export function DashboardHomePage() {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
-    }, 300);
+    }, 500);
     return () => window.clearTimeout(timer);
   }, [searchQuery]);
 
@@ -363,15 +368,18 @@ export function DashboardHomePage() {
     buildProgramYearLookupClause,
   ]);
 
+  // Keep the ref in sync with the latest buildServerFilter value each render.
+  buildServerFilterRef.current = buildServerFilter;
+
   const getLatestEnrolmentChangeStamp = useCallback(async (): Promise<string | null> => {
     const filters: string[] = [await getRecentProgramYearFilter()];
 
-    if (demoQueryMode === 'server' && buildServerFilter.trim()) {
-      filters.push(`(${buildServerFilter.trim()})`);
+    if (demoQueryMode === 'server' && buildServerFilterRef.current.trim()) {
+      filters.push(`(${buildServerFilterRef.current.trim()})`);
     }
 
     if (demoQueryMode === 'server' && debouncedSearchQuery.trim()) {
-      filters.push(`contains(vsi_name, '${escapeODataLiteral(debouncedSearchQuery.trim())}')`);
+      filters.push(await buildParticipantSearchClause(debouncedSearchQuery.trim()));
     }
 
     const result = await Vsi_participantprogramyearsService.getAll({
@@ -382,7 +390,7 @@ export function DashboardHomePage() {
     });
 
     return result.data?.[0]?.modifiedon ?? null;
-  }, [buildServerFilter, debouncedSearchQuery, demoQueryMode, escapeODataLiteral, getRecentProgramYearFilter]);
+  }, [debouncedSearchQuery, demoQueryMode, getRecentProgramYearFilter]);
 
   const syncLatestEnrolmentChangeStamp = useCallback(async () => {
     latestChangeStampRef.current = await getLatestEnrolmentChangeStamp();
@@ -453,7 +461,7 @@ export function DashboardHomePage() {
   const refreshServerTotalResults = useCallback(async () => {
     const term = debouncedSearchQuery.trim();
     const recentYearFilter = await getRecentProgramYearFilter();
-    const searchFilter = term ? `contains(vsi_name, '${escapeODataLiteral(term)}')` : '';
+    const searchFilter = term ? await buildParticipantSearchClause(term) : '';
     const combinedFilter = [recentYearFilter, buildServerFilter.trim(), searchFilter]
       .filter(Boolean)
       .map(clause => `(${clause})`)
@@ -678,10 +686,12 @@ export function DashboardHomePage() {
 
   const viewState = useMemo(() => ({
     visibleColumnKeys, columnWidths, sortKey, sortDir, filters,
-    taskStatusFilter, enrolStatusFilter, taskFilterOp, enrolFilterOp,
+    taskStatusFilter, enrolStatusFilter, yearFilter, ownerFilter,
+    taskFilterOp, enrolFilterOp,
     advFilterNodes, advLogicOp,
   }), [visibleColumnKeys, columnWidths, sortKey, sortDir, filters,
-    taskStatusFilter, enrolStatusFilter, taskFilterOp, enrolFilterOp,
+    taskStatusFilter, enrolStatusFilter, yearFilter, ownerFilter,
+    taskFilterOp, enrolFilterOp,
     advFilterNodes, advLogicOp]);
 
   const {

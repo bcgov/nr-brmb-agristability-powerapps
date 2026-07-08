@@ -11,6 +11,7 @@ import {
   Vsi_participantprogramyearsvsi_enrolmentstatus,
   Vsi_participantprogramyearsvsi_taskstatus,
 } from '../generated/models/Vsi_participantprogramyearsModel';
+import { AccountsService } from '../generated/services/AccountsService';
 import { Vsi_armsconfigurationsService } from '../generated/services/Vsi_armsconfigurationsService';
 import { Vsi_participantprogramyearsService } from '../generated/services/Vsi_participantprogramyearsService';
 import { Vsi_programyearsService } from '../generated/services/Vsi_programyearsService';
@@ -80,6 +81,33 @@ export function patchEnrolmentCache(patches: Array<{ id: string; fields: Partial
     const patch = patchMap.get(rowId);
     return patch ? { ...row, ...patch } : row;
   });
+}
+
+const _escapeOData = (value: string) => value.replace(/'/g, "''");
+
+/**
+ * Builds an OData search clause that matches vsi_name (PIN) OR any enrolment
+ * whose participant account name contains the search term.
+ * Falls back to PIN-only if the account lookup fails or returns no results.
+ */
+export async function buildParticipantSearchClause(term: string): Promise<string> {
+  const escaped = _escapeOData(term);
+  const pinClause = `contains(vsi_name, '${escaped}')`;
+  try {
+    const result = await AccountsService.getAll({
+      select: ['accountid'],
+      filter: `contains(name, '${escaped}')`,
+      maxPageSize: 50,
+    });
+    const ids = (result.data ?? [])
+      .map(a => a.accountid?.replace(/[{}]/g, '').toLowerCase())
+      .filter((id): id is string => Boolean(id));
+    if (ids.length === 0) return pinClause;
+    const participantClause = `(${ids.map(id => `_vsi_participantid_value eq ${id}`).join(' or ')})`;
+    return `(${pinClause} or ${participantClause})`;
+  } catch {
+    return pinClause;
+  }
 }
 
 export function useEnrolmentData() {
@@ -160,8 +188,6 @@ export function useEnrolmentData() {
     return ids;
   }, []);
 
-  const escapeODataLiteral = (value: string) => value.replace(/'/g, "''");
-
   // Fetch all rows for the default 5-year scope (client-side filtering/search after load)
   const fetchEnrolments = useCallback(async (options?: { mode?: 'client' | 'server'; page?: number; searchTerm?: string; yearsBack?: number; serverFilter?: string; orderBy?: string[] }): Promise<boolean> => {
     const mode = options?.mode ?? 'client';
@@ -199,7 +225,7 @@ export function useEnrolmentData() {
           filters.push(`(${options.serverFilter.trim()})`);
         }
         if (normalizedSearch) {
-          filters.push(`contains(vsi_name, '${escapeODataLiteral(normalizedSearch)}')`);
+          filters.push(await buildParticipantSearchClause(normalizedSearch));
         }
 
         const baseOptions = {
@@ -301,8 +327,11 @@ export function useEnrolmentData() {
         ? `(${recentProgramYearIds.map(id => `_vsi_programyearid_value eq ${id}`).join(' or ')})`
         : `vsi_programyearidname ge '${cutoffYear}'`;
 
+      // Use modifiedon ordering so all task-status types appear across pages evenly.
+      // vsi_taskstatus desc was previously used but caused only Approved records to fill
+      // the first page in large environments, leaving other statuses unreachable.
       const baseOptions = {
-        maxPageSize: 5000,
+        maxPageSize: 2000,
         select: [
           'vsi_name',
           '_vsi_participantid_value',
@@ -344,7 +373,7 @@ export function useEnrolmentData() {
           'vsi_isnewparticipant',
           'vsi_fullyprovinciallyfunded',
         ],
-        orderBy: ['vsi_taskstatus desc'],
+        orderBy: ['modifiedon desc'],
         filter: recentYearFilter,
       };
 
@@ -355,7 +384,8 @@ export function useEnrolmentData() {
           ...baseOptions,
           ...(skipToken ? { skipToken } : {}),
         });
-        allRows.push(...(result.data ?? []));
+        const pageRows = result.data ?? [];
+        allRows.push(...pageRows);
         const raw = result as unknown as Record<string, unknown>;
         skipToken = (raw['skipToken'] ?? raw['@odata.nextLink']) as string | undefined;
       } while (skipToken);
