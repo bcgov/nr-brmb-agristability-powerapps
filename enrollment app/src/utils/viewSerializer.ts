@@ -4,6 +4,7 @@ import type { Savedqueries } from '../generated/models/SavedqueriesModel';
 import { SORTKEY_TO_FIELD, FIELD_TO_SORTKEY, DEFAULT_VIEW_SNAPSHOT, ACTIVE_VIEW_KEY } from '../constants/columns';
 import { nextFilterId, serializeFilterNodes, deserializeFilterNodes } from './filterTree';
 import { Vsi_participantprogramyearsvsi_taskstatus, Vsi_participantprogramyearsvsi_enrolmentstatus } from '../generated/models/Vsi_participantprogramyearsModel';
+import { Vsi_participantprogramyearsService } from '../generated/services/Vsi_participantprogramyearsService';
 
 // Entity object type code for `vsi_participantprogramyear`.
 // Populated once on mount via resolveEntityObjectTypeCode().
@@ -13,6 +14,11 @@ let entityObjectTypeCode: string | null = null;
 /** Called once on mount with the ObjectTypeCode from entity metadata. */
 export function setEntityObjectTypeCode(code: number | string): void {
   entityObjectTypeCode = String(code);
+}
+
+/** Returns the currently resolved entity ObjectTypeCode, or null if not yet known. */
+export function getEntityObjectTypeCode(): string | null {
+  return entityObjectTypeCode;
 }
 
 type WinWithXrmWebApi = {
@@ -59,10 +65,23 @@ export async function resolveEntityObjectTypeCode(): Promise<void> {
       console.warn('[viewSerializer] Xrm.WebApi resolveEntityObjectTypeCode error:', e);
     }
   }
-  if (cachedGridOpenTag) {
-    // Grid tag cached from a previous system view load; ObjectTypeCode will be inferred from it
-  } else {
-    console.warn('[viewSerializer] Could not resolve entity ObjectTypeCode — layoutxml may be rejected by Dataverse');
+
+  // Fallback: use the SDK getMetadata to retrieve the ObjectTypeCode directly.
+  try {
+    const meta = await Vsi_participantprogramyearsService.getMetadata({});
+    const raw = (meta.data as unknown as Record<string, unknown>);
+    const code = raw?.['ObjectTypeCode'] ?? raw?.['objecttypecode'] ?? raw?.['objectTypeCode'];
+    const num = Number(code);
+    if (!isNaN(num) && num > 0) {
+      entityObjectTypeCode = String(num);
+      return;
+    }
+  } catch (e) {
+    console.warn('[viewSerializer] getMetadata failed:', e);
+  }
+
+  if (!cachedGridOpenTag) {
+    console.warn('[viewSerializer] Could not resolve entity ObjectTypeCode — layoutxml will be rejected by Dataverse');
   }
 }
 
@@ -322,17 +341,22 @@ export function savedqueryToView(sq: Savedqueries): PersonalView {
 type FieldSpec =
   | { field: AdvFilterField; kind: 'boolean' }
   | { field: AdvFilterField; kind: 'enum'; map: Record<string | number, string> }
-  | { field: AdvFilterField; kind: 'text' };
+  | { field: AdvFilterField; kind: 'text' }
+  | { field: AdvFilterField; kind: 'choice' }; // raw string value placed directly in values Set
 
 const CONDITION_FIELD_SPECS: Record<string, FieldSpec> = {
-  vsi_haspartners:      { field: 'hasPartners',      kind: 'boolean' },
-  vsi_incombinedfarm:   { field: 'inCombinedFarm',   kind: 'boolean' },
-  vsi_isnewparticipant: { field: 'isNewParticipant', kind: 'boolean' },
-  vsi_taskstatus:       { field: 'taskStatus',       kind: 'enum', map: Vsi_participantprogramyearsvsi_taskstatus },
-  vsi_enrolmentstatus:  { field: 'enrolStatus',      kind: 'enum', map: Vsi_participantprogramyearsvsi_enrolmentstatus },
-  vsi_name:             { field: 'pin',              kind: 'text' },
-  vsi_producerfullname: { field: 'producer',         kind: 'text' },
-  vsi_enrolmentfee:     { field: 'fee',              kind: 'text' },
+  vsi_haspartners:       { field: 'hasPartners',    kind: 'boolean' },
+  vsi_incombinedfarm:    { field: 'inCombinedFarm', kind: 'boolean' },
+  vsi_isnewparticipant:  { field: 'isNewParticipant', kind: 'boolean' },
+  vsi_taskstatus:        { field: 'taskStatus',     kind: 'enum', map: Vsi_participantprogramyearsvsi_taskstatus },
+  vsi_enrolmentstatus:   { field: 'enrolStatus',    kind: 'enum', map: Vsi_participantprogramyearsvsi_enrolmentstatus },
+  vsi_name:              { field: 'pin',            kind: 'text' },
+  vsi_producerfullname:  { field: 'producer',       kind: 'text' },
+  vsi_enrolmentfee:      { field: 'fee',            kind: 'text' },
+  // Year — system views use the display-name field for year-based conditions
+  vsi_programyearidname: { field: 'year',           kind: 'choice' },
+  // Owner — system views may filter by owner display name
+  owneridname:           { field: 'owner',          kind: 'choice' },
 };
 
 function fetchXmlOpToAdvOp(op: string, kind: FieldSpec['kind']): AdvFilterOp {
@@ -387,6 +411,13 @@ export function parseFetchXmlToAdvNodes(fetchxml: string | undefined | null): Ad
             children.push({
               kind: 'row', id: nextFilterId(), field: spec.field,
               operator, values: new Set([label]), textValue: '',
+            });
+          } else if (spec.kind === 'choice') {
+            // Raw string value goes directly into the values Set (used for year, owner, etc.)
+            if (!rawVal) continue;
+            children.push({
+              kind: 'row', id: nextFilterId(), field: spec.field,
+              operator, values: new Set([rawVal]), textValue: '',
             });
           } else {
             // text / numeric — strip surrounding % from LIKE wildcards

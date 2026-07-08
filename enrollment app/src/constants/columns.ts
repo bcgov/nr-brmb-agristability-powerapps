@@ -90,6 +90,8 @@ export const DEFAULT_VIEW_SNAPSHOT: ViewPayload = {
   filters: { verifiedCalc: false, unverifiedCalc: false, flagged: false, partnerships: false, fortyFiveDayLetter: false, varianceAlert: false },
   taskStatusFilter: [],
   enrolStatusFilter: [],
+  yearFilter: [],
+  ownerFilter: [],
   taskFilterOp: 'equals',
   enrolFilterOp: 'equals',
   advFilterNodes: [],

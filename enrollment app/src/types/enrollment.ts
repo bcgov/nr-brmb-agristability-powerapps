@@ -61,6 +61,8 @@ export interface ViewPayload {
   filters: QuickFilterState;
   taskStatusFilter: string[];
   enrolStatusFilter: string[];
+  yearFilter?: string[];
+  ownerFilter?: string[];
   taskFilterOp: FilterOperator;
   enrolFilterOp: FilterOperator;
   advFilterNodes: unknown[];

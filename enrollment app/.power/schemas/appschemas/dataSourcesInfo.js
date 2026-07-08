@@ -3537,6 +3537,13 @@ export const dataSourcesInfo = {
     "dataSourceType": "Dataverse",
     "apis": {}
   },
+  "vsi_automaticemailaudits": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "vsi_automaticemailauditid",
+    "dataSourceType": "Dataverse",
+    "apis": {}
+  },
   "vsi_enrolmenthistories": {
     "tableId": "",
     "version": "",

@@ -8,7 +8,7 @@ import { dataSourcesInfo } from '../../../.power/schemas/appschemas/dataSourcesI
 import { getClient } from '@microsoft/power-apps/data';
 
 export class FARMSAPIService {
-  private static readonly dataSourceName = 'farms_20api_5fe39d1efd21a19d13_5f571039b465579741';
+  private static readonly dataSourceName = 'vsi_5ffarms_20api_5f4155bcad29d5d05a';
 
   private static readonly client = getClient(dataSourcesInfo);
 

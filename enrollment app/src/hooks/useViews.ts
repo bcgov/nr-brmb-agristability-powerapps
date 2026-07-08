@@ -12,7 +12,7 @@ import type {
 import { DEFAULT_VIEW_SNAPSHOT, USERQUERY_ENTITY, USERQUERY_TYPE } from '../constants/columns';
 import { UserqueriesService } from '../generated/services/UserqueriesService';
 import { SavedqueriesService } from '../generated/services/SavedqueriesService';
-import { generateLayoutXml, generateFetchXml, userqueryToView, savedqueryToView, loadActiveViewId, saveActiveViewId, resolveEntityObjectTypeCode, setEntityObjectTypeCode } from '../utils/viewSerializer';
+import { generateLayoutXml, generateFetchXml, userqueryToView, savedqueryToView, loadActiveViewId, saveActiveViewId, resolveEntityObjectTypeCode, setEntityObjectTypeCode, getEntityObjectTypeCode } from '../utils/viewSerializer';
 import { serializeFilterNodes, deserializeFilterNodes } from '../utils/filterTree';
 
 export interface ViewState {
@@ -23,6 +23,8 @@ export interface ViewState {
   filters: QuickFilterState;
   taskStatusFilter: Set<string>;
   enrolStatusFilter: Set<string>;
+  yearFilter: Set<string>;
+  ownerFilter: Set<string>;
   taskFilterOp: FilterOperator;
   enrolFilterOp: FilterOperator;
   advFilterNodes: AdvFilterNode[];
@@ -70,7 +72,7 @@ export function useViews(state: ViewState, setters: {
     return ['flagged', ...without];
   }, []);
 
-  const applyView = useCallback((view: ViewPayload) => {
+  const applyView = useCallback((view: ViewPayload & { id?: string; name?: string; source?: string }) => {
     setters.setVisibleColumnKeys(ensureRequiredColumns(view.visibleColumnKeys));
     setters.setColumnWidths({ ...view.columnWidths });
     setters.setSortKey(view.sortKey);
@@ -78,13 +80,12 @@ export function useViews(state: ViewState, setters: {
     setters.setFilters({ ...DEFAULT_VIEW_SNAPSHOT.filters, ...view.filters });
     setters.setTaskStatusFilter(new Set(view.taskStatusFilter));
     setters.setEnrolStatusFilter(new Set(view.enrolStatusFilter));
+    setters.setYearFilter(new Set(view.yearFilter ?? []));
+    setters.setOwnerFilter(new Set(view.ownerFilter ?? []));
     setters.setTaskFilterOp(view.taskFilterOp ?? 'equals');
     setters.setEnrolFilterOp(view.enrolFilterOp ?? 'equals');
     setters.setAdvFilterNodes(deserializeFilterNodes(view.advFilterNodes as unknown[]));
     setters.setAdvLogicOp(view.advLogicOp ?? 'AND');
-    // Reset year/owner filters since they are not part of the saved view payload
-    setters.setYearFilter(new Set());
-    setters.setOwnerFilter(new Set());
   }, [setters, ensureRequiredColumns]);
 
   const captureCurrentSnapshot = useCallback((): ViewPayload => ({
@@ -95,6 +96,8 @@ export function useViews(state: ViewState, setters: {
     filters: { ...state.filters },
     taskStatusFilter: [...state.taskStatusFilter],
     enrolStatusFilter: [...state.enrolStatusFilter],
+    yearFilter: [...state.yearFilter],
+    ownerFilter: [...state.ownerFilter],
     taskFilterOp: state.taskFilterOp,
     enrolFilterOp: state.enrolFilterOp,
     advFilterNodes: serializeFilterNodes(state.advFilterNodes),
@@ -114,6 +117,8 @@ export function useViews(state: ViewState, setters: {
         filters: { ...DEFAULT_VIEW_SNAPSHOT.filters, ...view.filters },
         taskStatusFilter: [...view.taskStatusFilter],
         enrolStatusFilter: [...view.enrolStatusFilter],
+        yearFilter: [...(view.yearFilter ?? [])],
+        ownerFilter: [...(view.ownerFilter ?? [])],
         taskFilterOp: view.taskFilterOp,
         enrolFilterOp: view.enrolFilterOp,
         advFilterNodes: serializeFilterNodes(deserializeFilterNodes(view.advFilterNodes as unknown[])),
@@ -152,13 +157,23 @@ export function useViews(state: ViewState, setters: {
       }
       if (sqResult.status === 'fulfilled') {
         const allSq = sqResult.value.data ?? [];
-        // Opportunistically extract the integer object type code from the first
-        // record if the SDK returns the raw OData numeric value.
+        // Extract entity ObjectTypeCode — try returnedtypecode as integer first,
+        // then scan all layoutxml for object="\d+" (more reliable in test environments
+        // where returnedtypecode is returned as the logical name string, not an integer).
         if (allSq.length > 0) {
           const rawCode = (allSq[0] as unknown as Record<string, unknown>)['returnedtypecode'];
           const num = Number(rawCode);
           if (!isNaN(num) && num > 0) {
             setEntityObjectTypeCode(num);
+          }
+        }
+        if (!getEntityObjectTypeCode()) {
+          for (const sq of allSq) {
+            const match = (sq.layoutxml ?? '').match(/\bobject="(\d+)"/);
+            if (match) {
+              setEntityObjectTypeCode(Number(match[1]));
+              break;
+            }
           }
         }
         const mainViews = allSq.filter(sq => String(sq.querytype) === '0');
