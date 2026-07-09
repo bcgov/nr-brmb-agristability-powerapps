@@ -114,7 +114,18 @@ function FilterRowEditor({
   useEffect(() => {
     if (valDropdownOpen && valBtnRef.current) {
       const r = valBtnRef.current.getBoundingClientRect();
-      setDropdownStyle({ position: 'fixed', top: r.bottom + 2, left: r.left, minWidth: r.width });
+      const dropdownMaxHeight = 200;
+      const panelEl = valBtnRef.current.closest('.ef-panel');
+      const footerEl = panelEl?.querySelector('.ef-footer');
+      const spaceLimit = footerEl
+        ? footerEl.getBoundingClientRect().top
+        : window.innerHeight;
+      const spaceBelow = spaceLimit - r.bottom - 8;
+      if (spaceBelow >= dropdownMaxHeight) {
+        setDropdownStyle({ position: 'fixed', top: r.bottom + 2, left: r.left, minWidth: r.width });
+      } else {
+        setDropdownStyle({ position: 'fixed', bottom: window.innerHeight - r.top + 2, left: r.left, minWidth: r.width });
+      }
     }
   }, [valDropdownOpen]);
 
