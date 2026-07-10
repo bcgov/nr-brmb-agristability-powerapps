@@ -278,6 +278,7 @@ function stripQuickFilterNodes(nodes: AdvFilterNode[], fetchFilters: Partial<Qui
 }
 
 export function userqueryToView(uq: Userqueries): PersonalView {
+  const ownerName = getUserqueryOwnerName(uq);
   try {
     const payload: ViewPayload = JSON.parse(uq.layoutjson ?? '{}');
     if (payload.visibleColumnKeys) {
@@ -293,6 +294,7 @@ export function userqueryToView(uq: Userqueries): PersonalView {
         name: uq.name,
         source: 'personal',
         ...payload,
+        ownerName,
         advFilterNodes,
         filters: mergedFilters,
       };
@@ -304,7 +306,19 @@ export function userqueryToView(uq: Userqueries): PersonalView {
   const snapshot: ViewPayload = xmlCols
     ? { ...DEFAULT_VIEW_SNAPSHOT, visibleColumnKeys: xmlCols, advFilterNodes }
     : { ...DEFAULT_VIEW_SNAPSHOT, advFilterNodes };
-  return { id: uq.userqueryid, name: uq.name, source: 'personal', ...snapshot };
+  return { id: uq.userqueryid, name: uq.name, source: 'personal', ...snapshot, ownerName };
+}
+
+function getUserqueryOwnerName(uq: Userqueries): string | undefined {
+  const raw = uq as unknown as Record<string, unknown>;
+  const value = [
+    uq.owneridname,
+    raw['_ownerid_value@OData.Community.Display.V1.FormattedValue'],
+    raw['ownerid@OData.Community.Display.V1.FormattedValue'],
+    uq.owneridyominame,
+  ].find((candidate): candidate is string => typeof candidate === 'string' && candidate.trim().length > 0);
+
+  return value?.trim();
 }
 
 // Columns that must always be present regardless of what the view definition says

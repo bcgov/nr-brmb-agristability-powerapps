@@ -34,35 +34,52 @@ export function ShareViewModal({
     (async () => {
       setLoading(true);
       try {
-        const request = {
+        const request: Parameters<typeof client.executeAsync>[0] = {
           dataverseRequest: {
-            action: 'RetrieveSharedPrincipalsAndAccess',
+            action: 'customapi',
             parameters: {
-              Target: {
-                '@odata.type': 'Microsoft.Dynamics.CRM.userquery',
-                userqueryid: viewId,
+              operationName: 'RetrieveSharedPrincipalsAndAccess',
+              tableName: 'userqueries',
+              body: {
+                Target: JSON.stringify({ '@odata.id': `userqueries(${viewId})` }),
               },
             },
           },
-        } as unknown as Parameters<typeof client.executeAsync>[0];
-        const result = await client.executeAsync(request) as unknown as {
-          PrincipalAccesses?: Array<{
-            Principal?: { systemuserid?: string; name?: string };
-          }>;
         };
-        if (!cancelled && result?.PrincipalAccesses) {
-          setSharedWith(
-            result.PrincipalAccesses
-              .map(pa => ({
-                id: pa.Principal?.systemuserid ?? '',
-                name: pa.Principal?.name ?? '',
-                email: '',
-                kind: 'user' as PrincipalKind,
-              }))
-              .filter(p => p.id),
-          );
+        console.log('[ShareView] RetrieveSharedPrincipalsAndAccess request:', request);
+        const result = await client.executeAsync<unknown, { PrincipalAccesses?: Array<{ AccessMask?: string; Principal?: { systemuserid?: string; ownerid?: string; name?: string } }> }>(request as Parameters<typeof client.executeAsync>[0]);
+        console.log('[ShareView] RetrieveSharedPrincipalsAndAccess result:', result);
+        console.log('[ShareView] RetrieveSharedPrincipalsAndAccess data:', JSON.stringify(result.data, null, 2));
+        if (!cancelled && result.success && result.data?.PrincipalAccesses) {
+          const principalIds = result.data.PrincipalAccesses
+            .map(pa => pa.Principal?.systemuserid ?? pa.Principal?.ownerid ?? '')
+            .filter(Boolean);
+
+          if (principalIds.length > 0) {
+            const usersRes = await SystemusersService.getAll({
+              select: ['systemuserid', 'fullname', 'internalemailaddress'],
+              filter: principalIds.map(id => `systemuserid eq ${id}`).join(' or '),
+            });
+            const userMap = new Map(
+              (usersRes.data ?? []).map(u => [u.systemuserid ?? '', u])
+            );
+            if (!cancelled) {
+              setSharedWith(
+                principalIds.map(id => {
+                  const u = userMap.get(id);
+                  return {
+                    id,
+                    name: u?.fullname ?? u?.internalemailaddress ?? id,
+                    email: u?.internalemailaddress ?? '',
+                    kind: 'user' as PrincipalKind,
+                  };
+                }),
+              );
+            }
+          }
         }
-      } catch {
+      } catch (err) {
+        console.error('[ShareView] RetrieveSharedPrincipalsAndAccess error:', err);
         // sharing info may not be available in all environments
       } finally {
         if (!cancelled) setLoading(false);
@@ -156,29 +173,39 @@ export function ShareViewModal({
         ? 'Microsoft.Dynamics.CRM.team'
         : 'Microsoft.Dynamics.CRM.systemuser';
       const principalIdField = selected.kind === 'team' ? 'teamid' : 'systemuserid';
-      const request = {
+      const request: Parameters<typeof client.executeAsync>[0] = {
         dataverseRequest: {
-          action: 'GrantAccess',
+          action: 'customapi',
           parameters: {
-            Target: {
-              '@odata.type': 'Microsoft.Dynamics.CRM.userquery',
-              userqueryid: viewId,
-            },
-            PrincipalAccess: {
-              Principal: {
-                '@odata.type': principalType,
-                [principalIdField]: selected.id,
+            operationName: 'GrantAccess',
+            tableName: 'userqueries',
+            body: {
+              Target: {
+                '@odata.type': 'Microsoft.Dynamics.CRM.userquery',
+                userqueryid: viewId,
               },
-              AccessMask: 'ReadAccess',
+              PrincipalAccess: {
+                Principal: {
+                  '@odata.type': principalType,
+                  [principalIdField]: selected.id,
+                },
+                AccessMask: 'ReadAccess',
+              },
             },
           },
         },
-      } as unknown as Parameters<typeof client.executeAsync>[0];
-      await client.executeAsync(request);
+      };
+      console.log('[ShareView] GrantAccess request:', request);
+      const grantResult = await client.executeAsync(request);
+      console.log('[ShareView] GrantAccess result:', grantResult);
+      if (!grantResult.success) {
+        throw grantResult.error ?? new Error('GrantAccess returned success: false');
+      }
       setSharedWith(prev => [...prev, selected]);
       setSelected(null);
       setSearch('');
-    } catch {
+    } catch (err) {
+      console.error('[ShareView] GrantAccess error:', err);
       setError('Failed to share view. Please try again.');
     } finally {
       setSaving(false);
@@ -189,24 +216,34 @@ export function ShareViewModal({
     setSaving(true);
     setError(null);
     try {
-      const request = {
+      const request: Parameters<typeof client.executeAsync>[0] = {
         dataverseRequest: {
-          action: 'RevokeAccess',
+          action: 'customapi',
           parameters: {
-            Target: {
-              '@odata.type': 'Microsoft.Dynamics.CRM.userquery',
-              userqueryid: viewId,
-            },
-            Revokee: {
-              '@odata.type': 'Microsoft.Dynamics.CRM.systemuser',
-              systemuserid: principalId,
+            operationName: 'RevokeAccess',
+            tableName: 'userqueries',
+            body: {
+              Target: {
+                '@odata.type': 'Microsoft.Dynamics.CRM.userquery',
+                userqueryid: viewId,
+              },
+              Revokee: {
+                '@odata.type': 'Microsoft.Dynamics.CRM.systemuser',
+                systemuserid: principalId,
+              },
             },
           },
         },
-      } as unknown as Parameters<typeof client.executeAsync>[0];
-      await client.executeAsync(request);
+      };
+      console.log('[ShareView] RevokeAccess request:', request);
+      const revokeResult = await client.executeAsync(request);
+      console.log('[ShareView] RevokeAccess result:', revokeResult);
+      if (!revokeResult.success) {
+        throw revokeResult.error ?? new Error('RevokeAccess returned success: false');
+      }
       setSharedWith(prev => prev.filter(p => p.id !== principalId));
-    } catch {
+    } catch (err) {
+      console.error('[ShareView] RevokeAccess error:', err);
       setError('Failed to remove access. Please try again.');
     } finally {
       setSaving(false);
