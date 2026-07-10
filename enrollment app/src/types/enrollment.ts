@@ -75,6 +75,7 @@ export interface PersonalView extends ViewPayload {
   id: string;
   name: string;
   source: ViewSource;
+  ownerName?: string;
 }
 
 export type EnrolmentRow = Vsi_participantprogramyears;

@@ -1,7 +1,46 @@
 import { useRef, useState } from 'react';
 import type { PersonalView } from '../types/enrollment';
+import { ALL_COLUMNS } from '../constants/columns';
 import { ShareViewModal } from './ShareViewModal';
 import { ManageViewsModal } from './ManageViewsModal';
+
+function buildViewInfo(v: PersonalView): string[] {
+  const lines: string[] = [];
+
+  if (v.source === 'personal' && v.ownerName) {
+    lines.push(`Owned by ${v.ownerName}.`);
+  }
+
+  if (v.sortKey) {
+    const col = ALL_COLUMNS.find(c => c.key === v.sortKey);
+    const label = col?.label || v.sortKey;
+    const dir = v.sortDir === 'asc' ? 'ascending' : 'descending';
+    lines.push(`Sorted by ${label} (${dir}).`);
+  } else {
+    lines.push('No sort applied.');
+  }
+
+  const filterParts: string[] = [];
+  if (v.taskStatusFilter?.length) filterParts.push(`Task Status: ${v.taskStatusFilter.join(', ')}`);
+  if (v.enrolStatusFilter?.length) filterParts.push(`Enrolment Status: ${v.enrolStatusFilter.join(', ')}`);
+  if (v.yearFilter?.length) filterParts.push(`Year: ${v.yearFilter.join(', ')}`);
+  if (v.ownerFilter?.length) filterParts.push(`Owner filter active`);
+  const advCount = Array.isArray(v.advFilterNodes) ? v.advFilterNodes.length : 0;
+  if (advCount > 0) filterParts.push(`${advCount} advanced filter${advCount > 1 ? 's' : ''}`);
+
+  if (filterParts.length > 0) {
+    lines.push(`Filters: ${filterParts.join('; ')}.`);
+  } else {
+    lines.push('No filters applied.');
+  }
+
+  const colCount = v.visibleColumnKeys?.length ?? 0;
+  if (colCount > 0) lines.push(`${colCount} column${colCount > 1 ? 's' : ''} visible.`);
+
+  return lines;
+}
+
+interface InfoPopoverPos { top: number; left: number; }
 
 export function ViewsMenu({
   views,
@@ -38,6 +77,7 @@ export function ViewsMenu({
   const [renameText, setRenameText] = useState('');
   const [sharingView, setSharingView] = useState<PersonalView | null>(null);
   const [showManageViews, setShowManageViews] = useState(false);
+  const [infoState, setInfoState] = useState<{ view: PersonalView; pos: InfoPopoverPos } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const currentView = views.find(v => v.id === activeViewId);
@@ -110,6 +150,18 @@ export function ViewsMenu({
                             {v.id === activeViewId && <span className="vm-check">✓</span>}
                             <span className="vm-item-name">{v.name}</span>
                           </button>
+                          <div className="vm-info-wrapper">
+                            <button
+                              className="vm-info-btn"
+                              title="View info"
+                              onMouseEnter={e => {
+                                const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                setInfoState({ view: v, pos: { top: r.top, left: r.right + 8 } });
+                              }}
+                              onMouseLeave={() => setInfoState(null)}
+                              onClick={e => e.stopPropagation()}
+                            >ⓘ</button>
+                          </div>
                           <div className="vm-item-actions">
                             <button className="vm-item-action" title="Share" onClick={() => { setSharingView(v); setOpen(false); }}>&#x1F4E4;</button>
                             <button className="vm-item-action" title="Rename" onClick={() => { setRenamingId(v.id); setRenameText(v.name); }}>✏</button>
@@ -129,6 +181,18 @@ export function ViewsMenu({
                         {v.id === activeViewId && <span className="vm-check">✓</span>}
                         <span className="vm-item-name">{v.name}</span>
                       </button>
+                      <div className="vm-info-wrapper">
+                        <button
+                          className="vm-info-btn"
+                          title="View info"
+                          onMouseEnter={e => {
+                            const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                            setInfoState({ view: v, pos: { top: r.top, left: r.right + 8 } });
+                          }}
+                          onMouseLeave={() => setInfoState(null)}
+                          onClick={e => e.stopPropagation()}
+                        >ⓘ</button>
+                      </div>
                     </div>
                   ))}
 
@@ -196,6 +260,19 @@ export function ViewsMenu({
         viewName={sharingView.name}
         onClose={() => setSharingView(null)}
       />
+    )}
+    {infoState && (
+      <div
+        className="vm-info-popover"
+        style={{ top: infoState.pos.top, left: infoState.pos.left }}
+      >
+        <div className="vm-info-popover-type">
+          {infoState.view.source === 'personal' ? 'Personal view' : 'System view'}
+        </div>
+        {buildViewInfo(infoState.view).map((line, i) => (
+          <div key={i} className="vm-info-popover-line">{line}</div>
+        ))}
+      </div>
     )}
   </>
   );

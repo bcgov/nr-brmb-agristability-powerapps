@@ -12,8 +12,11 @@ import type {
 import { DEFAULT_VIEW_SNAPSHOT, USERQUERY_ENTITY, USERQUERY_TYPE } from '../constants/columns';
 import { UserqueriesService } from '../generated/services/UserqueriesService';
 import { SavedqueriesService } from '../generated/services/SavedqueriesService';
+import { SystemusersService } from '../generated/services/SystemusersService';
+import { TeamsService } from '../generated/services/TeamsService';
 import { generateLayoutXml, generateFetchXml, userqueryToView, savedqueryToView, loadActiveViewId, saveActiveViewId, resolveEntityObjectTypeCode, setEntityObjectTypeCode, getEntityObjectTypeCode } from '../utils/viewSerializer';
 import { serializeFilterNodes, deserializeFilterNodes } from '../utils/filterTree';
+import type { Userqueries } from '../generated/models/UserqueriesModel';
 
 export interface ViewState {
   visibleColumnKeys: SortKey[];
@@ -44,6 +47,127 @@ function shouldRestoreLastViewOnLoad(): boolean {
   const hashParams = new URLSearchParams(hashQuery);
   const hashValue = (hashParams.get('restoreLastView') ?? '').toLowerCase();
   return hashValue === '1' || hashValue === 'true';
+}
+
+function getRawOwnerId(uq: Userqueries): string | undefined {
+  const raw = uq as unknown as Record<string, unknown>;
+  const ownerId = uq.ownerid || raw['_ownerid_value'];
+  return typeof ownerId === 'string' && ownerId.trim() ? ownerId.trim() : undefined;
+}
+
+function getRawOwnerType(uq: Userqueries): string | undefined {
+  const raw = uq as unknown as Record<string, unknown>;
+  const ownerType = uq.owneridtype || raw['_ownerid_value@Microsoft.Dynamics.CRM.lookuplogicalname'];
+  return typeof ownerType === 'string' ? ownerType.toLowerCase() : undefined;
+}
+
+type WinWithXrmWebApi = {
+  Xrm?: {
+    WebApi?: {
+      retrieveMultipleRecords: (
+        entityType: string,
+        options?: string,
+        maxPageSize?: number
+      ) => Promise<{ entities: Array<Record<string, unknown>> }>;
+    };
+  };
+};
+
+async function getUserqueryOwnerNamesFromXrm(userqueryIds: string[]): Promise<Map<string, string>> {
+  const ownerNames = new Map<string, string>();
+  if (userqueryIds.length === 0 || typeof window === 'undefined') return ownerNames;
+
+  const candidates = [window, window.parent, window.top];
+  const filter = userqueryIds
+    .map(id => `userqueryid eq ${id}`)
+    .join(' or ');
+  const options = `?$select=userqueryid,_ownerid_value&$filter=${filter}`;
+
+  for (const candidate of candidates) {
+    try {
+      const webApi = (candidate as unknown as WinWithXrmWebApi | undefined)?.Xrm?.WebApi;
+      if (!webApi?.retrieveMultipleRecords) continue;
+
+      const result = await webApi.retrieveMultipleRecords('userquery', options);
+      for (const entity of result.entities ?? []) {
+        const id = entity.userqueryid;
+        const ownerName = entity['_ownerid_value@OData.Community.Display.V1.FormattedValue'];
+        if (typeof id === 'string' && typeof ownerName === 'string' && ownerName.trim()) {
+          ownerNames.set(id, ownerName.trim());
+        }
+      }
+      if (ownerNames.size > 0) return ownerNames;
+    } catch (e) {
+      console.warn('[Views] Xrm.WebApi owner lookup failed:', e);
+    }
+  }
+
+  return ownerNames;
+}
+
+async function addOwnerNamesToPersonalViews(views: PersonalView[], userqueries: Userqueries[]): Promise<PersonalView[]> {
+  const missingOwnerViews = views.filter(v => v.source === 'personal' && !v.ownerName);
+  if (missingOwnerViews.length === 0) return views;
+
+  const xrmOwnerNames = await getUserqueryOwnerNamesFromXrm(missingOwnerViews.map(v => v.id));
+  if (xrmOwnerNames.size > 0) {
+    views = views.map(view => {
+      if (view.source !== 'personal' || view.ownerName) return view;
+      const ownerName = xrmOwnerNames.get(view.id);
+      return ownerName ? { ...view, ownerName } : view;
+    });
+  }
+
+  const ownerByViewId = new Map(
+    userqueries
+      .map(uq => [uq.userqueryid, { id: getRawOwnerId(uq), type: getRawOwnerType(uq) }] as const)
+      .filter(([, owner]) => Boolean(owner.id))
+  );
+  const userOwnerIds = [...new Set(
+    [...ownerByViewId.values()]
+      .filter(owner => !owner.type || owner.type === 'systemuser')
+      .map(owner => owner.id as string)
+  )];
+  const teamOwnerIds = [...new Set(
+    [...ownerByViewId.values()]
+      .filter(owner => owner.type === 'team')
+      .map(owner => owner.id as string)
+  )];
+
+  const ownerNames = new Map<string, string>();
+  const [usersResult, teamsResult] = await Promise.allSettled([
+    userOwnerIds.length
+      ? SystemusersService.getAll({
+          select: ['systemuserid', 'fullname', 'internalemailaddress', 'domainname'],
+          filter: userOwnerIds.map(id => `systemuserid eq ${id}`).join(' or '),
+        })
+      : Promise.resolve(null),
+    teamOwnerIds.length
+      ? TeamsService.getAll({
+          select: ['teamid', 'name'],
+          filter: teamOwnerIds.map(id => `teamid eq ${id}`).join(' or '),
+        })
+      : Promise.resolve(null),
+  ]);
+
+  if (usersResult.status === 'fulfilled' && usersResult.value) {
+    for (const user of usersResult.value.data ?? []) {
+      const name = user.fullname || user.internalemailaddress || user.domainname;
+      if (user.systemuserid && name) ownerNames.set(user.systemuserid, name);
+    }
+  }
+  if (teamsResult.status === 'fulfilled' && teamsResult.value) {
+    for (const team of teamsResult.value.data ?? []) {
+      if (team.teamid && team.name) ownerNames.set(team.teamid, team.name);
+    }
+  }
+
+  return views.map(view => {
+    if (view.source !== 'personal' || view.ownerName) return view;
+    const ownerId = ownerByViewId.get(view.id)?.id;
+    const ownerName = ownerId ? ownerNames.get(ownerId) : undefined;
+    return ownerName ? { ...view, ownerName } : view;
+  });
 }
 
 export function useViews(state: ViewState, setters: {
@@ -137,7 +261,7 @@ export function useViews(state: ViewState, setters: {
 
       const [uqResult, sqResult] = await Promise.allSettled([
         UserqueriesService.getAll({
-          select: ['userqueryid', 'name', 'fetchxml', 'layoutjson', 'layoutxml', 'returnedtypecode', 'querytype'],
+          select: ['userqueryid', 'name', 'fetchxml', 'layoutjson', 'layoutxml', 'returnedtypecode', 'querytype', 'ownerid'],
           filter: `returnedtypecode eq '${USERQUERY_ENTITY}'`,
         }),
         SavedqueriesService.getAll({
@@ -151,7 +275,8 @@ export function useViews(state: ViewState, setters: {
       await resolveEntityObjectTypeCode();
 
       if (uqResult.status === 'fulfilled') {
-        personal = (uqResult.value.data ?? []).map(uq => userqueryToView(uq));
+        const userqueries = uqResult.value.data ?? [];
+        personal = await addOwnerNamesToPersonalViews(userqueries.map(uq => userqueryToView(uq)), userqueries);
       } else {
         console.error('[Views] Failed to load personal views:', uqResult.reason);
       }
