@@ -1408,57 +1408,34 @@ export function SupervisorApprovalPage() {
           queueId={assignTarget.queueId}
           queueName={assignTarget.queueName}
           onClose={() => setAssignTarget(null)}
-          onAssigned={(workerId, workerName) => {
+          onAssigned={async (workerId, workerName) => {
             const rowsToUpdate = assignTarget.bulkRows ?? [{ itemId: assignTarget.enrolmentId, queueitemId: assignTarget.queueitemId }];
-            setQueueWorkByEnrolmentId(prev => {
-              const next = { ...prev };
-              for (const r of rowsToUpdate) {
-                next[r.itemId] = {
-                  ...next[r.itemId],
-                  workedBy: workerName,
-                  workedOn: new Date().toLocaleDateString(),
-                  workerId,
-                };
-              }
-              return next;
+            setActionError(null);
+
+            const assignResult = await ProcessEnrolmentActionService.Run({
+              text: rowsToUpdate.map(r => r.itemId).join(','),
+              text_1: 'assign',
+              text_2: workerId,
             });
-            // Apply assignment through the flow and update ownerid on all enrolment records.
-            void (async () => {
-              try {
-                const assignResult = await ProcessEnrolmentActionService.Run({
-                  text: rowsToUpdate.map(r => r.itemId).join(','),
-                  text_1: 'assign',
-                  text_2: workerId,
-                });
-                if (!assignResult.success) {
-                  const msg = (assignResult.error as { message?: string } | undefined)?.message ?? 'Assign partially failed';
-                  throw new Error(msg);
-                }
-                const assignFlowMessage = assignResult.data?.message;
-                if (assignFlowMessage && assignFlowMessage.toLowerCase() !== 'success') {
-                  throw new Error(assignFlowMessage);
-                }
-                patchEnrolmentCache(rowsToUpdate.map(r => ({ id: r.itemId, fields: {
-                  vsi_taskstatus: 865520000 as unknown as import('../generated/models/Vsi_participantprogramyearsModel').Vsi_participantprogramyearsvsi_taskstatus,
-                  vsi_enrolmentstatus: 865520009 as unknown as import('../generated/models/Vsi_participantprogramyearsModel').Vsi_participantprogramyearsvsi_enrolmentstatus,
-                  '_ownerid_value': workerId,
-                } })));
-              } catch (err) {
-                setActionError(err instanceof Error ? err.message : 'Assign partially failed');
-              }
-            })();
-            setAssignTarget(null);
-            // Keep Dataverse queueitems intact; local UI removal follows existing flow behavior.
-            const assignedItemIds = new Set(rowsToUpdate.map(r => r.itemId));
-            removeApprovedRowsFromState(allRows.filter(r => r.itemId != null && assignedItemIds.has(r.itemId)));
+            if (!assignResult.success) {
+              const msg = (assignResult.error as { message?: string } | undefined)?.message ?? 'Assign failed';
+              setActionError(msg);
+              throw new Error(msg);
+            }
+            const assignFlowMessage = assignResult.data?.message;
+            if (assignFlowMessage && assignFlowMessage.toLowerCase() !== 'success') {
+              setActionError(assignFlowMessage);
+              throw new Error(assignFlowMessage);
+            }
+
             const count = assignTarget.bulkRows?.length ?? 1;
             addToast(`${count} enrolment${count === 1 ? '' : 's'} assigned to ${workerName}.`);
-            // Refresh supervisor screen and invalidate dashboard cache
+
+            // The flow owns queue item state. Refresh so Worked By/Worked On and removals reflect Dataverse.
             clearEnrolmentCache();
-            saItemsCache = null;
-            saQueueWorkCache = null;
-            saSupervisorQueueIdsCache = null;
-            saWorkerAvatarUrlsCache = null;
+            clearSaCache();
+            fetchedQueueIds.current.clear();
+            setSelectedIds(new Set());
             setRefreshCounter(prev => prev + 1);
           }}
         />

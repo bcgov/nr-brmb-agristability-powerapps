@@ -57,7 +57,7 @@
   padding: 1.25rem 1.5rem;
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -107,6 +107,10 @@
   border: 1px solid #e2e6ec;
   border-radius: 8px;
   overflow: hidden;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .sa-card-header {
@@ -116,6 +120,7 @@
   padding: 1rem 1.25rem 0.75rem;
   border-bottom: 1px solid #e2e6ec;
   gap: 1rem;
+  flex-shrink: 0;
 }
 
 .sa-card-title-block {
@@ -201,7 +206,9 @@
 
 /* Table */
 .sa-table-container {
-  overflow-x: auto;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
 }
 
 .sa-table {
@@ -212,6 +219,9 @@
 }
 
 .sa-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   background: #f7f8fa;
   font-weight: 600;
   font-size: 0.8rem;
@@ -375,6 +385,7 @@
 
 /* Pagination */
 .sa-pagination {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
