@@ -22,7 +22,7 @@ type Props = {
   selectedIds: Set<string>;
   rows: Vsi_participantprogramyears[];
   onClose: () => void;
-  onComplete: (update: BulkEditUpdate) => void;
+  onSubmitted: (update: BulkEditUpdate) => void;
   onError?: (message: string) => void;
 };
 
@@ -30,7 +30,7 @@ export function BulkEditEnrolmentsModal({
   selectedIds,
   rows,
   onClose,
-  onComplete,
+  onSubmitted,
   onError,
 }: Props) {
   const [taskStatus, setTaskStatus] = useState('');
@@ -61,7 +61,7 @@ export function BulkEditEnrolmentsModal({
     [],
   );
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!canSubmit) return;
     setSubmitting(true);
     setError(null);
@@ -75,31 +75,33 @@ export function BulkEditEnrolmentsModal({
         lateFinalDeadlineDate: lateFinalDeadlineDate || null,
       };
 
-      const result = await BulkUpdateEnrolmentRecordsService.Run({
+      const request = {
         text: ids.join(','),
         number: update.taskStatus ?? NO_CHANGE_NUMBER,
         number_1: update.enrolmentStatus ?? NO_CHANGE_NUMBER,
         date: update.finalDeadlineDate ?? NO_CHANGE_DATE,
         date_1: update.lateFinalDeadlineDate ?? NO_CHANGE_DATE,
+      };
+
+      void BulkUpdateEnrolmentRecordsService.Run(request).then(result => {
+        if (!result.success) {
+          console.error('Bulk update workflow failed', result.error);
+          return;
+        }
+        const flowMessage = result.data?.message;
+        if (flowMessage && !['success', 'done'].includes(flowMessage.toLowerCase())) {
+          console.error('Bulk update workflow returned an unexpected message', flowMessage);
+        }
+      }).catch(err => {
+        console.error('Bulk update workflow failed', err);
       });
 
-      if (!result.success) {
-        const msg = (result.error as { message?: string } | undefined)?.message ?? 'Bulk update failed';
-        throw new Error(msg);
-      }
-
-      const flowMessage = result.data?.message;
-      if (flowMessage && !['success', 'done'].includes(flowMessage.toLowerCase())) {
-        throw new Error(flowMessage);
-      }
-
-      onComplete(update);
+      onSubmitted(update);
       onClose();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Bulk update failed';
       setError(msg);
       onError?.(msg);
-    } finally {
       setSubmitting(false);
     }
   };
