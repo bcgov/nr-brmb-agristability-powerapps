@@ -1,5 +1,4 @@
 ﻿import { useState } from 'react';
-import { QueueitemsService } from '../generated/services/QueueitemsService';
 import { useAssignableUsers } from '../hooks/useAssignableUsers';
 import type { AssignableUser } from '../hooks/useAssignableUsers';
 import { getInitials } from '../utils/helpers';
@@ -18,7 +17,7 @@ export function AssignWorkerModal({
   queueId?: string;
   queueName?: string;
   onClose: () => void;
-  onAssigned: (workerId: string, workerName: string) => void;
+  onAssigned: (workerId: string, workerName: string) => void | Promise<void>;
 }) {
   const { results, searchTerm, setSearchTerm, searching, loadError, hasLoaded } =
     useAssignableUsers(queueId, !!queueitemId);
@@ -32,8 +31,7 @@ export function AssignWorkerModal({
     setSubmitting(true);
     setSubmitError(null);
     try {
-      await QueueitemsService.delete(queueitemId);
-      onAssigned(selected.systemUserId, selected.displayName);
+      await onAssigned(selected.systemUserId, selected.displayName);
       onClose();
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Assignment failed');
