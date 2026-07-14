@@ -1422,8 +1422,7 @@ export function SupervisorApprovalPage() {
               }
               return next;
             });
-            // Apply assignment to remaining queue items (first was handled by the modal)
-            // and update ownerid on all enrolment records
+            // Apply assignment through the flow and update ownerid on all enrolment records.
             void (async () => {
               try {
                 const assignResult = await ProcessEnrolmentActionService.Run({
@@ -1449,7 +1448,7 @@ export function SupervisorApprovalPage() {
               }
             })();
             setAssignTarget(null);
-            // Remove assigned rows from the table, queue work state, and selection — same as Manual/Approve
+            // Keep Dataverse queueitems intact; local UI removal follows existing flow behavior.
             const assignedItemIds = new Set(rowsToUpdate.map(r => r.itemId));
             removeApprovedRowsFromState(allRows.filter(r => r.itemId != null && assignedItemIds.has(r.itemId)));
             const count = assignTarget.bulkRows?.length ?? 1;
