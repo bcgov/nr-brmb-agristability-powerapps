@@ -1222,21 +1222,11 @@ export function DashboardHomePage() {
           selectedIds={selectedIds}
           rows={rows}
           onClose={() => setShowBulkEditModal(false)}
-          onComplete={(update) => {
-            setRows(prev => prev.map(r => {
-              if (!update.ids.includes(r.vsi_participantprogramyearid)) return r;
-              return {
-                ...r,
-                ...(update.taskStatus != null ? { vsi_taskstatus: update.taskStatus as unknown as typeof r.vsi_taskstatus } : {}),
-                ...(update.enrolmentStatus != null ? { vsi_enrolmentstatus: update.enrolmentStatus as unknown as typeof r.vsi_enrolmentstatus } : {}),
-                ...(update.finalDeadlineDate != null ? { vsi_enrolmentfeesfinaldeadlinedate: update.finalDeadlineDate } : {}),
-                ...(update.lateFinalDeadlineDate != null ? { vsi_lateenrolmentfeesfinaldeadlinedate: update.lateFinalDeadlineDate } : {}),
-              };
-            }));
+          onSubmitted={(update) => {
             setSelectedIds(new Set());
+            clearEnrolmentCache();
             clearSaCache();
-            reloadFirstPage();
-            addToast(`${update.ids.length} enrolment${update.ids.length === 1 ? '' : 's'} updated successfully.`);
+            addToast(`${update.ids.length} enrolment${update.ids.length === 1 ? '' : 's'} submitted for update. Processing will continue in the background.`);
           }}
           onError={(msg) => addToast(msg, 'error')}
         />
