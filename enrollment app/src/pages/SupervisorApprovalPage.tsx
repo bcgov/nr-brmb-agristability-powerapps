@@ -24,6 +24,7 @@ import type { ToastMessage } from '../components/Toast';
 import type { FilterOperator, SortDir } from '../types/enrollment';
 import '../styles/supervisor-approval.css';
 import { CORE_APP_ID_FALLBACK, CORE_BASE_URL_FALLBACK } from '../constants/config';
+import { getCoreConfig } from '../hooks/useEnrolmentData';
 
 const PAGE_SIZE = 20;
 const SUPERVISOR_QUEUE_NAME = 'Supervisor Approval Queue';
@@ -265,7 +266,7 @@ export function SupervisorApprovalPage() {
             'vsi_fortyfivedaypausedate',
             'vsi_enrolmentfee',
             'vsi_previousyearcalculatedenfee',
-            'vsi_administrativecostsharingfee',
+            'vsi_totalfeesowedcalculated',
             'vsi_variancecalculation',
             'vsi_taskstatus',
             'modifiedon',
@@ -819,7 +820,7 @@ export function SupervisorApprovalPage() {
         participantName: participantDisplayName,
         taskStatusLabel: getTaskStatusLabel(item.vsi_taskstatus) || 'Unknown',
         enrolmentStatusLabel: getEnrolmentStatusLabel(item.vsi_enrolmentstatus) || '—',
-        calculatedFeeValue: item.vsi_enrolmentfee ?? null,
+        calculatedFeeValue: item.vsi_totalfeesowedcalculated ?? null,
         enteredQueue: workMeta?.enteredQueue ?? '—',
         enteredQueueRaw: workMeta?.enteredQueueRaw,
         workedBy: workMeta?.workedBy ?? '—',
@@ -1221,8 +1222,7 @@ export function SupervisorApprovalPage() {
                 {pageRows.map((row, index) => {
                   const item = row.item;
                   const itemId = row.itemId;
-                  const adminFee = item.vsi_administrativecostsharingfee ?? 0;
-                  const calcFeeTotal = item.vsi_enrolmentfee != null ? item.vsi_enrolmentfee + adminFee : null;
+                  const calcFeeTotal = item.vsi_totalfeesowedcalculated ?? null;
                   const variance = item.vsi_variancecalculation != null ? item.vsi_variancecalculation * 100 : null;
                   const workMeta = row.workMeta;
 
@@ -1251,7 +1251,10 @@ export function SupervisorApprovalPage() {
                         }
                         if (key === 'participant') {
                           const participantId = item._vsi_participantid_value;
-                          const href = `${CORE_BASE_URL_FALLBACK}?appid=${encodeURIComponent(CORE_APP_ID_FALLBACK)}&pagetype=entityrecord&etn=account&id=${encodeURIComponent(participantId ?? '')}`;
+                          const { coreAppId, coreBaseUrl } = getCoreConfig();
+                          const appId = coreAppId ?? CORE_APP_ID_FALLBACK;
+                          const baseUrl = coreBaseUrl ?? CORE_BASE_URL_FALLBACK;
+                          const href = `${baseUrl}?appid=${encodeURIComponent(appId)}&pagetype=entityrecord&etn=account&id=${encodeURIComponent(participantId ?? '')}`;
                           return (
                             <td key={key}>
                               {participantId

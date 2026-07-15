@@ -85,8 +85,7 @@ export function renderCell(
       );
     }
     case 'fee': {
-      const adminFee = row.vsi_administrativecostsharingfee ?? 0;
-      const calcFee = row.vsi_enrolmentfee != null ? row.vsi_enrolmentfee + adminFee : null;
+      const calcFee = row.vsi_totalfeesowedcalculated ?? null;
       const variance = row.vsi_enrolmentfee != null && row.vsi_variancecalculation != null ? row.vsi_variancecalculation * 100 : null;
       const varianceClass = getVarianceClass(variance);
       const varianceText = formatVariancePercent(variance);
@@ -133,7 +132,7 @@ export function renderCell(
       const variance = row.vsi_variancecalculation != null ? row.vsi_variancecalculation * 100 : null;
       const reasons: string[] = [];
       if (row.vsi_prevyearpartnotverified === true) {
-        reasons.push('Previous year participant data is not verified.');
+        reasons.push('Previous year partnership not verified.');
       }
       if (row.vsi_isnewparticipant !== true && row.vsi_enrolmentfee != null && row.vsi_previousyearcalculatedenfee == null) {
         reasons.push('Current enrolment fee exists, but previous year calculated EN fee is missing.');
