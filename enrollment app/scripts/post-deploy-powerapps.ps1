@@ -163,13 +163,13 @@ function Patch-UserqueriesSharingApis {
   )
 
   if (-not (Test-Path -LiteralPath $FilePath)) {
-    Write-Host "  Skipping patch — file not found: $FilePath" -ForegroundColor Yellow
+    Write-Host "  Skipping patch - file not found: $FilePath" -ForegroundColor Yellow
     return
   }
 
   $content = [System.IO.File]::ReadAllText($FilePath)
 
-  # Already patched — nothing to do
+  # Already patched - nothing to do
   if ($content -match '"GrantAccess"') {
     Write-Host "  Already patched: $FilePath" -ForegroundColor DarkGray
     return
@@ -203,25 +203,35 @@ function Patch-UserqueriesSharingApis {
     }
 '@
 
-  # Replace "apis": {} inside the userqueries block (no nested braces before the empty apis value)
-  $pattern = '("userqueries"\s*:\s*\{[^{]*?"apis"\s*:\s*)\{\}'
-  $patched = [System.Text.RegularExpressions.Regex]::Replace(
-    $content,
-    $pattern,
-    { param($m) $m.Groups[1].Value + $sharingApis },
-    [System.Text.RegularExpressions.RegexOptions]::Singleline
-  )
-
-  if ($patched -eq $content) {
-    Write-Host "  Warning: userqueries 'apis' pattern not found in $FilePath — manual patch may be needed." -ForegroundColor Yellow
+  # Replace "apis": {} inside the userqueries block using string index to avoid
+  # scriptblock delegate issues in PowerShell 5.1
+  $userqueriesIdx = $content.IndexOf('"userqueries"')
+  if ($userqueriesIdx -lt 0) {
+    Write-Host "  Warning: 'userqueries' entry not found in $FilePath - manual patch may be needed." -ForegroundColor Yellow
     return
   }
+
+  $emptyApisMarker = '"apis": {}'
+  $emptyApisIdx = $content.IndexOf($emptyApisMarker, $userqueriesIdx)
+  if ($emptyApisIdx -lt 0) {
+    # Also try with a space inside braces in case pac formats it differently
+    $emptyApisMarker = '"apis": { }'
+    $emptyApisIdx = $content.IndexOf($emptyApisMarker, $userqueriesIdx)
+  }
+  if ($emptyApisIdx -lt 0) {
+    Write-Host "  Warning: userqueries 'apis' pattern not found in $FilePath - manual patch may be needed." -ForegroundColor Yellow
+    return
+  }
+  Write-Host "  Found empty apis at index $emptyApisIdx, injecting..." -ForegroundColor DarkGray
+
+  $patched = $content.Substring(0, $emptyApisIdx) + '"apis": ' + $sharingApis + $content.Substring($emptyApisIdx + $emptyApisMarker.Length)
 
   [System.IO.File]::WriteAllText($FilePath, $patched, [System.Text.Encoding]::UTF8)
   Write-Host "  Patched: $FilePath" -ForegroundColor Green
 }
 
 
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $powerConfigPath = Join-Path $repoRoot 'power.config.json'
 
 if (-not (Test-Path -LiteralPath $ConfigPath)) {
@@ -501,6 +511,11 @@ if ($null -ne $config.flowReferences -and $config.flowReferences.Count -gt 0) {
 }
 
 if (-not $SkipBuild.IsPresent) {
+  # Re-patch here in case add-flow or any earlier step wiped the schemas
+  Write-Host "`n==> Re-patch userqueries sharing APIs (pre-build safety check)" -ForegroundColor Cyan
+  Patch-UserqueriesSharingApis -FilePath (Join-Path $dataSourcesInfoDir 'dataSourcesInfo.ts')
+  Patch-UserqueriesSharingApis -FilePath (Join-Path $dataSourcesInfoDir 'dataSourcesInfo.js')
+
   Invoke-CheckedCommand -FilePath 'npm.cmd' -Arguments @('run', 'build') -Description 'Build app'
 }
 

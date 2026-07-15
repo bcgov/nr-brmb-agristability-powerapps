@@ -46,10 +46,7 @@ export function ShareViewModal({
             },
           },
         };
-        console.log('[ShareView] RetrieveSharedPrincipalsAndAccess request:', request);
         const result = await client.executeAsync<unknown, { PrincipalAccesses?: Array<{ AccessMask?: string; Principal?: { systemuserid?: string; ownerid?: string; name?: string } }> }>(request as Parameters<typeof client.executeAsync>[0]);
-        console.log('[ShareView] RetrieveSharedPrincipalsAndAccess result:', result);
-        console.log('[ShareView] RetrieveSharedPrincipalsAndAccess data:', JSON.stringify(result.data, null, 2));
         if (!cancelled && result.success && result.data?.PrincipalAccesses) {
           const principalIds = result.data.PrincipalAccesses
             .map(pa => pa.Principal?.systemuserid ?? pa.Principal?.ownerid ?? '')
@@ -79,7 +76,6 @@ export function ShareViewModal({
           }
         }
       } catch (err) {
-        console.error('[ShareView] RetrieveSharedPrincipalsAndAccess error:', err);
         // sharing info may not be available in all environments
       } finally {
         if (!cancelled) setLoading(false);
@@ -195,9 +191,7 @@ export function ShareViewModal({
           },
         },
       };
-      console.log('[ShareView] GrantAccess request:', request);
       const grantResult = await client.executeAsync(request);
-      console.log('[ShareView] GrantAccess result:', grantResult);
       if (!grantResult.success) {
         throw grantResult.error ?? new Error('GrantAccess returned success: false');
       }
@@ -205,7 +199,6 @@ export function ShareViewModal({
       setSelected(null);
       setSearch('');
     } catch (err) {
-      console.error('[ShareView] GrantAccess error:', err);
       setError('Failed to share view. Please try again.');
     } finally {
       setSaving(false);
@@ -235,15 +228,12 @@ export function ShareViewModal({
           },
         },
       };
-      console.log('[ShareView] RevokeAccess request:', request);
       const revokeResult = await client.executeAsync(request);
-      console.log('[ShareView] RevokeAccess result:', revokeResult);
       if (!revokeResult.success) {
         throw revokeResult.error ?? new Error('RevokeAccess returned success: false');
       }
       setSharedWith(prev => prev.filter(p => p.id !== principalId));
     } catch (err) {
-      console.error('[ShareView] RevokeAccess error:', err);
       setError('Failed to remove access. Please try again.');
     } finally {
       setSaving(false);
