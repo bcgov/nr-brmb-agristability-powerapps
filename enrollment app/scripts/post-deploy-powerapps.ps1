@@ -151,7 +151,77 @@ function Get-DataSourceNameVariants {
   return @($deduped)
 }
 
-$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+function Patch-UserqueriesSharingApis {
+  <#
+  .SYNOPSIS
+    Re-injects the GrantAccess/RevokeAccess/RetrieveSharedPrincipalsAndAccess API
+    definitions into the userqueries entry of dataSourcesInfo after pac regenerates it.
+  #>
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$FilePath
+  )
+
+  if (-not (Test-Path -LiteralPath $FilePath)) {
+    Write-Host "  Skipping patch — file not found: $FilePath" -ForegroundColor Yellow
+    return
+  }
+
+  $content = [System.IO.File]::ReadAllText($FilePath)
+
+  # Already patched — nothing to do
+  if ($content -match '"GrantAccess"') {
+    Write-Host "  Already patched: $FilePath" -ForegroundColor DarkGray
+    return
+  }
+
+  $sharingApis = @'
+{
+      "GrantAccess": {
+        "path": "api/data/v9.2/GrantAccess",
+        "method": "POST",
+        "parameters": [
+          { "name": "Target", "in": "body", "required": true, "type": "object" },
+          { "name": "PrincipalAccess", "in": "body", "required": true, "type": "object" }
+        ]
+      },
+      "RevokeAccess": {
+        "path": "api/data/v9.2/RevokeAccess",
+        "method": "POST",
+        "parameters": [
+          { "name": "Target", "in": "body", "required": true, "type": "object" },
+          { "name": "Revokee", "in": "body", "required": true, "type": "object" }
+        ]
+      },
+      "RetrieveSharedPrincipalsAndAccess": {
+        "path": "api/data/v9.2/RetrieveSharedPrincipalsAndAccess(Target=@p1)?@p1={Target}",
+        "method": "GET",
+        "parameters": [
+          { "name": "Target", "in": "path", "required": true, "type": "string" }
+        ]
+      }
+    }
+'@
+
+  # Replace "apis": {} inside the userqueries block (no nested braces before the empty apis value)
+  $pattern = '("userqueries"\s*:\s*\{[^{]*?"apis"\s*:\s*)\{\}'
+  $patched = [System.Text.RegularExpressions.Regex]::Replace(
+    $content,
+    $pattern,
+    { param($m) $m.Groups[1].Value + $sharingApis },
+    [System.Text.RegularExpressions.RegexOptions]::Singleline
+  )
+
+  if ($patched -eq $content) {
+    Write-Host "  Warning: userqueries 'apis' pattern not found in $FilePath — manual patch may be needed." -ForegroundColor Yellow
+    return
+  }
+
+  [System.IO.File]::WriteAllText($FilePath, $patched, [System.Text.Encoding]::UTF8)
+  Write-Host "  Patched: $FilePath" -ForegroundColor Green
+}
+
+
 $powerConfigPath = Join-Path $repoRoot 'power.config.json'
 
 if (-not (Test-Path -LiteralPath $ConfigPath)) {
@@ -263,6 +333,12 @@ foreach ($dataSource in $target.dataSources) {
 
   Invoke-CheckedCommand -FilePath 'pac' -Arguments $args -Description "Add data source '$apiId'"
 }
+
+# Patch dataSourcesInfo files to restore sharing APIs wiped by pac regeneration
+Write-Host "`n==> Patch userqueries sharing APIs in dataSourcesInfo" -ForegroundColor Cyan
+$dataSourcesInfoDir = Join-Path $repoRoot '.power\schemas\appschemas'
+Patch-UserqueriesSharingApis -FilePath (Join-Path $dataSourcesInfoDir 'dataSourcesInfo.ts')
+Patch-UserqueriesSharingApis -FilePath (Join-Path $dataSourcesInfoDir 'dataSourcesInfo.js')
 
 # Inject Dataverse table mappings into databaseReferences after PAC creates default.cds
 if ($null -ne $config.dataverseTableMappings -and (Test-Path -LiteralPath $powerConfigPath)) {

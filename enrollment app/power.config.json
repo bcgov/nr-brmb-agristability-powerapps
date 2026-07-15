@@ -10,7 +10,7 @@
   "localAppUrl": "http://localhost:3000",
   "logoPath": "Default",
   "connectionReferences": {
-    "c9a8d4ed-a7e6-4ed7-b241-aa90960649b6": {
+    "8b8cfcd3-3a1d-4b53-af74-c0db7b352fec": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_farms-20api-5fe39d1efd21a19d13-5f571039b465579741",
       "displayName": "FARMS API",
       "dataSources": [
@@ -22,7 +22,7 @@
       "sharedConnectionId": "/providers/Microsoft.PowerApps/apis/shared_farms-20api-5fe39d1efd21a19d13-5f571039b465579741/connections/7f0dbaddf90e498e82c553b27272a705",
       "dataSets": {}
     },
-    "d7e2f9e8-b47f-4753-93a3-a37e0ff4f123": {
+    "34a31d7b-2560-464f-ba66-4bd8b95d56e9": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
       "displayName": "Microsoft Dataverse",
       "dataSources": [
@@ -32,7 +32,7 @@
       "sharedConnectionId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps/connections/b05319f6f3244385ac9d9959391a2970",
       "dataSets": {}
     },
-    "0d605659-5217-4b25-bddd-238401c6e548": {
+    "55b4b260-d628-498b-9ee1-3c15107c18b2": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
       "displayName": "Logic flows",
       "dataSources": [
@@ -44,15 +44,15 @@
         "workflowName": "e3f5031f-0d21-4b4e-90ad-bf43d6d496cd"
       }
     },
-    "68f0e070-dd0f-42a0-9535-fb1c02bc86e4": {
+    "064a9fc5-3eba-47d7-8293-363ae602eb7c": {
       "id": "/providers/microsoft.powerapps/apis/shared_sharepointonline",
       "displayName": "SharePoint"
     },
-    "264e4db3-ae3f-405a-ac39-29579c0dc593": {
+    "c3655dcb-28eb-4976-ab8a-42e23e0f1e21": {
       "id": "/providers/microsoft.powerapps/apis/shared_wordonlinebusiness",
       "displayName": "Word Online (Business)"
     },
-    "d0f18dc8-103a-45a8-8839-b461a78eaaf6": {
+    "97a74af8-0813-4c8f-be9c-908ce38bab8e": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
       "displayName": "Logic flows",
       "dataSources": [
@@ -63,12 +63,12 @@
         "workflowDisplayName": "Generate 45 Day Letter",
         "workflowName": "8bdef04a-3078-a8e8-bed0-89163ef5e0c4",
         "dependencies": {
-          "shared_sharepointonline_1": "68f0e070-dd0f-42a0-9535-fb1c02bc86e4",
-          "shared_wordonlinebusiness_1": "264e4db3-ae3f-405a-ac39-29579c0dc593"
+          "shared_sharepointonline_1": "064a9fc5-3eba-47d7-8293-363ae602eb7c",
+          "shared_wordonlinebusiness_1": "c3655dcb-28eb-4976-ab8a-42e23e0f1e21"
         }
       }
     },
-    "78052b2d-c8a6-427d-a1b2-e0480fecd2a4": {
+    "d0cd1a82-5844-435a-b7d9-20d4b33db010": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
       "displayName": "Logic flows",
       "dataSources": [
@@ -80,7 +80,7 @@
         "workflowName": "1659a9c0-1436-b7b2-d918-2b5b3fc5e819"
       }
     },
-    "4959a6a1-1574-4d58-ab3b-9a14096194dc": {
+    "490190a7-f198-4f1c-8a4b-c515f0a1a939": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
       "displayName": "Logic flows",
       "dataSources": [
