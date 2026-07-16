@@ -99,6 +99,9 @@
 
 /* ── header ── */
 .enrolment-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   background: #f7f8fa;
   font-weight: 600;
   font-size: 0.84rem;

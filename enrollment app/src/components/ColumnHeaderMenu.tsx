@@ -100,7 +100,7 @@ export function ColumnHeaderMenu<K extends string = string>({
   return (
     <th
       className={`col-hdr-menu-th${dragProps?.className ? ' ' + dragProps.className : ''}`}
-      style={{ position: 'relative', cursor: 'grab', minWidth: columnWidth ? `${columnWidth}px` : undefined, width: columnWidth ? `${columnWidth}px` : undefined, ...thStyle }}
+      style={{ cursor: 'grab', minWidth: columnWidth ? `${columnWidth}px` : undefined, width: columnWidth ? `${columnWidth}px` : undefined, ...thStyle }}
       draggable={dragProps?.draggable}
       onDragStart={dragProps?.onDragStart}
       onDragOver={dragProps?.onDragOver}

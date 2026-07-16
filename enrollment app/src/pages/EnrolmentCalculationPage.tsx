@@ -1383,7 +1383,7 @@ export function EnrolmentCalculationPage() {
             rel="noopener noreferrer"
           >
             <ExternalLink size={14} aria-hidden="true" />
-            Open a Scenario in FARMS
+            Go to FARMS
           </a>
         ) : (
           <button
@@ -1393,7 +1393,7 @@ export function EnrolmentCalculationPage() {
             title={loading || participantPinLoading || farmsLegacyBaseUrlLoading ? 'Loading FARMS scenario link' : 'FARMS URL, PIN, or program year is missing for this enrolment'}
           >
             <ExternalLink size={14} aria-hidden="true" />
-            Open a Scenario in FARMS
+            Go to FARMS
           </button>
         )}
         {sharePointFolderUrl ? (

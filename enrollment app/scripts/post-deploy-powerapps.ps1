@@ -493,21 +493,53 @@ if ($null -ne $config.flowReferences -and $config.flowReferences.Count -gt 0) {
     }
   }
 
+  $jsonStart = $flowListText.IndexOf('[')
+  $jsonEnd = $flowListText.LastIndexOf(']')
+  if ($jsonStart -lt 0 -or $jsonEnd -lt $jsonStart) {
+    throw "Could not parse the flow list returned for the '$Stage' environment. Deployment stopped before push."
+  }
+
+  $availableFlows = @($flowListText.Substring($jsonStart, $jsonEnd - $jsonStart + 1) | ConvertFrom-Json)
+
   foreach ($flowRef in $config.flowReferences) {
     if (-not (Test-HasProperty -Object $flowRef -PropertyName 'workflowDisplayName')) {
       throw "Flow reference '$($flowRef.dataSources[0])' is missing workflowDisplayName in '$ConfigPath'."
     }
 
     $workflowDisplayName = [string]$flowRef.workflowDisplayName
-    $flowMatch = [regex]::Match($flowListText, '(?s)"name"\s*:\s*"' + [regex]::Escape($workflowDisplayName) + '".*?"workflowId"\s*:\s*"(?<workflowId>[^"]+)"')
+    $flowMatches = @($availableFlows | Where-Object { [string]$_.name -eq $workflowDisplayName })
 
-    if (-not $flowMatch.Success -or [string]::IsNullOrWhiteSpace($flowMatch.Groups['workflowId'].Value)) {
-      Write-Host "Skipping flow '$workflowDisplayName' because it was not found in the '$Stage' environment." -ForegroundColor Yellow
-      continue
+    if ($flowMatches.Count -ne 1) {
+      throw "Required flow '$workflowDisplayName' was not found exactly once in the '$Stage' environment. Deployment stopped before push."
     }
 
-    Invoke-CheckedCommand -FilePath 'npx.cmd' -Arguments @('power-apps', 'add-flow', '-f', [string]$flowMatch.Groups['workflowId'].Value) -Description "Add flow '$workflowDisplayName'"
+    $flow = $flowMatches[0]
+    if ([string]::IsNullOrWhiteSpace([string]$flow.workflowId)) {
+      throw "Required flow '$workflowDisplayName' has no workflowId in the '$Stage' environment. Deployment stopped before push."
+    }
+
+    if ([int]$flow.statecode -ne 1) {
+      throw "Required flow '$workflowDisplayName' is not active in the '$Stage' environment (statecode: $($flow.statecode)). Deployment stopped before push."
+    }
+
+    Invoke-CheckedCommand -FilePath 'npx.cmd' -Arguments @('power-apps', 'add-flow', '-f', [string]$flow.workflowId) -Description "Add flow '$workflowDisplayName'"
   }
+
+  $boundPowerConfig = Get-Content -LiteralPath $powerConfigPath -Raw | ConvertFrom-Json
+  $boundFlowNames = @(
+    $boundPowerConfig.connectionReferences.PSObject.Properties |
+      ForEach-Object { [string]$_.Value.workflowDetails.workflowDisplayName } |
+      Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+  )
+
+  foreach ($flowRef in $config.flowReferences) {
+    $requiredFlowName = [string]$flowRef.workflowDisplayName
+    if ($boundFlowNames -notcontains $requiredFlowName) {
+      throw "Required flow '$requiredFlowName' was not written to power.config.json. Deployment stopped before build and push."
+    }
+  }
+
+  Write-Host "Verified all $($config.flowReferences.Count) required flow connection references in power.config.json." -ForegroundColor Green
 }
 
 if (-not $SkipBuild.IsPresent) {
