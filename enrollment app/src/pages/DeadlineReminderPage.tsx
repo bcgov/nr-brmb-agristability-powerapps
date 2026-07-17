@@ -10,11 +10,19 @@ import '../styles/supervisor-approval.css';
 
 type DeadlineReminderKind = 'nonPenalty' | 'finalDeadline';
 
+function getParticipantPinFromEnrolmentName(value: string | null | undefined): string {
+  const text = value?.trim() ?? '';
+  if (!text) return '';
+  const numericTokens = text.match(/\b\d{4,}\b/g);
+  return numericTokens?.at(-1) ?? '';
+}
+
 type DeadlineReminderRow = {
   item: Vsi_participantprogramyears;
   itemId: string;
   participantId?: string;
   participantName: string;
+  participantPin: string;
   year: string;
   enrolmentStatusLabel: string;
   totalFeesOwed: number | null;
@@ -113,6 +121,7 @@ const toReminderRow = (item: Vsi_participantprogramyears): DeadlineReminderRow |
     itemId,
     participantId: item._vsi_participantid_value,
     participantName: getDisplayValue(item, '_vsi_participantid_value@OData.Community.Display.V1.FormattedValue', item.vsi_participantidname),
+    participantPin: getParticipantPinFromEnrolmentName(item.vsi_name),
     year: getDisplayValue(item, '_vsi_programyearid_value@OData.Community.Display.V1.FormattedValue', item.vsi_programyearidname),
     enrolmentStatusLabel: getEnrolmentStatusLabel(item.vsi_enrolmentstatus) || '-',
     totalFeesOwed: item.vsi_totalfeesowed ?? item.vsi_totalfeesowedcalculated ?? null,
@@ -245,6 +254,7 @@ export function DeadlineReminderPage() {
                   <th>Enrolment Name</th>
                   <th>Year</th>
                   <th>Participant</th>
+                  <th>PIN</th>
                   <th>Enrolment Status</th>
                   <th>Total Fees Owed</th>
                   <th>EN Notice Sent Date</th>
@@ -270,6 +280,7 @@ export function DeadlineReminderPage() {
                           ? <a className="cell-pin-link" href={participantHref} target="_blank" rel="noopener noreferrer">{row.participantName}</a>
                           : row.participantName}
                       </td>
+                      <td>{row.participantPin || '-'}</td>
                       <td>{formatEnrolmentStatusDisplay(row.enrolmentStatusLabel)}</td>
                       <td>{formatCurrencyOr(row.totalFeesOwed, '-')}</td>
                       <td>{formatDate(row.noticeSentDate)}</td>
