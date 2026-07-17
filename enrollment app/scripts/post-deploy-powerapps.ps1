@@ -486,6 +486,9 @@ if ($null -ne $config.flowReferences -and $config.flowReferences.Count -gt 0) {
     }
 
     $flowListText = Get-Content -LiteralPath $flowListTempPath -Raw
+    # Strip ANSI/VT escape sequences emitted by the spinner (ESC[?25l, ESC[2K, ESC[1G, etc.)
+    # so that IndexOf('[') finds the JSON array bracket and not an ANSI CSI bracket.
+    $flowListText = $flowListText -replace '\x1b\[[0-9;?]*[a-zA-Z]', ''
   }
   finally {
     if (Test-Path -LiteralPath $flowListTempPath) {
@@ -499,7 +502,7 @@ if ($null -ne $config.flowReferences -and $config.flowReferences.Count -gt 0) {
     throw "Could not parse the flow list returned for the '$Stage' environment. Deployment stopped before push."
   }
 
-  $availableFlows = @($flowListText.Substring($jsonStart, $jsonEnd - $jsonStart + 1) | ConvertFrom-Json)
+  $availableFlows = @(foreach ($f in ($flowListText.Substring($jsonStart, $jsonEnd - $jsonStart + 1) | ConvertFrom-Json)) { $f })
 
   foreach ($flowRef in $config.flowReferences) {
     if (-not (Test-HasProperty -Object $flowRef -PropertyName 'workflowDisplayName')) {
@@ -528,7 +531,10 @@ if ($null -ne $config.flowReferences -and $config.flowReferences.Count -gt 0) {
   $boundPowerConfig = Get-Content -LiteralPath $powerConfigPath -Raw | ConvertFrom-Json
   $boundFlowNames = @(
     $boundPowerConfig.connectionReferences.PSObject.Properties |
-      ForEach-Object { [string]$_.Value.workflowDetails.workflowDisplayName } |
+      ForEach-Object {
+        $wd = $_.Value.PSObject.Properties['workflowDetails']
+        if ($null -ne $wd) { [string]$wd.Value.workflowDisplayName }
+      } |
       Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
   )
 
