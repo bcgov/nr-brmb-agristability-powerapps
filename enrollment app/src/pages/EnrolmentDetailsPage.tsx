@@ -1125,6 +1125,7 @@ export function EnrolmentDetailsPage() {
                 : <span className="details-participant-name">{participantName}</span>
               }
               <span className="details-label">Participant</span>
+              {participantPin && <span className="details-label">PIN: {participantPin}</span>}
             </div>
 
             <div className="details-fortyfiveday-cell">

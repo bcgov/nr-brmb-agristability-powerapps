@@ -3,6 +3,7 @@ import { useRole } from '../context/RoleContext';
 import type { AppRole } from '../context/RoleContext';
 
 const ASSIGN_ROLES: AppRole[] = ['SystemAdmin', 'Supervisor', 'ENAdmin'];
+const REFER_ROLES: AppRole[] = ['SystemAdmin', 'Supervisor', 'ENAdmin', 'Verifier'];
 
 type Props = {
   hasSelection: boolean;
@@ -17,6 +18,7 @@ type Props = {
 export function EnrolmentActionsBar({ hasSelection, selectedCount, onOpenBulkNotices, onOpenBulkEdit, onOpenAssign, onOpenReferToSupervisor, onOpenApproveCalculatedFees }: Props) {
   const { activeRole } = useRole();
   const canAssign = ASSIGN_ROLES.includes(activeRole);
+  const canRefer = REFER_ROLES.includes(activeRole);
 
   return (
     <div className="enrolment-actions">
@@ -38,7 +40,7 @@ export function EnrolmentActionsBar({ hasSelection, selectedCount, onOpenBulkNot
           <UserPlus size={15} /> Assign
         </button>
       )}
-      {canAssign && (
+      {canRefer && (
         <button className="dash-btn-secondary" onClick={onOpenReferToSupervisor} disabled={!hasSelection}>
           <UserCheck size={15} /> Refer to Supervisor
         </button>
