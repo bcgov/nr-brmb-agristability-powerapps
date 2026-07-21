@@ -11,7 +11,7 @@ type Props = {
   enrolmentName: string;
   programYear: string;
   onClose: () => void;
-  onSuccess: (fileBase64?: string) => void;
+  onSuccess: () => void;
 };
 
 function todayIso(): string {
@@ -61,6 +61,20 @@ export function Send45DayLetterModal({ enrolmentId, enrolmentName, programYear, 
   const handleSubmit = async () => {
     setSubmitting(true);
     setError(null);
+
+    // Open about:blank synchronously while the user gesture is still active —
+    // window.open() after an async call is treated as a popup and blocked.
+    // about:blank inherits the opener's origin so we have full document access
+    // and can write to it after the flow call without cross-origin blob URL issues.
+    const printWindow = window.open('about:blank', '_blank');
+    if (printWindow) {
+      printWindow.document.write(
+        '<html><head><meta charset="utf-8"></head><body style="font-family:sans-serif;display:flex;align-items:center;' +
+        'justify-content:center;height:100vh;margin:0">' +
+        '<h2>Generating letter, please wait...</h2></body></html>'
+      );
+    }
+
     try {
       const parts = missingItems.map(item =>
         item.type === 'All Reference Years' ? item.type : `your ${item.year} ${item.type}`
@@ -75,6 +89,7 @@ export function Send45DayLetterModal({ enrolmentId, enrolmentName, programYear, 
         text_2: missingText,
       });
       if (result.error) {
+        printWindow?.close();
         const code = (result.error as { code?: number | string }).code;
         const inner = (result.error as { innerError?: { error?: { message?: string } } }).innerError?.error?.message;
         if (code === 502 || code === '502' || (result.error.message ?? '').toLowerCase().includes('badgateway')) {
@@ -83,15 +98,47 @@ export function Send45DayLetterModal({ enrolmentId, enrolmentName, programYear, 
           setError(inner ?? result.error.message ?? 'Failed to send 45-day letter.');
         }
       } else {
-        onSuccess(result.data?.file);
+        const fileBase64 = result.data?.file;
+        if (fileBase64 && printWindow && !printWindow.closed) {
+          const raw = fileBase64.replace(/^data:[^;]+;base64,/i, '').replace(/\s/g, '');
+
+          // Create the PDF blob in the PARENT context — the about:blank child window
+          // inherits the opener's CSP (connect-src 'none') which blocks fetch() inside
+          // any injected script. By doing everything here we avoid that restriction.
+          let pdfBlob: Blob;
+          try {
+            const res = await fetch(`data:application/pdf;base64,${raw}`);
+            pdfBlob = await res.blob();
+          } catch {
+            // fetch of data: URI blocked by CSP — decode with atob instead
+            const bytes = Uint8Array.from(atob(raw), c => c.charCodeAt(0));
+            pdfBlob = new Blob([bytes], { type: 'application/pdf' });
+          }
+          const pdfBlobUrl = URL.createObjectURL(pdfBlob);
+
+          // Navigate the window directly to the blob PDF — avoids frame-src CSP restrictions
+          // that block blob: URLs in iframes. Top-level window navigation is not subject
+          // to frame-src. The blob URL origin matches the opener so printWindow stays
+          // same-origin and we can call print() on it from here.
+          printWindow.location.href = pdfBlobUrl;
+
+          setTimeout(() => {
+            try { printWindow.focus(); printWindow.print(); } catch { /* ignore */ }
+            setTimeout(() => URL.revokeObjectURL(pdfBlobUrl), 60_000);
+          }, 2500);
+        } else {
+          printWindow?.close();
+        }
+        onSuccess();
         onClose();
       }
     } catch (err) {
+      printWindow?.close();
       setError(err instanceof Error ? err.message : 'Failed to send 45-day letter.');
     } finally {
       setSubmitting(false);
     }
-  };
+  };;
 
   return createPortal(
     <div className="modal-overlay" onClick={submitting ? undefined : onClose}>
