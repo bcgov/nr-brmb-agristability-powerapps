@@ -62,10 +62,9 @@ export function Send45DayLetterModal({ enrolmentId, enrolmentName, programYear, 
     setSubmitting(true);
     setError(null);
 
-    // Open about:blank synchronously while the user gesture is still active —
-    // window.open() after an async call is treated as a popup and blocked.
-    // about:blank inherits the opener's origin so we have full document access
-    // and can write to it after the flow call without cross-origin blob URL issues.
+    // Open about:blank synchronously while the user gesture is still active.
+    // window.open() called after an async network call is treated as a popup and blocked.
+    // about:blank inherits the opener's origin so we have full document access.
     const printWindow = window.open('about:blank', '_blank');
     if (printWindow) {
       printWindow.document.write(
@@ -101,27 +100,19 @@ export function Send45DayLetterModal({ enrolmentId, enrolmentName, programYear, 
         const fileBase64 = result.data?.file;
         if (fileBase64 && printWindow && !printWindow.closed) {
           const raw = fileBase64.replace(/^data:[^;]+;base64,/i, '').replace(/\s/g, '');
-
-          // Create the PDF blob in the PARENT context — the about:blank child window
-          // inherits the opener's CSP (connect-src 'none') which blocks fetch() inside
-          // any injected script. By doing everything here we avoid that restriction.
+          // Decode blob in parent context (child inherits CSP which may block fetch/atob)
           let pdfBlob: Blob;
           try {
             const res = await fetch(`data:application/pdf;base64,${raw}`);
             pdfBlob = await res.blob();
           } catch {
-            // fetch of data: URI blocked by CSP — decode with atob instead
             const bytes = Uint8Array.from(atob(raw), c => c.charCodeAt(0));
             pdfBlob = new Blob([bytes], { type: 'application/pdf' });
           }
           const pdfBlobUrl = URL.createObjectURL(pdfBlob);
-
-          // Navigate the window directly to the blob PDF — avoids frame-src CSP restrictions
-          // that block blob: URLs in iframes. Top-level window navigation is not subject
-          // to frame-src. The blob URL origin matches the opener so printWindow stays
-          // same-origin and we can call print() on it from here.
+          // Navigate the pre-opened window to the PDF blob (top-level navigation,
+          // not an iframe — bypasses frame-src CSP). Same-origin blob allows print().
           printWindow.location.href = pdfBlobUrl;
-
           setTimeout(() => {
             try { printWindow.focus(); printWindow.print(); } catch { /* ignore */ }
             setTimeout(() => URL.revokeObjectURL(pdfBlobUrl), 60_000);
@@ -138,7 +129,7 @@ export function Send45DayLetterModal({ enrolmentId, enrolmentName, programYear, 
     } finally {
       setSubmitting(false);
     }
-  };;
+  };
 
   return createPortal(
     <div className="modal-overlay" onClick={submitting ? undefined : onClose}>
