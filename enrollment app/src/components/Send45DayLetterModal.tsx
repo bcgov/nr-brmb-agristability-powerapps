@@ -11,7 +11,7 @@ type Props = {
   enrolmentName: string;
   programYear: string;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (fileBase64?: string) => void;
 };
 
 function todayIso(): string {
@@ -83,7 +83,7 @@ export function Send45DayLetterModal({ enrolmentId, enrolmentName, programYear, 
           setError(inner ?? result.error.message ?? 'Failed to send 45-day letter.');
         }
       } else {
-        onSuccess();
+        onSuccess(result.data?.file);
         onClose();
       }
     } catch (err) {

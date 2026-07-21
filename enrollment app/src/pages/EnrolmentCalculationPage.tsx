@@ -655,6 +655,41 @@ function getApprovalError(
   return null;
 }
 
+async function openPdfForPrint(base64: string): Promise<void> {
+  const raw = base64.replace(/^data:[^;]+;base64,/i, '').replace(/\s/g, '');
+  const dataUrl = `data:application/pdf;base64,${raw}`;
+  try {
+    const response = await fetch(dataUrl);
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+
+    // Use a hidden off-screen iframe instead of a new tab.
+    // Chrome's PDF viewer responds to contentWindow.print() from same-document iframes
+    // but ignores win.print() called from an opener on a separate tab.
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:800px;height:600px;border:none;';
+    document.body.appendChild(iframe);
+    iframe.src = blobUrl;
+
+    const cleanup = () => {
+      try { document.body.removeChild(iframe); } catch { /* ignore */ }
+      URL.revokeObjectURL(blobUrl);
+    };
+
+    // Give the PDF viewer time to load before calling print
+    setTimeout(() => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } catch { /* ignore */ }
+      // Keep iframe alive long enough for the user to interact with the print dialog
+      setTimeout(cleanup, 60_000);
+    }, 1500);
+  } catch (err) {
+    console.error('[openPdfForPrint] error:', err);
+  }
+}
+
 export function EnrolmentCalculationPage() {
   const { enrolmentId, source } = useParams<{ enrolmentId: string; source: string }>();
   const navigate = useNavigate();
@@ -1759,7 +1794,10 @@ export function EnrolmentCalculationPage() {
           enrolmentName={record?.vsi_name ?? ''}
           programYear={String(getProgramYear(record) ?? '')}
           onClose={() => setShow45DayModal(false)}
-          onSuccess={() => setLetterSentMessage('45-day letter sent successfully.')}
+          onSuccess={(fileBase64) => {
+            setLetterSentMessage('45-day letter sent successfully.');
+            if (fileBase64) void openPdfForPrint(fileBase64);
+          }}
         />
       )}
       {showApproveConfirm && record && (

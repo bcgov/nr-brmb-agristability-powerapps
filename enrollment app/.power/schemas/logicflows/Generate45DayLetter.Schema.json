@@ -118,6 +118,17 @@
               "title": "Status",
               "x-ms-dynamically-added": true,
               "type": "string"
+            },
+            "sharepointurl": {
+              "title": "SharepointURL",
+              "x-ms-dynamically-added": true,
+              "type": "string"
+            },
+            "file": {
+              "title": "File",
+              "x-ms-dynamically-added": true,
+              "type": "string",
+              "format": "byte"
             }
           }
         }

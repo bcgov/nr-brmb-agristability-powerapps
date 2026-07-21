@@ -16,4 +16,6 @@ export interface ManualTriggerInput {
 
 export interface ResponseActionOutput {
   status?: string;
+  sharepointurl?: string;
+  file?: string;
 }
