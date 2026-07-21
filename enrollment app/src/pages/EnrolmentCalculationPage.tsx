@@ -661,30 +661,39 @@ async function openPdfForPrint(base64: string): Promise<void> {
   try {
     const response = await fetch(dataUrl);
     const blob = await response.blob();
-    const blobUrl = URL.createObjectURL(blob);
+    const pdfBlobUrl = URL.createObjectURL(blob);
 
-    // Use a hidden off-screen iframe instead of a new tab.
-    // Chrome's PDF viewer responds to contentWindow.print() from same-document iframes
-    // but ignores win.print() called from an opener on a separate tab.
-    const iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:800px;height:600px;border:none;';
-    document.body.appendChild(iframe);
-    iframe.src = blobUrl;
+    // Open an HTML wrapper blob in a new top-level tab rather than injecting an iframe
+    // into the current page. When the app runs inside Power Apps the current document is
+    // itself in an iframe, and Power Apps' CSP blocks nested blob: iframes. A new tab
+    // opened with window.open() is a top-level browsing context that is not subject to
+    // the host's CSP, so its own iframe can load the PDF blob and call print() on it.
+    const html = `<!DOCTYPE html>
+<html>
+<head><title>Print Letter</title>
+<style>
+  html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;}
+  iframe{display:block;width:100%;height:100%;border:none;}
+</style>
+</head>
+<body>
+<iframe src="${pdfBlobUrl}"></iframe>
+<script>
+  setTimeout(function(){
+    try{ window.frames[0].focus(); window.frames[0].print(); }catch(e){}
+  }, 1500);
+</script>
+</body>
+</html>`;
 
-    const cleanup = () => {
-      try { document.body.removeChild(iframe); } catch { /* ignore */ }
-      URL.revokeObjectURL(blobUrl);
-    };
+    const htmlBlob = new Blob([html], { type: 'text/html' });
+    const htmlBlobUrl = URL.createObjectURL(htmlBlob);
+    window.open(htmlBlobUrl, '_blank');
 
-    // Give the PDF viewer time to load before calling print
     setTimeout(() => {
-      try {
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
-      } catch { /* ignore */ }
-      // Keep iframe alive long enough for the user to interact with the print dialog
-      setTimeout(cleanup, 60_000);
-    }, 1500);
+      URL.revokeObjectURL(pdfBlobUrl);
+      URL.revokeObjectURL(htmlBlobUrl);
+    }, 120_000);
   } catch (err) {
     console.error('[openPdfForPrint] error:', err);
   }
