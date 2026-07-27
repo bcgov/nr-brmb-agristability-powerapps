@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { Calculator, CircleCheck, ExternalLink, PanelRightClose, PanelRightOpen, Pin, RefreshCw, Send } from 'lucide-react';
 import sharepointIconUrl from '/icons/sharepoint.svg?url';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -6,6 +6,7 @@ import { ApprovalErrorModal } from '../components/ApprovalErrorModal';
 import { Send45DayLetterModal } from '../components/Send45DayLetterModal';
 import { ConfirmActionModal } from '../components/ConfirmActionModal';
 import { ReferToSupervisorModal } from '../components/ReferToSupervisorModal';
+import { Toast, nextToastId, type ToastMessage } from '../components/Toast';
 import { getCoreConfig, normalizeCoreBaseUrl, patchEnrolmentCache, clearEnrolmentCache } from '../hooks/useEnrolmentData';
 import { removeSaItemsFromCache, clearSaCache } from './SupervisorApprovalPage';
 import { useRole } from '../context/RoleContext';
@@ -19,6 +20,7 @@ import { farmsApi } from '../services/farmsApi';
 import {
   enrichCombinedFarmSummaries,
   getCombinedFarmSummariesFromResponse,
+  getEnrolmentPartnerMessageFromResponse,
   getPartnerRowsFromResponse,
   resolvePartnerAccountId,
   resolvePartnerEnrolmentId,
@@ -34,6 +36,7 @@ import { CORE_APP_ID_FALLBACK, CORE_BASE_URL_FALLBACK } from '../constants/confi
 const BENEFIT_MARGIN_COUNT = 5;
 const APPROVABLE_STATUSES = new Set([865520005, 865520006]);
 const APPROVABLE_TASK_STATUSES = new Set([865520000, 865520001, 865520002]);
+const FARMS_EN_NOT_FOUND_MESSAGE = 'EN does not exist in FARMS.';
 
 type CalculationTableKey = 'enrolmentFee' | 'benefit' | 'proxy' | 'manual';
 
@@ -699,6 +702,13 @@ export function EnrolmentCalculationPage() {
   const [historicalPanelPinned, setHistoricalPanelPinned] = useState(true);
   const [coreAppId, setCoreAppId] = useState<string | null>(() => getCoreConfig().coreAppId);
   const [coreBaseUrl, setCoreBaseUrl] = useState<string | null>(() => getCoreConfig().coreBaseUrl);
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const addToast = useCallback((message: string, type: ToastMessage['type'], persistent = false) => {
+    setToasts(prev => [...prev, { id: nextToastId(), message, type, persistent }]);
+  }, []);
+  const dismissToast = useCallback((id: number) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  }, []);
 
   useEffect(() => {
     if (coreAppId !== null) return;
@@ -959,11 +969,20 @@ export function EnrolmentCalculationPage() {
         if (!result.success) {
           throw new Error(result.error?.message ?? 'Unable to load FARMS enrolment partners.');
         }
+        const partnerMessage = getEnrolmentPartnerMessageFromResponse(result.data);
+        const rows = getPartnerRowsFromResponse(result.data);
         const combinedFarms = await enrichCombinedFarmSummaries(
           getCombinedFarmSummariesFromResponse(result.data),
         );
         if (cancelled) return;
-        setPartnerRows(getPartnerRowsFromResponse(result.data));
+        if (
+          partnerMessage === FARMS_EN_NOT_FOUND_MESSAGE
+          && rows.length === 0
+          && combinedFarms.length === 0
+        ) {
+          addToast(`${record?.vsi_name?.trim() || 'Enrolment'} does not exist in FARMS.`, 'error', true);
+        }
+        setPartnerRows(rows);
         setCombinedFarmRows(combinedFarms);
       })
       .catch((err) => {
@@ -979,7 +998,7 @@ export function EnrolmentCalculationPage() {
     return () => {
       cancelled = true;
     };
-  }, [participantPin, farmsScenarioProgramYear]);
+  }, [participantPin, farmsScenarioProgramYear, record?.vsi_name, addToast]);
 
   const participantName = useMemo(() => {
     if (!record) return '';
@@ -1747,6 +1766,7 @@ export function EnrolmentCalculationPage() {
           onError={(message) => setError(message)}
         />
       )}
+      <Toast toasts={toasts} onDismiss={dismissToast} />
       {approvalErrorModal && (
         <ApprovalErrorModal message={approvalErrorModal} onClose={() => setApprovalErrorModal(null)} />
       )}

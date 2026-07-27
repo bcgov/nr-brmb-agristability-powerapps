@@ -4,6 +4,7 @@ export type ToastMessage = {
   id: number;
   message: string;
   type: 'success' | 'error';
+  persistent?: boolean;
 };
 
 let _toastId = 1;
@@ -26,13 +27,16 @@ function ToastItem({ toast, onDismiss }: { toast: ToastMessage; onDismiss: (id: 
   useEffect(() => {
     // Trigger enter animation
     const enterTimer = setTimeout(() => setVisible(true), 10);
+    if (toast.persistent) {
+      return () => clearTimeout(enterTimer);
+    }
     // Auto-dismiss after 5 seconds
     const dismissTimer = setTimeout(() => {
       setVisible(false);
       setTimeout(() => onDismiss(toast.id), 300);
     }, 5000);
     return () => { clearTimeout(enterTimer); clearTimeout(dismissTimer); };
-  }, [toast.id, onDismiss]);
+  }, [toast.id, toast.persistent, onDismiss]);
 
   return (
     <div className={`toast toast--${toast.type} ${visible ? 'toast--visible' : ''}`}>
