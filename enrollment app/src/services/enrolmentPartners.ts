@@ -56,6 +56,7 @@ type EnrolmentPartnerRsrc = {
 export type EnrolmentPartnerListRsrc = {
   participantPin?: number | string | null;
   scenarioNumber?: number | string | null;
+  message?: string | null;
   inCombinedFarm?: boolean | number | string | null;
   combinedFarmNumber?: number | string | null;
   combinedFarmClientList?: EnrolmentCombinedFarmClientRsrc[] | null;
@@ -167,6 +168,10 @@ function mergeDynamicProperties<T extends { dynamicProperties?: Partial<T> }>(va
 function getEnrolmentPartnerListResponse(response: unknown): EnrolmentPartnerListRsrc | null {
   if (!response || typeof response !== 'object') return null;
   return mergeDynamicProperties(response as EnrolmentPartnerListRsrc);
+}
+
+export function getEnrolmentPartnerMessageFromResponse(response: unknown): string {
+  return formatTextBlank(getEnrolmentPartnerListResponse(response)?.message);
 }
 
 export function getPartnerRowsFromResponse(response: unknown): PartnerComparisonRow[] {
