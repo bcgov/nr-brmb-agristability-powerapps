@@ -106,9 +106,23 @@ export const ADV_FIELD_LABELS: Record<string, string> = {
   owner: 'Owner',
   year: 'Program Year',
   fee: 'Total Fee',
+  totalFeesOwedCalculated: 'Total Fees Owed',
+  totalFeesPaid: 'Total Fees Paid',
+  latePay: 'Late Payment Fee',
   hasPartners: 'Has Partners',
   inCombinedFarm: 'In Combined Farm',
   isNewParticipant: 'New Participant',
+  fullyProvinciallyFunded: 'Late Participant',
+  bringForward: 'Bring Forward',
+  broughtForward: 'Brought Forward',
+  manualReview: 'Manual Review',
+  regionalOffice: 'Regional Office',
+  farmingSector: 'Farming Sector',
+  modifiedOn: 'Modified On',
+  enrolmentNoticeSentDate: 'Enrolment Notice Sent',
+  enrolmentOptedOutDate: 'Opted Out Date',
+  fileReceivedDate: 'File Received Date',
+  feesPaidDate: 'Fees Paid Date',
 };
 
 export const ADV_FIELD_OPTIONS: Record<string, 'choice' | 'text' | 'number'> = {
@@ -119,9 +133,23 @@ export const ADV_FIELD_OPTIONS: Record<string, 'choice' | 'text' | 'number'> = {
   owner: 'choice',
   year: 'choice',
   fee: 'number',
+  totalFeesOwedCalculated: 'number',
+  totalFeesPaid: 'number',
+  latePay: 'number',
   hasPartners: 'choice',
   inCombinedFarm: 'choice',
   isNewParticipant: 'choice',
+  fullyProvinciallyFunded: 'choice',
+  bringForward: 'choice',
+  broughtForward: 'choice',
+  manualReview: 'choice',
+  regionalOffice: 'choice',
+  farmingSector: 'choice',
+  modifiedOn: 'text',
+  enrolmentNoticeSentDate: 'text',
+  enrolmentOptedOutDate: 'text',
+  fileReceivedDate: 'text',
+  feesPaidDate: 'text',
 };
 
 export const ADV_OP_LABELS: Record<string, string> = {
@@ -131,5 +159,7 @@ export const ADV_OP_LABELS: Record<string, string> = {
   notContains: 'Does not contain',
   beginsWith: 'Begins with',
   endsWith: 'Ends with',
+  hasValue: 'Has a value',
+  hasNoValue: 'Has no value',
 };
 

@@ -1,4 +1,4 @@
-/*!
+﻿/*!
  * Copyright (C) Microsoft Corporation. All rights reserved.
  * This file is auto-generated. Do not modify it manually.
  * Changes to this file may be overwritten.
@@ -3622,7 +3622,31 @@ export const dataSourcesInfo = {
     "version": "",
     "primaryKey": "userqueryid",
     "dataSourceType": "Dataverse",
-    "apis": {}
+    "apis": {
+      "GrantAccess": {
+        "path": "api/data/v9.2/GrantAccess",
+        "method": "POST",
+        "parameters": [
+          { "name": "Target", "in": "body", "required": true, "type": "object" },
+          { "name": "PrincipalAccess", "in": "body", "required": true, "type": "object" }
+        ]
+      },
+      "RevokeAccess": {
+        "path": "api/data/v9.2/RevokeAccess",
+        "method": "POST",
+        "parameters": [
+          { "name": "Target", "in": "body", "required": true, "type": "object" },
+          { "name": "Revokee", "in": "body", "required": true, "type": "object" }
+        ]
+      },
+      "RetrieveSharedPrincipalsAndAccess": {
+        "path": "api/data/v9.2/RetrieveSharedPrincipalsAndAccess(Target=@p1)?@p1={Target}",
+        "method": "GET",
+        "parameters": [
+          { "name": "Target", "in": "path", "required": true, "type": "string" }
+        ]
+      }
+    }
   },
   "roles": {
     "tableId": "",

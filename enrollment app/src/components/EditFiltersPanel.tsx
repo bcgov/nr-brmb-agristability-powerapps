@@ -158,10 +158,17 @@ function FilterRowEditor({
             <option value="equals">Equals</option>
             <option value="notEquals">Does not equal</option>
           </>
+        ) : ['enrolmentNoticeSentDate', 'enrolmentOptedOutDate', 'fileReceivedDate', 'feesPaidDate'].includes(row.field) ? (
+          <>
+            <option value="hasValue">Has a value</option>
+            <option value="hasNoValue">Has no value</option>
+          </>
         ) : (
-          (Object.keys(ADV_OP_LABELS) as AdvFilterOp[]).map(op => (
-            <option key={op} value={op}>{ADV_OP_LABELS[op]}</option>
-          ))
+          (Object.keys(ADV_OP_LABELS) as AdvFilterOp[])
+            .filter(op => op !== 'hasValue' && op !== 'hasNoValue')
+            .map(op => (
+              <option key={op} value={op}>{ADV_OP_LABELS[op]}</option>
+            ))
         )}
       </select>
       {fieldType === 'choice' ? (
@@ -185,10 +192,12 @@ function FilterRowEditor({
             document.body
           )}
         </div>
+      ) : row.operator === 'hasValue' || row.operator === 'hasNoValue' ? (
+        <div className="ef-cell ef-cell-val" />
       ) : (
         <input
           className="ef-cell ef-cell-val ef-text-input"
-          type={row.field === 'fee' ? 'number' : 'text'}
+          type={row.field === 'fee' || row.field === 'totalFeesOwedCalculated' || row.field === 'totalFeesPaid' || row.field === 'latePay' ? 'number' : 'text'}
           value={row.textValue}
           placeholder="Value"
           onChange={e => onChange({ textValue: e.target.value })}

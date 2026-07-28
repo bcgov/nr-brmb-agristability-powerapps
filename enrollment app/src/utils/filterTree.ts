@@ -74,6 +74,7 @@ export function addNodeToParent(nodes: AdvFilterNode[], parentId: number | null,
 export function isNodeActive(node: AdvFilterNode): boolean {
   if (node.kind === 'row') {
     if (!node.field) return false;
+    if (node.operator === 'hasValue' || node.operator === 'hasNoValue') return true;
     return ADV_FIELD_OPTIONS[node.field] === 'choice' ? node.values.size > 0 : !!node.textValue;
   }
   return node.children.some(isNodeActive);
