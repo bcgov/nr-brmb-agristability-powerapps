@@ -8,7 +8,7 @@ import { DeadlineReminderPage } from './pages/DeadlineReminderPage';
 import { EnrolmentDetailsPage } from './pages/EnrolmentDetailsPage';
 import { EnrolmentCalculationPage } from './pages/EnrolmentCalculationPage';
 import { EnrolmentHistoryPage } from './pages/EnrolmentHistoryPage';
-import { RoleProvider, useRole, ALL_ROLES, ROLE_LABELS, type AppRole, type DemoQueryMode, type DemoYearsWindow } from './context/RoleContext';
+import { RoleProvider, useRole, ALL_ROLES, ROLE_LABELS, type AppRole, type DemoYearsWindow } from './context/RoleContext';
 import { navGuard } from './utils/helpers';
 import { normalizeInitialDeepLink, openInNewTab } from './utils/deepLinks';
 import { resolveCurrentSystemUser } from './utils/currentUser';
@@ -174,7 +174,7 @@ function EnvironmentBanner() {
 }
 
 function RoleSwitcher({ collapsed }: { collapsed: boolean }) {
-  const { activeRole, setActiveRole, demoQueryMode, setDemoQueryMode, demoYearsWindow, setDemoYearsWindow } = useRole();
+  const { activeRole, setActiveRole, demoYearsWindow, setDemoYearsWindow } = useRole();
   // TODO: gate visibility to SystemAdmin only once real security is implemented
   return (
     <div className={`role-switcher${collapsed ? ' role-switcher--collapsed' : ''}`}>
@@ -194,16 +194,6 @@ function RoleSwitcher({ collapsed }: { collapsed: boolean }) {
             {ALL_ROLES.map(role => (
               <option key={role} value={role}>{ROLE_LABELS[role]}</option>
             ))}
-          </select>
-          <label className="role-switcher-label" htmlFor="query-mode-select">Data mode</label>
-          <select
-            id="query-mode-select"
-            className="role-switcher-select"
-            value={demoQueryMode}
-            onChange={e => setDemoQueryMode(e.target.value as DemoQueryMode)}
-          >
-            <option value="client">Client-side (load selected years)</option>
-            <option value="server">Server-side (paged/search)</option>
           </select>
           <label className="role-switcher-label" htmlFor="years-window-select">Years of data</label>
           <select

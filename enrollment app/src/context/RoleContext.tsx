@@ -2,7 +2,6 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from '
 import { checkHasDataverseSystemAdminRole, checkIsSupervisorQueueMember, checkIsEnrolmentAdminTeamMember, checkIsVerifierTeamMember } from '../utils/currentUser';
 
 export type AppRole = 'SystemAdmin' | 'Supervisor' | 'ENAdmin' | 'Verifier';
-export type DemoQueryMode = 'client' | 'server';
 export type DemoYearsWindow = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
 
 export const ALL_ROLES: AppRole[] = ['SystemAdmin', 'Supervisor', 'ENAdmin', 'Verifier'];
@@ -15,7 +14,6 @@ export const ROLE_LABELS: Record<AppRole, string> = {
 };
 
 const STORAGE_KEY = 'dev_simulated_role';
-const QUERY_MODE_STORAGE_KEY = 'dashboard_query_mode';
 const YEARS_WINDOW_STORAGE_KEY = 'dashboard_years_window';
 
 function readStoredRole(): AppRole {
@@ -24,14 +22,6 @@ function readStoredRole(): AppRole {
     if (stored && ALL_ROLES.includes(stored as AppRole)) return stored as AppRole;
   } catch { /* ignore */ }
   return 'SystemAdmin';
-}
-
-function readStoredQueryMode(): DemoQueryMode {
-  try {
-    const stored = sessionStorage.getItem(QUERY_MODE_STORAGE_KEY);
-    if (stored === 'client' || stored === 'server') return stored;
-  } catch { /* ignore */ }
-  return 'client';
 }
 
 function readStoredYearsWindow(): DemoYearsWindow {
@@ -45,8 +35,6 @@ function readStoredYearsWindow(): DemoYearsWindow {
 type RoleContextValue = {
   activeRole: AppRole;
   setActiveRole: (role: AppRole) => void;
-  demoQueryMode: DemoQueryMode;
-  setDemoQueryMode: (mode: DemoQueryMode) => void;
   demoYearsWindow: DemoYearsWindow;
   setDemoYearsWindow: (years: DemoYearsWindow) => void;
 };
@@ -55,7 +43,6 @@ const RoleContext = createContext<RoleContextValue | null>(null);
 
 export function RoleProvider({ children }: { children: ReactNode }) {
   const [activeRole, setActiveRoleState] = useState<AppRole>(readStoredRole);
-  const [demoQueryMode, setDemoQueryModeState] = useState<DemoQueryMode>(readStoredQueryMode);
   const [demoYearsWindow, setDemoYearsWindowState] = useState<DemoYearsWindow>(readStoredYearsWindow);
   const [validating, setValidating] = useState(true);
 
@@ -100,14 +87,10 @@ export function RoleProvider({ children }: { children: ReactNode }) {
     window.location.reload();
   };
 
-  const setDemoQueryMode = (mode: DemoQueryMode) => {
-    try { sessionStorage.setItem(QUERY_MODE_STORAGE_KEY, mode); } catch { /* ignore */ }
-    setDemoQueryModeState(mode);
-  };
-
   const setDemoYearsWindow = (years: DemoYearsWindow) => {
     try { sessionStorage.setItem(YEARS_WINDOW_STORAGE_KEY, String(years)); } catch { /* ignore */ }
     setDemoYearsWindowState(years);
+    window.location.reload();
   };
 
   if (validating) return null;
@@ -116,8 +99,6 @@ export function RoleProvider({ children }: { children: ReactNode }) {
     <RoleContext.Provider value={{
       activeRole,
       setActiveRole,
-      demoQueryMode,
-      setDemoQueryMode,
       demoYearsWindow,
       setDemoYearsWindow,
     }}>

@@ -153,7 +153,7 @@ function FilterRowEditor({
         value={row.operator}
         onChange={e => onChange({ operator: e.target.value as AdvFilterOp })}
       >
-        {fieldType === 'choice' ? (
+        {fieldType === 'choice' || fieldType === 'number' ? (
           <>
             <option value="equals">Equals</option>
             <option value="notEquals">Does not equal</option>

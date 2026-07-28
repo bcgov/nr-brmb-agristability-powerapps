@@ -125,17 +125,17 @@ export const ADV_FIELD_LABELS: Record<string, string> = {
   feesPaidDate: 'Fees Paid Date',
 };
 
-export const ADV_FIELD_OPTIONS: Record<string, 'choice' | 'text'> = {
+export const ADV_FIELD_OPTIONS: Record<string, 'choice' | 'text' | 'number'> = {
   taskStatus: 'choice',
   enrolStatus: 'choice',
   pin: 'text',
   producer: 'text',
   owner: 'choice',
   year: 'choice',
-  fee: 'text',
-  totalFeesOwedCalculated: 'text',
-  totalFeesPaid: 'text',
-  latePay: 'text',
+  fee: 'number',
+  totalFeesOwedCalculated: 'number',
+  totalFeesPaid: 'number',
+  latePay: 'number',
   hasPartners: 'choice',
   inCombinedFarm: 'choice',
   isNewParticipant: 'choice',
