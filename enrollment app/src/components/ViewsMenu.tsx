@@ -1,8 +1,26 @@
 import { useRef, useState } from 'react';
-import type { PersonalView } from '../types/enrollment';
-import { ALL_COLUMNS } from '../constants/columns';
+import type { AdvFilterNode, PersonalView } from '../types/enrollment';
+import { ALL_COLUMNS, ADV_FIELD_LABELS, ADV_OP_LABELS } from '../constants/columns';
 import { ShareViewModal } from './ShareViewModal';
 import { ManageViewsModal } from './ManageViewsModal';
+import { isNodeActive, deserializeFilterNodes } from '../utils/filterTree';
+
+function describeAdvNode(node: AdvFilterNode): string {
+  if (node.kind === 'row') {
+    if (!isNodeActive(node)) return '';
+    const fieldLabel = ADV_FIELD_LABELS[node.field] || node.field;
+    if (node.operator === 'hasValue') return `${fieldLabel}: has a value`;
+    if (node.operator === 'hasNoValue') return `${fieldLabel}: has no value`;
+    const opLabel = ADV_OP_LABELS[node.operator] || node.operator;
+    const valueDesc = node.values.size > 0 ? [...node.values].join(', ') : node.textValue;
+    return valueDesc ? `${fieldLabel} ${opLabel.toLowerCase()} ${valueDesc}` : '';
+  }
+  const parts = node.children.map(describeAdvNode).filter(Boolean);
+  if (parts.length === 0) return '';
+  if (parts.length === 1) return parts[0];
+  const joiner = node.logic === 'OR' ? ' OR ' : ' AND ';
+  return `(${parts.join(joiner)})`;
+}
 
 function buildViewInfo(v: PersonalView): string[] {
   const lines: string[] = [];
@@ -24,9 +42,15 @@ function buildViewInfo(v: PersonalView): string[] {
   if (v.taskStatusFilter?.length) filterParts.push(`Task Status: ${v.taskStatusFilter.join(', ')}`);
   if (v.enrolStatusFilter?.length) filterParts.push(`Enrolment Status: ${v.enrolStatusFilter.join(', ')}`);
   if (v.yearFilter?.length) filterParts.push(`Year: ${v.yearFilter.join(', ')}`);
-  if (v.ownerFilter?.length) filterParts.push(`Owner filter active`);
-  const advCount = Array.isArray(v.advFilterNodes) ? v.advFilterNodes.length : 0;
-  if (advCount > 0) filterParts.push(`${advCount} advanced filter${advCount > 1 ? 's' : ''}`);
+  if (v.ownerFilter?.length) filterParts.push(`Owner: ${v.ownerFilter.join(', ')}`);
+
+  if (Array.isArray(v.advFilterNodes)) {
+    const nodes = deserializeFilterNodes(v.advFilterNodes as unknown[]);
+    for (const node of nodes) {
+      const desc = describeAdvNode(node);
+      if (desc) filterParts.push(desc);
+    }
+  }
 
   if (filterParts.length > 0) {
     lines.push(`Filters: ${filterParts.join('; ')}.`);

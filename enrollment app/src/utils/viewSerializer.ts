@@ -1,9 +1,9 @@
-import type { SortKey, PersonalView, ViewPayload, QuickFilterState, AdvFilterNode, AdvFilterField, AdvFilterOp } from '../types/enrollment';
+import type { SortKey, PersonalView, ViewPayload, QuickFilterState, AdvFilterNode, AdvFilterField, AdvFilterOp, FilterOperator } from '../types/enrollment';
 import type { Userqueries } from '../generated/models/UserqueriesModel';
 import type { Savedqueries } from '../generated/models/SavedqueriesModel';
 import { SORTKEY_TO_FIELD, FIELD_TO_SORTKEY, DEFAULT_VIEW_SNAPSHOT, ACTIVE_VIEW_KEY } from '../constants/columns';
 import { nextFilterId, serializeFilterNodes, deserializeFilterNodes } from './filterTree';
-import { Vsi_participantprogramyearsvsi_taskstatus, Vsi_participantprogramyearsvsi_enrolmentstatus } from '../generated/models/Vsi_participantprogramyearsModel';
+import { Vsi_participantprogramyearsvsi_taskstatus, Vsi_participantprogramyearsvsi_enrolmentstatus, Vsi_participantprogramyearsvsi_enrollmentregionaloffice, Vsi_participantprogramyearsvsi_farmingsector } from '../generated/models/Vsi_participantprogramyearsModel';
 import { Vsi_participantprogramyearsService } from '../generated/services/Vsi_participantprogramyearsService';
 
 // Entity object type code for `vsi_participantprogramyear`.
@@ -96,12 +96,29 @@ let cachedGridOpenTag: string | null = null;
 // a floating navigation icon.
 const LAYOUT_XML_EXCLUDED_KEYS = new Set<SortKey>(['flagged']);
 
+function escapeXmlAttr(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 /**
  * Generates a Dataverse fetchxml for a personal view.
  * Explicitly lists all visible columns as <attribute> elements — required by
  * model-driven app views to populate data in the grid.
+ * Quick filter state (taskStatusFilter, enrolStatusFilter, yearFilter, ownerFilter)
+ * is encoded into fetchxml so filters survive even if layoutjson is unavailable.
  */
-export function generateFetchXml(keys: SortKey[], advFilterNodes: unknown[] = []): string {
+export function generateFetchXml(
+  keys: SortKey[],
+  advFilterNodes: unknown[] = [],
+  quickFilters?: {
+    taskStatusFilter?: string[];
+    enrolStatusFilter?: string[];
+    yearFilter?: string[];
+    ownerFilter?: string[];
+    taskFilterOp?: FilterOperator;
+    enrolFilterOp?: FilterOperator;
+  }
+): string {
   const includedKeys = keys.filter(k => !LAYOUT_XML_EXCLUDED_KEYS.has(k));
   const fields = new Set<string>();
   for (const k of includedKeys) {
@@ -111,12 +128,60 @@ export function generateFetchXml(keys: SortKey[], advFilterNodes: unknown[] = []
     .map(f => `<attribute name="${f}"/>`)
     .join('');
 
-  let filterXml = '';
+  const filterParts: string[] = [];
+
+  // Advanced filter nodes
   if (advFilterNodes.length > 0) {
     const nodes = deserializeFilterNodes(advFilterNodes);
     const parts = nodes.map(advNodeToFilterXml).filter(Boolean);
-    if (parts.length > 0) filterXml = `<filter type="and">${parts.join('')}</filter>`;
+    filterParts.push(...parts);
   }
+
+  // Quick filter: taskStatusFilter
+  const taskStatusValues = quickFilters?.taskStatusFilter ?? [];
+  if (taskStatusValues.length > 0) {
+    const op = quickFilters?.taskFilterOp === 'notEquals' ? 'ne' : 'eq';
+    const joinType = quickFilters?.taskFilterOp === 'notEquals' ? 'and' : 'or';
+    const conds = taskStatusValues
+      .map(label => labelToValue('taskStatus', label))
+      .filter((v): v is string => v !== null)
+      .map(v => `<condition attribute="vsi_taskstatus" operator="${op}" value="${v}"/>`);
+    if (conds.length === 1) filterParts.push(conds[0]);
+    else if (conds.length > 1) filterParts.push(`<filter type="${joinType}">${conds.join('')}</filter>`);
+  }
+
+  // Quick filter: enrolStatusFilter
+  const enrolStatusValues = quickFilters?.enrolStatusFilter ?? [];
+  if (enrolStatusValues.length > 0) {
+    const op = quickFilters?.enrolFilterOp === 'notEquals' ? 'ne' : 'eq';
+    const joinType = quickFilters?.enrolFilterOp === 'notEquals' ? 'and' : 'or';
+    const conds = enrolStatusValues
+      .map(label => labelToValue('enrolStatus', label))
+      .filter((v): v is string => v !== null)
+      .map(v => `<condition attribute="vsi_enrolmentstatus" operator="${op}" value="${v}"/>`);
+    if (conds.length === 1) filterParts.push(conds[0]);
+    else if (conds.length > 1) filterParts.push(`<filter type="${joinType}">${conds.join('')}</filter>`);
+  }
+
+  // Quick filter: yearFilter (OR-joined display-name conditions)
+  const yearValues = quickFilters?.yearFilter ?? [];
+  if (yearValues.length > 0) {
+    const conds = yearValues.map(y => `<condition attribute="vsi_programyearidname" operator="eq" value="${escapeXmlAttr(y)}"/>`);
+    if (conds.length === 1) filterParts.push(conds[0]);
+    else filterParts.push(`<filter type="or">${conds.join('')}</filter>`);
+  }
+
+  // Quick filter: ownerFilter (OR-joined owner-name conditions)
+  const ownerValues = quickFilters?.ownerFilter ?? [];
+  if (ownerValues.length > 0) {
+    const conds = ownerValues.map(o => `<condition attribute="owneridname" operator="eq" value="${escapeXmlAttr(o)}"/>`);
+    if (conds.length === 1) filterParts.push(conds[0]);
+    else filterParts.push(`<filter type="or">${conds.join('')}</filter>`);
+  }
+
+  let filterXml = '';
+  if (filterParts.length === 1) filterXml = filterParts[0];
+  else if (filterParts.length > 1) filterXml = `<filter type="and">${filterParts.join('')}</filter>`;
 
   return `<fetch><entity name="vsi_participantprogramyear">${attrs}${filterXml}<order attribute="vsi_name" descending="false"/></entity></fetch>`;
 }
@@ -124,13 +189,27 @@ export function generateFetchXml(keys: SortKey[], advFilterNodes: unknown[] = []
 // ── fetchxml filter helpers ──────────────────────────────────────────────────
 
 const ADV_FIELD_TO_ATTR: Partial<Record<AdvFilterField, string>> = {
-  taskStatus: 'vsi_taskstatus',
-  enrolStatus: 'vsi_enrolmentstatus',
-  pin: 'vsi_name',
-  fee: 'vsi_enrolmentfee',
-  hasPartners: 'vsi_haspartners',
-  inCombinedFarm: 'vsi_incombinedfarm',
-  isNewParticipant: 'vsi_isnewparticipant',
+  taskStatus:              'vsi_taskstatus',
+  enrolStatus:             'vsi_enrolmentstatus',
+  pin:                     'vsi_name',
+  fee:                     'vsi_enrolmentfee',
+  totalFeesOwedCalculated: 'vsi_totalfeesowedcalculated',
+  totalFeesPaid:           'vsi_totalfeespaid',
+  latePay:                 'vsi_latepaymentfee',
+  hasPartners:             'vsi_haspartners',
+  inCombinedFarm:          'vsi_incombinedfarm',
+  isNewParticipant:        'vsi_isnewparticipant',
+  fullyProvinciallyFunded: 'vsi_fullyprovinciallyfunded',
+  bringForward:            'vsi_bringforward',
+  broughtForward:          'vsi_broughtforward',
+  manualReview:            'vsi_manualreview',
+  regionalOffice:          'vsi_enrollmentregionaloffice',
+  farmingSector:           'vsi_farmingsector',
+  modifiedOn:              'modifiedon',
+  enrolmentNoticeSentDate: 'vsi_enrolmentnoticesentdate',
+  enrolmentOptedOutDate:   'vsi_programyearoptoutdate',
+  fileReceivedDate:        'vsi_filereceiveddate',
+  feesPaidDate:            'vsi_enrolmentfeespaiddate',
   // producer omitted — lookup display name requires linked-entity join
 };
 
@@ -150,8 +229,12 @@ function advRowToConditions(node: AdvFilterNode & { kind: 'row' }): string {
   const attr = ADV_FIELD_TO_ATTR[node.field];
   if (!attr || !node.field) return '';
 
+  // has-value / has-no-value operators (no value attribute needed)
+  if (node.operator === 'hasValue') return `<condition attribute="${attr}" operator="not-null"/>`;
+  if (node.operator === 'hasNoValue') return `<condition attribute="${attr}" operator="null"/>`;
+
   // Boolean fields (Yes/No)
-  if (node.field === 'hasPartners' || node.field === 'inCombinedFarm' || node.field === 'isNewParticipant') {
+  if (node.field === 'hasPartners' || node.field === 'inCombinedFarm' || node.field === 'isNewParticipant' || node.field === 'fullyProvinciallyFunded' || node.field === 'bringForward' || node.field === 'broughtForward' || node.field === 'manualReview') {
     if (node.values.size === 0) return '';
     const op = node.operator === 'notEquals' ? 'ne' : 'eq';
     const conds = [...node.values].map(v => `<condition attribute="${attr}" operator="${op}" value="${v === 'Yes' ? '1' : '0'}"/>`);
@@ -277,48 +360,104 @@ function stripQuickFilterNodes(nodes: AdvFilterNode[], fetchFilters: Partial<Qui
   return nodes.map(filterNode).filter((n): n is AdvFilterNode => n !== null);
 }
 
+/**
+ * Strip AdvFilterNode rows for fields managed by quick filter chips
+ * (taskStatus, enrolStatus, year, owner).  These are encoded in fetchxml as a
+ * reliable backup but must not appear as duplicate advFilterNodes when the
+ * chip filter state is already populated from layoutjson or parseFetchXmlToQuickFilters.
+ */
+function stripChipFieldNodes(nodes: AdvFilterNode[]): AdvFilterNode[] {
+  function strip(n: AdvFilterNode): AdvFilterNode | null {
+    if (n.kind === 'row') {
+      return (n.field === 'taskStatus' || n.field === 'enrolStatus' || n.field === 'year' || n.field === 'owner')
+        ? null : n;
+    }
+    const children = n.children.map(strip).filter((c): c is AdvFilterNode => c !== null);
+    return children.length > 0 ? { ...n, children } : null;
+  }
+  return nodes.map(strip).filter((n): n is AdvFilterNode => n !== null);
+}
+
 export function userqueryToView(uq: Userqueries): PersonalView {
-  const ownerName = getUserqueryOwnerName(uq);
+  console.debug('[Views][userqueryToView] raw record', {
+    id: uq.userqueryid,
+    name: uq.name,
+    returnedtypecode: uq.returnedtypecode,
+    hasLayoutjson: !!uq.layoutjson,
+    layoutjsonLength: uq.layoutjson?.length ?? 0,
+    layoutjsonPreview: uq.layoutjson ? uq.layoutjson.slice(0, 200) : null,
+    hasFetchxml: !!uq.fetchxml,
+    fetchxmlPreview: uq.fetchxml ? uq.fetchxml.slice(0, 400) : null,
+    hasLayoutxml: !!uq.layoutxml,
+  });
   try {
     const payload: ViewPayload = JSON.parse(uq.layoutjson ?? '{}');
     if (payload.visibleColumnKeys) {
+      console.debug('[Views][userqueryToView] PATH=layoutjson', uq.name, {
+        visibleColumnKeys: payload.visibleColumnKeys,
+        taskStatusFilter: payload.taskStatusFilter,
+        enrolStatusFilter: payload.enrolStatusFilter,
+        yearFilter: payload.yearFilter,
+        ownerFilter: payload.ownerFilter,
+        advFilterNodes: payload.advFilterNodes,
+        filters: payload.filters,
+      });
       const mergedFilters = { ...DEFAULT_VIEW_SNAPSHOT.filters, ...payload.filters };
       // Fall back to parsing fetchxml for advFilterNodes if layoutjson didn't
       // persist them (e.g. Dataverse may not return layoutjson immediately after create).
+      // Strip chip-filter conditions first — fetchxml now encodes chip filters too,
+      // and they must not appear as duplicate advFilterNodes alongside taskStatusFilter etc.
       const rawAdvNodes = Array.isArray(payload.advFilterNodes) && payload.advFilterNodes.length > 0
         ? (deserializeFilterNodes(payload.advFilterNodes) as AdvFilterNode[])
-        : parseFetchXmlToAdvNodes(uq.fetchxml);
+        : stripChipFieldNodes(parseFetchXmlToAdvNodes(uq.fetchxml));
       const advFilterNodes = serializeFilterNodes(stripQuickFilterNodes(rawAdvNodes, mergedFilters));
-      return {
+      const result = {
         id: uq.userqueryid,
         name: uq.name,
-        source: 'personal',
+        source: 'personal' as const,
+        ownerName: uq.owneridname || undefined,
         ...payload,
-        ownerName,
         advFilterNodes,
         filters: mergedFilters,
       };
+      console.debug('[Views][userqueryToView] RESULT (layoutjson path)', uq.name, {
+        taskStatusFilter: result.taskStatusFilter,
+        enrolStatusFilter: result.enrolStatusFilter,
+        yearFilter: result.yearFilter,
+        ownerFilter: result.ownerFilter,
+        advFilterNodes: result.advFilterNodes,
+      });
+      return result;
     }
-  } catch { /* layoutjson not in our format */ }
+    console.debug('[Views][userqueryToView] layoutjson present but missing visibleColumnKeys — using fallback', uq.name,
+      { layoutjsonKeys: Object.keys(payload) });
+  } catch (e) {
+    console.debug('[Views][userqueryToView] layoutjson parse error — using fallback', uq.name, e);
+  }
   const xmlCols = parseLayoutXml(uq.layoutxml);
   const rawFallbackNodes = parseFetchXmlToAdvNodes(uq.fetchxml);
-  const advFilterNodes = serializeFilterNodes(rawFallbackNodes);
-  const snapshot: ViewPayload = xmlCols
-    ? { ...DEFAULT_VIEW_SNAPSHOT, visibleColumnKeys: xmlCols, advFilterNodes }
-    : { ...DEFAULT_VIEW_SNAPSHOT, advFilterNodes };
-  return { id: uq.userqueryid, name: uq.name, source: 'personal', ...snapshot, ownerName };
-}
-
-function getUserqueryOwnerName(uq: Userqueries): string | undefined {
-  const raw = uq as unknown as Record<string, unknown>;
-  const value = [
-    uq.owneridname,
-    raw['_ownerid_value@OData.Community.Display.V1.FormattedValue'],
-    raw['ownerid@OData.Community.Display.V1.FormattedValue'],
-    uq.owneridyominame,
-  ].find((candidate): candidate is string => typeof candidate === 'string' && candidate.trim().length > 0);
-
-  return value?.trim();
+  const quickFilters = parseFetchXmlToQuickFilters(uq.fetchxml);
+  console.debug('[Views][userqueryToView] PATH=fallback/fetchxml', uq.name, {
+    xmlColsFound: xmlCols?.length ?? 0,
+    rawAdvNodeCount: rawFallbackNodes.length,
+    quickFilters,
+  });
+  // Strip chip-field nodes — they are now captured via quickFilters, so keeping
+  // them in advFilterNodes would cause duplicate filtering in effectiveFilterNodes.
+  const advFilterNodes = serializeFilterNodes(stripChipFieldNodes(rawFallbackNodes));
+  const snapshot: ViewPayload = {
+    ...(xmlCols ? { ...DEFAULT_VIEW_SNAPSHOT, visibleColumnKeys: xmlCols } : { ...DEFAULT_VIEW_SNAPSHOT }),
+    advFilterNodes,
+    ...quickFilters,
+  };
+  console.debug('[Views][userqueryToView] RESULT (fallback path)', uq.name, {
+    taskStatusFilter: snapshot.taskStatusFilter,
+    enrolStatusFilter: snapshot.enrolStatusFilter,
+    yearFilter: snapshot.yearFilter,
+    ownerFilter: snapshot.ownerFilter,
+    advFilterNodes: snapshot.advFilterNodes,
+  });
+  return { id: uq.userqueryid, name: uq.name, source: 'personal', ownerName: uq.owneridname || undefined, ...snapshot };
 }
 
 // Columns that must always be present regardless of what the view definition says
@@ -359,18 +498,35 @@ type FieldSpec =
   | { field: AdvFilterField; kind: 'choice' }; // raw string value placed directly in values Set
 
 const CONDITION_FIELD_SPECS: Record<string, FieldSpec> = {
-  vsi_haspartners:       { field: 'hasPartners',    kind: 'boolean' },
-  vsi_incombinedfarm:    { field: 'inCombinedFarm', kind: 'boolean' },
-  vsi_isnewparticipant:  { field: 'isNewParticipant', kind: 'boolean' },
-  vsi_taskstatus:        { field: 'taskStatus',     kind: 'enum', map: Vsi_participantprogramyearsvsi_taskstatus },
-  vsi_enrolmentstatus:   { field: 'enrolStatus',    kind: 'enum', map: Vsi_participantprogramyearsvsi_enrolmentstatus },
-  vsi_name:              { field: 'pin',            kind: 'text' },
-  vsi_producerfullname:  { field: 'producer',       kind: 'text' },
-  vsi_enrolmentfee:      { field: 'fee',            kind: 'text' },
+  vsi_haspartners:              { field: 'hasPartners',             kind: 'boolean' },
+  vsi_incombinedfarm:           { field: 'inCombinedFarm',          kind: 'boolean' },
+  vsi_isnewparticipant:         { field: 'isNewParticipant',        kind: 'boolean' },
+  vsi_fullyprovinciallyfunded:  { field: 'fullyProvinciallyFunded', kind: 'boolean' },
+  vsi_bringforward:             { field: 'bringForward',            kind: 'boolean' },
+  vsi_broughtforward:           { field: 'broughtForward',          kind: 'boolean' },
+  vsi_manualreview:             { field: 'manualReview',            kind: 'boolean' },
+  vsi_taskstatus:               { field: 'taskStatus',              kind: 'enum', map: Vsi_participantprogramyearsvsi_taskstatus },
+  vsi_enrolmentstatus:          { field: 'enrolStatus',             kind: 'enum', map: Vsi_participantprogramyearsvsi_enrolmentstatus },
+  vsi_enrollmentregionaloffice: { field: 'regionalOffice',          kind: 'enum', map: Vsi_participantprogramyearsvsi_enrollmentregionaloffice },
+  vsi_farmingsector:            { field: 'farmingSector',           kind: 'enum', map: Vsi_participantprogramyearsvsi_farmingsector },
+  vsi_name:                     { field: 'pin',                     kind: 'text' },
+  vsi_producerfullname:         { field: 'producer',                kind: 'text' },
+  vsi_enrolmentfee:             { field: 'fee',                     kind: 'text' },
+  // vsi_totalfeesowed is legacy — map to totalFeesOwedCalculated so MDA views
+  // using this field still filter correctly without exposing it in the UI
+  vsi_totalfeesowed:            { field: 'totalFeesOwedCalculated', kind: 'text' },
+  vsi_totalfeesowedcalculated:  { field: 'totalFeesOwedCalculated', kind: 'text' },
+  vsi_totalfeespaid:            { field: 'totalFeesPaid',           kind: 'text' },
+  vsi_latepaymentfee:           { field: 'latePay',                 kind: 'text' },
+  vsi_enrolmentnoticesentdate:  { field: 'enrolmentNoticeSentDate', kind: 'text' },
+  vsi_programyearoptoutdate:    { field: 'enrolmentOptedOutDate',   kind: 'text' },
+  vsi_filereceiveddate:         { field: 'fileReceivedDate',        kind: 'text' },
+  vsi_enrolmentfeespaiddate:    { field: 'feesPaidDate',            kind: 'text' },
+  modifiedon:                   { field: 'modifiedOn',              kind: 'text' },
   // Year — system views use the display-name field for year-based conditions
-  vsi_programyearidname: { field: 'year',           kind: 'choice' },
+  vsi_programyearidname:        { field: 'year',                    kind: 'choice' },
   // Owner — system views may filter by owner display name
-  owneridname:           { field: 'owner',          kind: 'choice' },
+  owneridname:                  { field: 'owner',                   kind: 'choice' },
 };
 
 function fetchXmlOpToAdvOp(op: string, kind: FieldSpec['kind']): AdvFilterOp {
@@ -410,6 +566,16 @@ export function parseFetchXmlToAdvNodes(fetchxml: string | undefined | null): Ad
           const rawVal = child.getAttribute('value') ?? '';
           const spec = CONDITION_FIELD_SPECS[attr];
           if (!spec) continue;
+
+          // Handle not-null / null operators before value-based processing
+          if (op === 'not-null' || op === 'null') {
+            children.push({
+              kind: 'row', id: nextFilterId(), field: spec.field,
+              operator: op === 'not-null' ? 'hasValue' : 'hasNoValue',
+              values: new Set<string>(), textValue: '',
+            });
+            continue;
+          }
 
           const operator = fetchXmlOpToAdvOp(op, spec.kind);
 
@@ -464,6 +630,58 @@ export function parseFetchXmlToAdvNodes(fetchxml: string | undefined | null): Ad
     return result ? [result] : [];
   } catch {
     return [];
+  }
+}
+
+/**
+ * Parse a Dataverse fetchxml string and reconstruct quick filter arrays
+ * (taskStatusFilter, enrolStatusFilter, yearFilter, ownerFilter) that were
+ * encoded into fetchxml as a reliable fallback when layoutjson is unavailable.
+ */
+export function parseFetchXmlToQuickFilters(fetchxml: string | undefined | null): {
+  taskStatusFilter: string[];
+  enrolStatusFilter: string[];
+  taskFilterOp: FilterOperator;
+  enrolFilterOp: FilterOperator;
+  yearFilter: string[];
+  ownerFilter: string[];
+} {
+  const result = {
+    taskStatusFilter: [] as string[],
+    enrolStatusFilter: [] as string[],
+    taskFilterOp: 'equals' as FilterOperator,
+    enrolFilterOp: 'equals' as FilterOperator,
+    yearFilter: [] as string[],
+    ownerFilter: [] as string[],
+  };
+  if (!fetchxml) return result;
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(fetchxml, 'text/xml');
+    if (doc.querySelector('parsererror')) return result;
+
+    for (const cond of Array.from(doc.querySelectorAll('condition'))) {
+      const attr = cond.getAttribute('attribute') ?? '';
+      const op = cond.getAttribute('operator') ?? 'eq';
+      const val = cond.getAttribute('value') ?? '';
+
+      if (attr === 'vsi_taskstatus') {
+        const label = Vsi_participantprogramyearsvsi_taskstatus[val as unknown as keyof typeof Vsi_participantprogramyearsvsi_taskstatus];
+        if (label && !result.taskStatusFilter.includes(label)) result.taskStatusFilter.push(label);
+        if (op === 'ne' || op === 'neq') result.taskFilterOp = 'notEquals';
+      } else if (attr === 'vsi_enrolmentstatus') {
+        const label = Vsi_participantprogramyearsvsi_enrolmentstatus[val as unknown as keyof typeof Vsi_participantprogramyearsvsi_enrolmentstatus];
+        if (label && !result.enrolStatusFilter.includes(label)) result.enrolStatusFilter.push(label);
+        if (op === 'ne' || op === 'neq') result.enrolFilterOp = 'notEquals';
+      } else if (attr === 'vsi_programyearidname') {
+        if (val && !result.yearFilter.includes(val)) result.yearFilter.push(val);
+      } else if (attr === 'owneridname') {
+        if (val && !result.ownerFilter.includes(val)) result.ownerFilter.push(val);
+      }
+    }
+    return result;
+  } catch {
+    return result;
   }
 }
 

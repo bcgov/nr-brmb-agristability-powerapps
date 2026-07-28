@@ -10,6 +10,8 @@ import type { Vsi_participantprogramyears } from '../generated/models/Vsi_partic
 import {
   Vsi_participantprogramyearsvsi_enrolmentstatus,
   Vsi_participantprogramyearsvsi_taskstatus,
+  Vsi_participantprogramyearsvsi_enrollmentregionaloffice,
+  Vsi_participantprogramyearsvsi_farmingsector,
 } from '../generated/models/Vsi_participantprogramyearsModel';
 import { AccountsService } from '../generated/services/AccountsService';
 import { Vsi_armsconfigurationsService } from '../generated/services/Vsi_armsconfigurationsService';
@@ -510,6 +512,21 @@ export function useSortedAndFilteredRows(
       case 'hasPartners': return row.vsi_haspartners === true ? 'Yes' : 'No';
       case 'inCombinedFarm': return row.vsi_incombinedfarm === true ? 'Yes' : 'No';
       case 'isNewParticipant': return row.vsi_isnewparticipant === true ? 'Yes' : 'No';
+      case 'fullyProvinciallyFunded': return row.vsi_fullyprovinciallyfunded === true ? 'Yes' : 'No';
+      case 'bringForward': return row.vsi_bringforward === true ? 'Yes' : 'No';
+      case 'broughtForward': return row.vsi_broughtforward === true ? 'Yes' : 'No';
+      case 'manualReview': return row.vsi_manualreview === true ? 'Yes' : 'No';
+      case 'totalFeesOwed': // legacy alias — treat as totalFeesOwedCalculated
+      case 'totalFeesOwedCalculated': return String(row.vsi_totalfeesowedcalculated ?? '');
+      case 'totalFeesPaid': return String(row.vsi_totalfeespaid ?? '');
+      case 'latePay': return String(row.vsi_latepaymentfee ?? '');
+      case 'regionalOffice': return Vsi_participantprogramyearsvsi_enrollmentregionaloffice[row.vsi_enrollmentregionaloffice as keyof typeof Vsi_participantprogramyearsvsi_enrollmentregionaloffice] ?? '';
+      case 'farmingSector': return Vsi_participantprogramyearsvsi_farmingsector[row.vsi_farmingsector as keyof typeof Vsi_participantprogramyearsvsi_farmingsector] ?? '';
+      case 'modifiedOn': return row.modifiedon ?? '';
+      case 'enrolmentNoticeSentDate': return row.vsi_enrolmentnoticesentdate ?? '';
+      case 'enrolmentOptedOutDate': return row.vsi_programyearoptoutdate ?? '';
+      case 'fileReceivedDate': return row.vsi_filereceiveddate ?? '';
+      case 'feesPaidDate': return row.vsi_enrolmentfeespaiddate ?? '';
       default: return '';
     }
   }, []);
@@ -517,6 +534,9 @@ export function useSortedAndFilteredRows(
   const matchAdvRow = useCallback((row: Vsi_participantprogramyears, fr: { kind: 'row'; field: AdvFilterField; operator: string; values: Set<string>; textValue: string }): boolean => {
     const val = getRowFieldValue(row, fr.field);
     const fieldType = ADV_FIELD_OPTIONS[fr.field];
+    // Null-check operators: test whether the field has any value
+    if (fr.operator === 'hasValue') return val !== '';
+    if (fr.operator === 'hasNoValue') return val === '';
     if (fieldType === 'choice') {
       if (fr.values.size === 0) return true;
       const inSet = fr.values.has(val);

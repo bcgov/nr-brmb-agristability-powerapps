@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>How Dynamics Model-Driven Apps Handle Large Tables</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 2rem;
+      line-height: 1.6;
+      color: #222;
+    }
+    h1, h2 {
+      color: #005a9e;
+    }
+    ul {
+      margin-left: 1.5rem;
+    }
+    code {
+      background: #f3f3f3;
+      padding: 0.15rem 0.3rem;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+  <h1>How Dynamics Model-Driven Apps Handle Loading Large Tables</h1>
+
+  <p>
+    Dynamics model-driven apps do <strong>not</strong> load an entire large Dataverse table at once.
+    Instead, they rely on server-side paging, grid virtualization, and filtered views to keep the
+    user interface responsive even when tables contain millions of rows.
+  </p>
+
+  <h2>Key Mechanics</h2>
+  <ul>
+    <li>
+      <strong>Server-side paging:</strong>
+      Dataverse returns only a page of records per query (up to platform limits). Additional pages
+      are retrieved only when the user scrolls or navigates, so the app never pulls the full dataset
+      in a single request.
+    </li>
+    <li>
+      <strong>Grid virtualization:</strong>
+      The model-driven grid renders only the rows that are visible on screen. As the user scrolls,
+      the grid requests the next page of data. Sorting and filtering are executed on the server,
+      minimizing client-side load.
+    </li>
+    <li>
+      <strong>View design and column minimization:</strong>
+      Views define which columns and filters are applied. Keeping views narrow (fewer columns) and
+      well-filtered (e.g., “My Active”, “Last 30 days”) reduces payload size and improves load time.
+    </li>
+    <li>
+      <strong>Paging cookies:</strong>
+      Under the hood, FetchXML paging cookies are used to support consistent ordering and efficient
+      paging across large datasets.
+    </li>
+    <li>
+      <strong>Virtual tables for huge or external data:</strong>
+      When datasets are extremely large or live in external systems, virtual tables expose that data
+      in the model-driven UI without storing everything in Dataverse.
+    </li>
+  </ul>
+
+  <h2>What Happens When a View Opens</h2>
+  <ol>
+    <li>Dataverse retrieves only the first page of records for the view.</li>
+    <li>The grid renders just the visible rows using UI virtualization.</li>
+    <li>Scrolling, sorting, or filtering triggers new paged queries.</li>
+    <li>The app never attempts to load the entire table in one operation.</li>
+  </ol>
+
+  <p>
+    Together, these mechanisms allow Dynamics model-driven apps to handle very large tables while
+    maintaining good performance and a smooth user experience.
+  </p>
+</body>
+</html>

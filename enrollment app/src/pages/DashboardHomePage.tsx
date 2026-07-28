@@ -15,6 +15,8 @@ import { Vsi_programyearsService } from '../generated/services/Vsi_programyearsS
 import {
   Vsi_participantprogramyearsvsi_enrolmentstatus,
   Vsi_participantprogramyearsvsi_taskstatus,
+  Vsi_participantprogramyearsvsi_enrollmentregionaloffice,
+  Vsi_participantprogramyearsvsi_farmingsector,
 } from '../generated/models/Vsi_participantprogramyearsModel';
 
 import { ViewsMenu } from '../components/ViewsMenu';
@@ -149,6 +151,16 @@ export function DashboardHomePage() {
     return new Map<string, number>(entries);
   }, []);
 
+  const regionalOfficeCodeByLabel = useMemo(() => {
+    const entries = Object.entries(Vsi_participantprogramyearsvsi_enrollmentregionaloffice).map(([code, label]) => [label, Number(code)] as const);
+    return new Map<string, number>(entries);
+  }, []);
+
+  const farmingSectorCodeByLabel = useMemo(() => {
+    const entries = Object.entries(Vsi_participantprogramyearsvsi_farmingsector).map(([code, label]) => [label, Number(code)] as const);
+    return new Map<string, number>(entries);
+  }, []);
+
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
@@ -276,7 +288,22 @@ export function DashboardHomePage() {
 
     const buildAdvNodeClause = (node: AdvFilterNode): string => {
       if (node.kind === 'row') {
-        if (node.field === 'taskStatus' || node.field === 'enrolStatus' || node.field === 'year' || node.field === 'owner') {
+        // has-value / has-no-value operators apply to any field
+        if (node.operator === 'hasValue' || node.operator === 'hasNoValue') {
+          const fieldMap: Partial<Record<string, string>> = {
+            enrolmentNoticeSentDate: 'vsi_enrolmentnoticesentdate',
+            totalFeesOwed: 'vsi_totalfeesowed',
+            fullyProvinciallyFunded: 'vsi_fullyprovinciallyfunded',
+            pin: 'vsi_name', fee: 'vsi_enrolmentfee',
+            hasPartners: 'vsi_haspartners', inCombinedFarm: 'vsi_incombinedfarm',
+            isNewParticipant: 'vsi_isnewparticipant',
+          };
+          const col = fieldMap[node.field];
+          if (!col) return '';
+          return node.operator === 'hasValue' ? `${col} ne null` : `${col} eq null`;
+        }
+
+        if (node.field === 'taskStatus' || node.field === 'enrolStatus' || node.field === 'year' || node.field === 'owner' || node.field === 'regionalOffice' || node.field === 'farmingSector') {
           if (node.field === 'owner') {
             const owners = [...node.values].filter(Boolean);
             if (owners.length === 0) return '';
@@ -292,8 +319,14 @@ export function DashboardHomePage() {
             return node.operator === 'equals' ? clause : `not ${clause}`;
           }
 
-          const map = node.field === 'taskStatus' ? taskStatusCodeByLabel : enrolStatusCodeByLabel;
-          const field = node.field === 'taskStatus' ? 'vsi_taskstatus' : 'vsi_enrolmentstatus';
+          const map = node.field === 'taskStatus' ? taskStatusCodeByLabel
+            : node.field === 'enrolStatus' ? enrolStatusCodeByLabel
+            : node.field === 'regionalOffice' ? regionalOfficeCodeByLabel
+            : farmingSectorCodeByLabel;
+          const field = node.field === 'taskStatus' ? 'vsi_taskstatus'
+            : node.field === 'enrolStatus' ? 'vsi_enrolmentstatus'
+            : node.field === 'regionalOffice' ? 'vsi_enrollmentregionaloffice'
+            : 'vsi_farmingsector';
           const codes = [...node.values]
             .map(v => map.get(v))
             .filter((code): code is number => Number.isFinite(code));
@@ -302,10 +335,17 @@ export function DashboardHomePage() {
           return node.operator === 'equals' ? clause : `not ${clause}`;
         }
 
-        if (node.field === 'hasPartners' || node.field === 'inCombinedFarm' || node.field === 'isNewParticipant') {
-          const field = node.field === 'hasPartners'
-            ? 'vsi_haspartners'
-            : (node.field === 'inCombinedFarm' ? 'vsi_incombinedfarm' : 'vsi_isnewparticipant');
+        if (node.field === 'hasPartners' || node.field === 'inCombinedFarm' || node.field === 'isNewParticipant' || node.field === 'fullyProvinciallyFunded' || node.field === 'bringForward' || node.field === 'broughtForward' || node.field === 'manualReview') {
+          const fieldMap: Record<string, string> = {
+            hasPartners: 'vsi_haspartners',
+            inCombinedFarm: 'vsi_incombinedfarm',
+            isNewParticipant: 'vsi_isnewparticipant',
+            fullyProvinciallyFunded: 'vsi_fullyprovinciallyfunded',
+            bringForward: 'vsi_bringforward',
+            broughtForward: 'vsi_broughtforward',
+            manualReview: 'vsi_manualreview',
+          };
+          const field = fieldMap[node.field];
           const values = [...node.values];
           if (values.length === 0) return '';
           const boolClauses = values.map(v => {
@@ -319,15 +359,29 @@ export function DashboardHomePage() {
         const text = node.textValue?.trim() ?? '';
         if (!text) return '';
         const safe = escapeODataLiteral(text);
-        const field = node.field === 'pin' ? 'vsi_name' : node.field === 'producer' ? 'vsi_participantidname' : 'vsi_enrolmentfee';
-        if (node.field === 'fee') {
+        const numericFields: Partial<Record<string, string>> = {
+          fee: 'vsi_enrolmentfee',
+          totalFeesOwed: 'vsi_totalfeesowedcalculated', // legacy alias
+          totalFeesOwedCalculated: 'vsi_totalfeesowedcalculated',
+          totalFeesPaid: 'vsi_totalfeespaid', latePay: 'vsi_latepaymentfee',
+        };
+        const textFieldMap: Partial<Record<string, string>> = {
+          pin: 'vsi_name', producer: 'vsi_participantidname',
+          modifiedOn: 'modifiedon',
+          enrolmentNoticeSentDate: 'vsi_enrolmentnoticesentdate',
+          enrolmentOptedOutDate: 'vsi_programyearoptoutdate',
+          fileReceivedDate: 'vsi_filereceiveddate',
+          feesPaidDate: 'vsi_enrolmentfeespaiddate',
+        };
+        if (numericFields[node.field]) {
+          const field = numericFields[node.field]!;
           const num = Number(text);
           if (!Number.isFinite(num)) return '';
           if (node.operator === 'equals') return `${field} eq ${num}`;
           if (node.operator === 'notEquals') return `${field} ne ${num}`;
           return '';
         }
-
+        const field = textFieldMap[node.field] ?? 'vsi_enrolmentfee';
         switch (node.operator) {
           case 'equals': return `${field} eq '${safe}'`;
           case 'notEquals': return `${field} ne '${safe}'`;
@@ -364,6 +418,8 @@ export function DashboardHomePage() {
     advLogicOp,
     taskStatusCodeByLabel,
     enrolStatusCodeByLabel,
+    regionalOfficeCodeByLabel,
+    farmingSectorCodeByLabel,
     escapeODataLiteral,
     buildProgramYearLookupClause,
   ]);
