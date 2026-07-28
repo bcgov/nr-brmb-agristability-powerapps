@@ -197,6 +197,16 @@ export function useViews(state: ViewState, setters: {
   }, []);
 
   const applyView = useCallback((view: ViewPayload & { id?: string; name?: string; source?: string }) => {
+    console.debug('[Views][applyView]', (view as { name?: string }).name ?? view, {
+      taskStatusFilter: view.taskStatusFilter,
+      enrolStatusFilter: view.enrolStatusFilter,
+      yearFilter: view.yearFilter,
+      ownerFilter: view.ownerFilter,
+      taskFilterOp: view.taskFilterOp,
+      enrolFilterOp: view.enrolFilterOp,
+      advFilterNodes: view.advFilterNodes,
+      filters: view.filters,
+    });
     setters.setVisibleColumnKeys(ensureRequiredColumns(view.visibleColumnKeys));
     setters.setColumnWidths({ ...view.columnWidths });
     setters.setSortKey(view.sortKey);
@@ -276,6 +286,14 @@ export function useViews(state: ViewState, setters: {
 
       if (uqResult.status === 'fulfilled') {
         const userqueries = uqResult.value.data ?? [];
+        console.debug('[Views][loadViews] raw userqueries count:', userqueries.length,
+          'filter was:', `returnedtypecode eq '${USERQUERY_ENTITY}'`);
+        userqueries.forEach(uq => console.debug('[Views][loadViews] raw uq:', {
+          id: uq.userqueryid, name: uq.name,
+          returnedtypecode: uq.returnedtypecode,
+          hasLayoutjson: !!uq.layoutjson,
+          hasFetchxml: !!uq.fetchxml,
+        }));
         personal = await addOwnerNamesToPersonalViews(userqueries.map(uq => userqueryToView(uq)), userqueries);
       } else {
         console.error('[Views] Failed to load personal views:', uqResult.reason);
@@ -360,7 +378,7 @@ export function useViews(state: ViewState, setters: {
       name,
       returnedtypecode: USERQUERY_ENTITY,
       querytype: USERQUERY_TYPE,
-      fetchxml: generateFetchXml(snap.visibleColumnKeys, snap.advFilterNodes as unknown[]),
+      fetchxml: generateFetchXml(snap.visibleColumnKeys, snap.advFilterNodes as unknown[], snap),
       layoutjson: JSON.stringify(snap),
       layoutxml: generateLayoutXml(snap.visibleColumnKeys, snap.columnWidths),
     };
@@ -421,7 +439,7 @@ export function useViews(state: ViewState, setters: {
       await UserqueriesService.update(activeViewId, {
         layoutjson: JSON.stringify(snap),
         layoutxml: generateLayoutXml(snap.visibleColumnKeys, snap.columnWidths),
-        fetchxml: generateFetchXml(snap.visibleColumnKeys, snap.advFilterNodes as unknown[]),
+        fetchxml: generateFetchXml(snap.visibleColumnKeys, snap.advFilterNodes as unknown[], snap),
       });
       setSavedViews(prev => prev.map(v => v.id === activeViewId ? { ...v, ...snap } : v));
       applyView({ ...view, ...snap });
