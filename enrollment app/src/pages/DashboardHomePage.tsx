@@ -3,9 +3,11 @@ import { Link } from 'react-router-dom';
 import { Columns2, Filter, FilterX, Info, RefreshCw } from 'lucide-react';
 
 import type { SortKey, SortDir, FilterOperator, AdvFilterNode, LogicOp, QuickFilterState } from '../types/enrollment';
-import { DEFAULT_VISIBLE_KEYS, SORTKEY_TO_FIELD } from '../constants/columns';
+import { DEFAULT_VISIBLE_KEYS } from '../constants/columns';
+import { getEnrolmentEnFeeVarianceThreshold } from '../constants/varianceThreshold';
+import { buildEnrolmentOrderBy } from '../data/enrolmentPaging';
 import { countActiveNodes } from '../utils/filterTree';
-import { useEnrolmentData, useSortedAndFilteredRows, clearEnrolmentCache, hasEnrolmentCache, buildParticipantSearchClause } from '../hooks/useEnrolmentData';
+import { useEnrolmentData, useSortedAndFilteredRows, clearEnrolmentCache, hasEnrolmentCache, patchEnrolmentCache, buildParticipantSearchClause } from '../hooks/useEnrolmentData';
 import { useRole } from '../context/RoleContext';
 import { resolveCurrentSystemUser } from '../utils/currentUser';
 import { clearSaCache } from './SupervisorApprovalPage';
@@ -52,15 +54,7 @@ type DashboardFilterCache = {
   currentPage: number;
 };
 
-type DashboardDerivedCache = {
-  newParticipantCount: number;
-  pendingSupervisorCount: number;
-  deadlineReminderCount: number;
-  serverTotalResults: number;
-};
-
 let dashboardFilterCache: DashboardFilterCache | null = null;
-let dashboardDerivedCache: DashboardDerivedCache | null = null;
 
 function parseProgramYearStart(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) return Math.trunc(value);
@@ -74,8 +68,8 @@ function parseProgramYearStart(value: unknown): number | null {
 }
 
 export function DashboardHomePage() {
-  const { activeRole, demoQueryMode, demoYearsWindow } = useRole();
-  const { rows, setRows, loading, pageSize, error, avatarUrls, fetchEnrolments, coreAppId, coreBaseUrl, fetchCoreAppId } = useEnrolmentData();
+  const { activeRole, demoYearsWindow } = useRole();
+  const { rows, setRows, loading, hasNextPage, pageSize, error, avatarUrls, fetchEnrolments, coreAppId, coreBaseUrl, fetchCoreAppId } = useEnrolmentData();
 
   // Refresh handler is defined after useViews so reloadViews is available
 
@@ -113,11 +107,6 @@ export function DashboardHomePage() {
   const [currentPage, setCurrentPage] = useState(() => dashboardFilterCache?.currentPage ?? 1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  // Ref to always have the latest buildServerFilter without it becoming a useCallback dep.
-  // This prevents filter state changes from recreating loadDashboardRows and triggering
-  // unnecessary client-mode re-fetches every time a filter or view is changed.
-  const buildServerFilterRef = useRef<string>('');
-
   // Panel visibility
   const [showEditColumns, setShowEditColumns] = useState(false);
   const [showEditFilters, setShowEditFilters] = useState(false);
@@ -127,16 +116,9 @@ export function DashboardHomePage() {
   const [showSupervisorModal, setShowSupervisorModal] = useState(false);
   const [showApproveFeesModal, setShowApproveFeesModal] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
-  const [newParticipantCount, setNewParticipantCount] = useState<number>(() => dashboardDerivedCache?.newParticipantCount ?? 0);
-  const [pendingSupervisorCount, setPendingSupervisorCount] = useState<number>(() => dashboardDerivedCache?.pendingSupervisorCount ?? 0);
-  const [deadlineReminderCount, setDeadlineReminderCount] = useState<number>(() => dashboardDerivedCache?.deadlineReminderCount ?? 0);
-  const [serverTotalResults, setServerTotalResults] = useState<number>(() => dashboardDerivedCache?.serverTotalResults ?? 0);
   const [programYearIdsByLabel, setProgramYearIdsByLabel] = useState<Record<string, string[]>>({});
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(() => dashboardFilterCache?.searchQuery ?? '');
   const latestChangeStampRef = useRef<string | null>(null);
-  const querySettingsInitializedRef = useRef(false);
-  const serverInfoCountsInitializedRef = useRef(false);
-  const serverTotalResultsInitializedRef = useRef(false);
   const lastServerQueryKeyRef = useRef<string | null>(null);
 
   const taskStatusCodeByLabel = useMemo(() => {
@@ -155,16 +137,6 @@ export function DashboardHomePage() {
     }, 500);
     return () => window.clearTimeout(timer);
   }, [searchQuery]);
-
-  useEffect(() => {
-    if (!querySettingsInitializedRef.current) {
-      querySettingsInitializedRef.current = true;
-      return;
-    }
-    clearEnrolmentCache();
-    setCurrentPage(1);
-    setSelectedIds(new Set());
-  }, [demoQueryMode, demoYearsWindow]);
 
   const getRecentProgramYearMetadata = useCallback(async (): Promise<{ cutoffYear: number; ids: string[]; idsByLabel: Record<string, string[]> }> => {
     const cutoffYear = new Date().getFullYear() - (demoYearsWindow - 1);
@@ -227,15 +199,11 @@ export function DashboardHomePage() {
     return `(${ids.map(id => `_vsi_programyearid_value eq ${id}`).join(' or ')})`;
   }, [programYearIdsByLabel]);
 
-  const serverOrderBy = useMemo(() => {
-    const normalizedKey = sortKey ?? 'modifiedOn';
-    if (normalizedKey === 'producer') return [`_vsi_participantid_value ${sortDir}`];
-    if (normalizedKey === 'year') return [`_vsi_programyearid_value ${sortDir}`];
-    if (normalizedKey === 'owner') return [`_ownerid_value ${sortDir}`];
-    if (normalizedKey === 'flagged') return [`modifiedon desc`];
-    const field = SORTKEY_TO_FIELD[normalizedKey] ?? 'modifiedon';
-    return [`${field} ${sortDir}`];
-  }, [sortKey, sortDir]);
+  const serverOrderBy = useMemo(
+    () => buildEnrolmentOrderBy(sortKey, sortDir),
+    [sortKey, sortDir],
+  );
+  const varianceThreshold = getEnrolmentEnFeeVarianceThreshold() / 100;
 
   const buildServerFilter = useMemo(() => {
     const clauses: string[] = [];
@@ -245,7 +213,7 @@ export function DashboardHomePage() {
     if (filters.fortyFiveDayLetter) clauses.push('vsi_enrolmentstatus eq 865520010');
     if (filters.partnerships) clauses.push('(vsi_haspartners eq true or vsi_incombinedfarm eq true)');
     if (filters.flagged) {
-      clauses.push('(vsi_prevyearpartnotverified eq true or (vsi_isnewparticipant ne true and vsi_enrolmentfee ne null and vsi_previousyearcalculatedenfee eq null) or (vsi_variancecalculation ge 0.15 or vsi_variancecalculation le -0.15))');
+      clauses.push(`(vsi_prevyearpartnotverified eq true or (vsi_isnewparticipant ne true and vsi_enrolmentfee ne null and vsi_previousyearcalculatedenfee eq null) or (vsi_variancecalculation ge ${varianceThreshold} or vsi_variancecalculation le -${varianceThreshold}))`);
     }
 
     const taskCodes = [...taskStatusFilter]
@@ -366,19 +334,17 @@ export function DashboardHomePage() {
     enrolStatusCodeByLabel,
     escapeODataLiteral,
     buildProgramYearLookupClause,
+    varianceThreshold,
   ]);
-
-  // Keep the ref in sync with the latest buildServerFilter value each render.
-  buildServerFilterRef.current = buildServerFilter;
 
   const getLatestEnrolmentChangeStamp = useCallback(async (): Promise<string | null> => {
     const filters: string[] = [await getRecentProgramYearFilter()];
 
-    if (demoQueryMode === 'server' && buildServerFilterRef.current.trim()) {
-      filters.push(`(${buildServerFilterRef.current.trim()})`);
+    if (buildServerFilter.trim()) {
+      filters.push(`(${buildServerFilter.trim()})`);
     }
 
-    if (demoQueryMode === 'server' && debouncedSearchQuery.trim()) {
+    if (debouncedSearchQuery.trim()) {
       filters.push(await buildParticipantSearchClause(debouncedSearchQuery.trim()));
     }
 
@@ -390,132 +356,41 @@ export function DashboardHomePage() {
     });
 
     return result.data?.[0]?.modifiedon ?? null;
-  }, [debouncedSearchQuery, demoQueryMode, getRecentProgramYearFilter]);
+  }, [buildServerFilter, debouncedSearchQuery, getRecentProgramYearFilter]);
 
-  const syncLatestEnrolmentChangeStamp = useCallback(async () => {
-    latestChangeStampRef.current = await getLatestEnrolmentChangeStamp();
-  }, [getLatestEnrolmentChangeStamp]);
-
-  const loadDashboardRows = useCallback(async (options: Parameters<typeof fetchEnrolments>[0]) => {
-    const succeeded = await fetchEnrolments(options);
-    if (succeeded) {
-      try {
-        await syncLatestEnrolmentChangeStamp();
-      } catch (e) {
-        console.error('Failed to sync enrolment change stamp:', e);
-      }
-    }
-    return succeeded;
-  }, [fetchEnrolments, syncLatestEnrolmentChangeStamp]);
+  const loadDashboardRows = fetchEnrolments;
 
   useEffect(() => {
-    if (demoQueryMode !== 'client') return;
-    void loadDashboardRows({ mode: 'client', yearsBack: demoYearsWindow });
-  }, [demoQueryMode, demoYearsWindow, loadDashboardRows]);
-
-  useEffect(() => {
-    if (demoQueryMode !== 'server') return;
     const queryKey = [currentPage, debouncedSearchQuery, buildServerFilter, serverOrderBy.join('|'), demoYearsWindow].join('\x00');
     if (hasEnrolmentCache() && lastServerQueryKeyRef.current === queryKey) return;
     lastServerQueryKeyRef.current = queryKey;
     if (hasEnrolmentCache()) clearEnrolmentCache();
     setRows([]);
-    void loadDashboardRows({ mode: 'server', page: currentPage, searchTerm: debouncedSearchQuery, yearsBack: demoYearsWindow, serverFilter: buildServerFilter, orderBy: serverOrderBy });
-  }, [demoQueryMode, demoYearsWindow, currentPage, debouncedSearchQuery, loadDashboardRows, buildServerFilter, serverOrderBy, setRows]);
-
-  const countEnrolmentsByFilter = useCallback(async (filter: string): Promise<number> => {
-    const recentYearFilter = await getRecentProgramYearFilter();
-    const combinedFilter = `(${recentYearFilter}) and (${filter})`;
-    let count = 0;
-    let skipToken: string | undefined;
-    do {
-      const result = await Vsi_participantprogramyearsService.getAll({
-        select: ['vsi_participantprogramyearid'],
-        filter: combinedFilter,
-        maxPageSize: 5000,
-        ...(skipToken ? { skipToken } : {}),
-      });
-      const rowsForBatch = result.data ?? [];
-      count += rowsForBatch.length;
-      const raw = result as unknown as Record<string, unknown>;
-      skipToken = (raw['skipToken'] ?? raw['@odata.nextLink']) as string | undefined;
-    } while (skipToken);
-    return count;
-  }, [getRecentProgramYearFilter]);
-
-  const refreshInfoCounts = useCallback(async () => {
-    try {
-      const [newCount, pendingCount, remindersCount] = await Promise.all([
-        countEnrolmentsByFilter('vsi_isnewparticipant eq true'),
-        countEnrolmentsByFilter('vsi_taskstatus eq 865520001'),
-        countEnrolmentsByFilter('(vsi_nonpenaltydeadlineremindersent ne true) or (vsi_finaldeadlineremindersent ne true)'),
-      ]);
-      setNewParticipantCount(newCount);
-      setPendingSupervisorCount(pendingCount);
-      setDeadlineReminderCount(remindersCount);
-    } catch (e) {
-      console.error('Failed to refresh dashboard info counts:', e);
-    }
-  }, [countEnrolmentsByFilter]);
-
-  const refreshServerTotalResults = useCallback(async () => {
-    const term = debouncedSearchQuery.trim();
-    const recentYearFilter = await getRecentProgramYearFilter();
-    const searchFilter = term ? await buildParticipantSearchClause(term) : '';
-    const combinedFilter = [recentYearFilter, buildServerFilter.trim(), searchFilter]
-      .filter(Boolean)
-      .map(clause => `(${clause})`)
-      .join(' and ');
-    let count = 0;
-    let skipToken: string | undefined;
-    do {
-      const result = await Vsi_participantprogramyearsService.getAll({
-        select: ['vsi_participantprogramyearid'],
-        filter: combinedFilter,
-        maxPageSize: 5000,
-        ...(skipToken ? { skipToken } : {}),
-      });
-      count += (result.data ?? []).length;
-      const raw = result as unknown as Record<string, unknown>;
-      skipToken = (raw['skipToken'] ?? raw['@odata.nextLink']) as string | undefined;
-    } while (skipToken);
-    setServerTotalResults(count);
-  }, [debouncedSearchQuery, getRecentProgramYearFilter, escapeODataLiteral, buildServerFilter]);
-
-  useEffect(() => {
-    if (demoQueryMode === 'client') {
-      setNewParticipantCount(rows.filter(r => r.vsi_isnewparticipant === true).length);
-      setPendingSupervisorCount(rows.filter(r => r.vsi_taskstatus === 865520001).length);
-      setDeadlineReminderCount(rows.filter(r => r.vsi_nonpenaltydeadlineremindersent !== true || r.vsi_finaldeadlineremindersent !== true).length);
-      return;
-    }
-    if (!serverInfoCountsInitializedRef.current) {
-      serverInfoCountsInitializedRef.current = true;
-      if (hasEnrolmentCache() && dashboardDerivedCache) return;
-    }
-    void refreshInfoCounts();
-  }, [demoQueryMode, rows, refreshInfoCounts]);
-
-  useEffect(() => {
-    if (demoQueryMode !== 'server') return;
-    if (!serverTotalResultsInitializedRef.current) {
-      serverTotalResultsInitializedRef.current = true;
-      if (hasEnrolmentCache() && dashboardDerivedCache) return;
-    }
-    void refreshServerTotalResults();
-  }, [demoQueryMode, demoYearsWindow, debouncedSearchQuery, buildServerFilter, refreshServerTotalResults]);
+    void loadDashboardRows({
+      page: currentPage,
+      searchTerm: debouncedSearchQuery,
+      yearsBack: demoYearsWindow,
+      serverFilter: buildServerFilter,
+      orderBy: serverOrderBy,
+    });
+  }, [demoYearsWindow, currentPage, debouncedSearchQuery, loadDashboardRows, buildServerFilter, serverOrderBy, setRows]);
 
   const reloadFirstPage = useCallback(() => {
     clearEnrolmentCache();
     lastServerQueryKeyRef.current = null;
-    setCurrentPage(1);
-    if (demoQueryMode === 'client') {
-      void loadDashboardRows({ mode: 'client', yearsBack: demoYearsWindow });
-    } else {
-      void loadDashboardRows({ mode: 'server', page: 1, searchTerm: debouncedSearchQuery, yearsBack: demoYearsWindow, serverFilter: buildServerFilter, orderBy: serverOrderBy });
-      void refreshInfoCounts();
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+      return;
     }
-  }, [demoQueryMode, demoYearsWindow, debouncedSearchQuery, loadDashboardRows, refreshInfoCounts, buildServerFilter, serverOrderBy]);
+    setCurrentPage(1);
+    void loadDashboardRows({
+      page: 1,
+      searchTerm: debouncedSearchQuery,
+      yearsBack: demoYearsWindow,
+      serverFilter: buildServerFilter,
+      orderBy: serverOrderBy,
+    });
+  }, [currentPage, demoYearsWindow, debouncedSearchQuery, loadDashboardRows, buildServerFilter, serverOrderBy]);
 
   const refreshCurrentPageIfChanged = useCallback(async () => {
     try {
@@ -524,26 +399,22 @@ export function DashboardHomePage() {
         latestChangeStampRef.current = latestStamp;
         return;
       }
-      if (latestStamp === latestChangeStampRef.current) {
-        return;
-      }
+      if (latestStamp === latestChangeStampRef.current) return;
 
       latestChangeStampRef.current = latestStamp;
       clearEnrolmentCache();
       lastServerQueryKeyRef.current = null;
-
-      if (demoQueryMode === 'client') {
-        await loadDashboardRows({ mode: 'client', yearsBack: demoYearsWindow });
-        return;
-      }
-
-      await loadDashboardRows({ mode: 'server', page: currentPage, searchTerm: debouncedSearchQuery, yearsBack: demoYearsWindow, serverFilter: buildServerFilter, orderBy: serverOrderBy });
-      await refreshInfoCounts();
-      await refreshServerTotalResults();
+      await loadDashboardRows({
+        page: currentPage,
+        searchTerm: debouncedSearchQuery,
+        yearsBack: demoYearsWindow,
+        serverFilter: buildServerFilter,
+        orderBy: serverOrderBy,
+      });
     } catch (e) {
       console.error('Failed to probe enrolment changes on dashboard return:', e);
     }
-  }, [buildServerFilter, currentPage, debouncedSearchQuery, demoQueryMode, demoYearsWindow, getLatestEnrolmentChangeStamp, loadDashboardRows, refreshInfoCounts, refreshServerTotalResults, serverOrderBy]);
+  }, [buildServerFilter, currentPage, debouncedSearchQuery, demoYearsWindow, getLatestEnrolmentChangeStamp, loadDashboardRows, serverOrderBy]);
 
   useEffect(() => {
     const handleFocus = () => {
@@ -719,15 +590,6 @@ export function DashboardHomePage() {
     taskStatusFilter, enrolStatusFilter, yearFilter, ownerFilter,
     taskFilterOp, enrolFilterOp, advFilterNodes, advLogicOp, currentPage]);
 
-  useEffect(() => {
-    dashboardDerivedCache = {
-      newParticipantCount,
-      pendingSupervisorCount,
-      deadlineReminderCount,
-      serverTotalResults,
-    };
-  }, [newParticipantCount, pendingSupervisorCount, deadlineReminderCount, serverTotalResults]);
-
   // Refresh handler for manual reload
   const handleRefresh = useCallback(() => {
     reloadFirstPage();
@@ -783,45 +645,20 @@ export function DashboardHomePage() {
     setCurrentPage(1);
   }, [nppViewId, activeViewId, handleResetDefault]);
 
-  // Sorting & filtering
-  const { filteredRows, taskStatusOptions, enrolStatusOptions, yearOptions, ownerOptions } = useSortedAndFilteredRows(
+  const { taskStatusOptions, enrolStatusOptions, yearOptions: pageYearOptions, ownerOptions } = useSortedAndFilteredRows(
     rows, sortKey, sortDir, filters,
     taskStatusFilter, enrolStatusFilter, yearFilter, ownerFilter, taskFilterOp, enrolFilterOp,
     advFilterNodes, advLogicOp, undefined,
   );
+  const yearOptions = useMemo(() => {
+    const configuredYears = Object.keys(programYearIdsByLabel).sort();
+    return configuredYears.length > 0 ? configuredYears : pageYearOptions;
+  }, [programYearIdsByLabel, pageYearOptions]);
 
-  const searchedRows = useMemo(() => {
-    if (demoQueryMode === 'server') return rows;
-
-    const term = searchQuery.trim().toLowerCase();
-    if (!term) return filteredRows;
-
-    return filteredRows.filter((row) => {
-      const raw = row as unknown as Record<string, unknown>;
-      const pin = row.vsi_name ?? '';
-      const participant = (row.vsi_participantidname ?? raw['_vsi_participantid_value@OData.Community.Display.V1.FormattedValue'] ?? '') as string;
-      const farmCorp = (row.new_combinedfarmname ?? row.vsi_partnershipnames ?? '') as string;
-
-      return [pin, participant, farmCorp].some((value) => String(value).toLowerCase().includes(term));
-    });
-  }, [demoQueryMode, filteredRows, searchQuery]);
-
-  const totalPages = demoQueryMode === 'client'
-    ? Math.max(1, Math.ceil(searchedRows.length / pageSize))
-    : Math.max(1, Math.ceil(serverTotalResults / pageSize));
-  const pagedRows = demoQueryMode === 'client'
-    ? searchedRows.slice((currentPage - 1) * pageSize, currentPage * pageSize)
-    : searchedRows;
-  const pageStart = searchedRows.length === 0 ? 0 : ((currentPage - 1) * pageSize) + 1;
-  const pageEnd = searchedRows.length === 0
-    ? 0
-    : (demoQueryMode === 'client' ? Math.min(currentPage * pageSize, searchedRows.length) : pageStart + searchedRows.length - 1);
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages]);
+  const searchedRows = rows;
+  const pagedRows = rows;
+  const pageStart = rows.length === 0 ? 0 : ((currentPage - 1) * pageSize) + 1;
+  const pageEnd = rows.length === 0 ? 0 : pageStart + rows.length - 1;
 
   const allPageSelected = pagedRows.length > 0 && pagedRows.every(r => selectedIds.has(r.vsi_participantprogramyearid));
   const somePageSelected = pagedRows.some(r => selectedIds.has(r.vsi_participantprogramyearid));
@@ -934,10 +771,8 @@ export function DashboardHomePage() {
   const setSort = (key: SortKey, dir: SortDir) => {
     setSortKey(key);
     setSortDir(dir);
-    if (demoQueryMode === 'server') {
-      setCurrentPage(1);
-      setSelectedIds(new Set());
-    }
+    setCurrentPage(1);
+    setSelectedIds(new Set());
   };
 
   const setColumnWidth = (key: SortKey) => (w: number | undefined) =>
@@ -1006,14 +841,14 @@ export function DashboardHomePage() {
                   setCurrentPage(1);
                 }
               }}>
-                New Participants: <strong>{newParticipantCount}</strong>
+                New Participants
               </button>
             </div>
             <div className="worklist-item">
               <Info size={14} className="worklist-icon" />
               {activeRole === 'Verifier' ? (
                 <button className="worklist-link" onClick={() => applyWorklistFilter('taskStatus', 'Supervisor')}>
-                  Pending supervisor&rsquo;s approval: <strong>{pendingSupervisorCount}</strong>
+                  Pending supervisor&rsquo;s approval
                 </button>
               ) : (
                 <Link
@@ -1021,14 +856,14 @@ export function DashboardHomePage() {
                   className="worklist-link"
                   onClick={() => clearSaCache()}
                 >
-                  Pending supervisor&rsquo;s approval: <strong>{pendingSupervisorCount}</strong>
+                  Pending supervisor&rsquo;s approval
                 </Link>
               )}
             </div>
             <div className="worklist-item">
               <Info size={14} className="worklist-icon" />
               <Link to="/deadline-reminders" className="worklist-link">
-                Deadline reminders: <strong>{deadlineReminderCount}</strong>
+                Deadline reminders
               </Link>
             </div>
           </div>
@@ -1094,56 +929,32 @@ export function DashboardHomePage() {
 
           <div className="dash-pagination">
             <span>
-              {demoQueryMode === 'client'
-                ? (searchedRows.length === 0
-                  ? 'Showing 0 of 0 results'
-                  : `Showing ${Math.min((currentPage - 1) * pageSize + 1, searchedRows.length)}-${Math.min(currentPage * pageSize, searchedRows.length)} of ${searchedRows.length} result${searchedRows.length !== 1 ? 's' : ''}`)
-                : (searchedRows.length === 0
-                  ? `Showing 0 results on page ${currentPage}`
-                  : `Showing ${pageStart}-${pageEnd} on page ${currentPage}`)}
+              {searchedRows.length === 0
+                ? `Showing 0 results on page ${currentPage}`
+                : `Showing ${pageStart}-${pageEnd} on page ${currentPage}`}
+              {hasNextPage ? ' (more records available)' : ''}
             </span>
             <div className="dash-pagination-controls">
               <button
                 type="button"
                 className="dash-page-btn"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                onClick={() => {
+                  setSelectedIds(new Set());
+                  setCurrentPage(p => Math.max(1, p - 1));
+                }}
                 disabled={currentPage === 1 || loading}
               >
                 &lsaquo; Previous
               </button>
-              {(() => {
-                const pages: (number | '...')[] = [];
-                if (totalPages <= 5) {
-                  for (let i = 1; i <= totalPages; i++) pages.push(i);
-                } else {
-                  pages.push(1);
-                  let start = Math.max(2, currentPage - 1);
-                  let end = Math.min(totalPages - 1, currentPage + 1);
-                  if (end - start < 2) {
-                    if (start === 2) end = Math.min(totalPages - 1, start + 2);
-                    else start = Math.max(2, end - 2);
-                  }
-                  if (start > 2) pages.push('...');
-                  for (let i = start; i <= end; i++) pages.push(i);
-                  if (end < totalPages - 1) pages.push('...');
-                  pages.push(totalPages);
-                }
-                return pages.map((p, idx) =>
-                  p === '...'
-                    ? <span key={`dots-${idx}`} className="dash-page-dots">&hellip;</span>
-                    : <button
-                        key={p}
-                        type="button"
-                        className={`dash-page-btn${p === currentPage ? ' active' : ''}`}
-                        onClick={() => setCurrentPage(p)}
-                      >{p}</button>
-                );
-              })()}
+              <span className="dash-page-btn active" aria-current="page">Page {currentPage}</span>
               <button
                 type="button"
                 className="dash-page-btn"
-                onClick={() => setCurrentPage(p => p + 1)}
-                disabled={currentPage === totalPages || loading}
+                onClick={() => {
+                  setSelectedIds(new Set());
+                  setCurrentPage(p => p + 1);
+                }}
+                disabled={!hasNextPage || loading}
               >
                 Next &rsaquo;
               </button>
@@ -1242,6 +1053,7 @@ export function DashboardHomePage() {
                 ? { ...r, owneridname: ownerName }
                 : r
             ));
+            patchEnrolmentCache(assignedIds.map(id => ({ id, fields: { owneridname: ownerName } })));
             setShowAssignModal(false);
             setSelectedIds(new Set());
             addToast(`${assignedIds.length} enrolment${assignedIds.length === 1 ? '' : 's'} assigned to ${ownerName}.`);

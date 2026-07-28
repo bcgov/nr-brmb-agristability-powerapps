@@ -1,4 +1,7 @@
+
+
 # Power SDK Instructions Start
+
 ## Overview
 
 This guide explains how to initialize an app, add a data source using the Power SDK CLI and generate the corresponding Models and Services, and publish the app.
@@ -60,4 +63,6 @@ pac code push
 
 - Read the files under src\Models and src\Services folder for data binding.
 - Read the files under .power\schemas folder for other schema reference.
+
 # Power SDK Instructions End
+

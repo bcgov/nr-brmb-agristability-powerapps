@@ -7,6 +7,7 @@
     "dev": "start npx power-apps run && vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "test": "node --test --experimental-strip-types tests/enrolmentPaging.test.ts",
     "preview": "vite preview"
   },
   "dependencies": {

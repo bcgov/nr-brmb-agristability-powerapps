@@ -111,14 +111,14 @@ export const ADV_FIELD_LABELS: Record<string, string> = {
   isNewParticipant: 'New Participant',
 };
 
-export const ADV_FIELD_OPTIONS: Record<string, 'choice' | 'text'> = {
+export const ADV_FIELD_OPTIONS: Record<string, 'choice' | 'text' | 'number'> = {
   taskStatus: 'choice',
   enrolStatus: 'choice',
   pin: 'text',
   producer: 'text',
   owner: 'choice',
   year: 'choice',
-  fee: 'text',
+  fee: 'number',
   hasPartners: 'choice',
   inCombinedFarm: 'choice',
   isNewParticipant: 'choice',

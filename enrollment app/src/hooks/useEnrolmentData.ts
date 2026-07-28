@@ -1,6 +1,9 @@
 // In-memory cache for enrolment rows (persists while app is open)
 let enrolmentRowsCache: Vsi_participantprogramyears[] | null = null;
-let recentProgramYearIdsCacheByCutoff: Record<number, string[]> = {};
+let pageTokensCache: Record<number, string | undefined> = { 1: undefined };
+let pageQueryKeyCache = '';
+let hasNextPageCache = false;
+const recentProgramYearIdsCacheByCutoff: Record<number, string[]> = {};
 let coreAppIdCache: string | null = null;
 let coreBaseUrlCache: string | null = null;
 let dataverseOrgUrlCache: string | null = null;
@@ -16,6 +19,7 @@ import { Vsi_armsconfigurationsService } from '../generated/services/Vsi_armscon
 import { Vsi_participantprogramyearsService } from '../generated/services/Vsi_participantprogramyearsService';
 import { Vsi_programyearsService } from '../generated/services/Vsi_programyearsService';
 import { Office365UsersService } from '../generated/services/Office365UsersService';
+import { ENROLMENT_PAGE_SIZE, buildEnrolmentDirectSearchFilter, escapeODataString, fetchEnrolmentPage } from '../data/enrolmentPaging';
 import type {
   SortKey,
   SortDir,
@@ -83,16 +87,14 @@ export function patchEnrolmentCache(patches: Array<{ id: string; fields: Partial
   });
 }
 
-const _escapeOData = (value: string) => value.replace(/'/g, "''");
-
 /**
- * Builds an OData search clause that matches vsi_name (PIN) OR any enrolment
- * whose participant account name contains the search term.
- * Falls back to PIN-only if the account lookup fails or returns no results.
+ * Builds an OData search clause that matches PIN, farm/corporation name,
+ * partnership name, or any enrolment whose participant account name contains
+ * the search term.
  */
 export async function buildParticipantSearchClause(term: string): Promise<string> {
-  const escaped = _escapeOData(term);
-  const pinClause = `contains(vsi_name, '${escaped}')`;
+  const escaped = escapeODataString(term);
+  const directClause = buildEnrolmentDirectSearchFilter(term);
   try {
     const result = await AccountsService.getAll({
       select: ['accountid'],
@@ -102,22 +104,21 @@ export async function buildParticipantSearchClause(term: string): Promise<string
     const ids = (result.data ?? [])
       .map(a => a.accountid?.replace(/[{}]/g, '').toLowerCase())
       .filter((id): id is string => Boolean(id));
-    if (ids.length === 0) return pinClause;
+    if (ids.length === 0) return `(${directClause})`;
     const participantClause = `(${ids.map(id => `_vsi_participantid_value eq ${id}`).join(' or ')})`;
-    return `(${pinClause} or ${participantClause})`;
+    return `((${directClause}) or ${participantClause})`;
   } catch {
-    return pinClause;
+    return `(${directClause})`;
   }
 }
 
 export function useEnrolmentData() {
-  const PAGE_SIZE = 300;
-  const pageTokensRef = useRef<Record<number, string | undefined>>({ 1: undefined });
-  const searchKeyRef = useRef('');
-  const orderByKeyRef = useRef('vsi_taskstatus desc');
+  const pageTokensRef = useRef<Record<number, string | undefined>>(pageTokensCache);
+  const queryKeyRef = useRef(pageQueryKeyCache);
+  const requestIdRef = useRef(0);
   const [rows, setRows] = useState<Vsi_participantprogramyears[]>(() => enrolmentRowsCache || []);
   const [loading, setLoading] = useState(() => enrolmentRowsCache === null);
-  const [hasNextPage, setHasNextPage] = useState(false);
+  const [hasNextPage, setHasNextPage] = useState(hasNextPageCache);
   const [error, setError] = useState<string | null>(null);
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string>>({});
   const [coreAppId, setCoreAppId] = useState<string | null>(() => (coreAppIdLoaded ? coreAppIdCache : null));
@@ -188,220 +189,79 @@ export function useEnrolmentData() {
     return ids;
   }, []);
 
-  // Fetch all rows for the default 5-year scope (client-side filtering/search after load)
-  const fetchEnrolments = useCallback(async (options?: { mode?: 'client' | 'server'; page?: number; searchTerm?: string; yearsBack?: number; serverFilter?: string; orderBy?: string[] }): Promise<boolean> => {
-    const mode = options?.mode ?? 'client';
+  // Retrieve exactly one Dataverse page. Continuation tokens are cached per
+  // sequential page and reset whenever any server query input changes.
+  const fetchEnrolments = useCallback(async (options?: { page?: number; searchTerm?: string; yearsBack?: number; serverFilter?: string; orderBy?: string[] }): Promise<boolean> => {
+    const requestId = ++requestIdRef.current;
+    const page = Math.max(1, options?.page ?? 1);
     const yearsBack = Math.min(10, Math.max(1, options?.yearsBack ?? 5));
+    const normalizedSearch = (options?.searchTerm ?? '').trim();
+    const serverFilter = options?.serverFilter?.trim() ?? '';
+    const serverOrderBy = options?.orderBy?.length
+      ? options.orderBy
+      : ['modifiedon desc', 'vsi_participantprogramyearid asc'];
+    const queryKey = JSON.stringify([
+      yearsBack,
+      normalizedSearch.toLowerCase(),
+      serverFilter,
+      serverOrderBy,
+    ]);
+
+    if (page === 1 || queryKeyRef.current !== queryKey) {
+      queryKeyRef.current = queryKey;
+      pageTokensRef.current = { 1: undefined };
+      pageQueryKeyCache = queryKey;
+      pageTokensCache = pageTokensRef.current;
+    }
+
+    if (page > 1 && !pageTokensRef.current[page]) {
+      setError('The requested page is not available. Return to the first page and try again.');
+      return false;
+    }
+
     setLoading(true);
     setError(null);
     try {
-      if (mode === 'server') {
-        const page = Math.max(1, options?.page ?? 1);
-        const normalizedSearch = (options?.searchTerm ?? '').trim();
-        const normalizedSearchKey = normalizedSearch.toLowerCase();
-        const serverOrderBy = options?.orderBy?.length ? options.orderBy : ['vsi_taskstatus desc'];
-        const normalizedOrderByKey = serverOrderBy.join('|');
-        const searchChanged = searchKeyRef.current !== normalizedSearchKey;
-        const orderByChanged = orderByKeyRef.current !== normalizedOrderByKey;
-        if (searchChanged) {
-          searchKeyRef.current = normalizedSearchKey;
-        }
-        if (orderByChanged) {
-          orderByKeyRef.current = normalizedOrderByKey;
-        }
-
-        if (page === 1 || searchChanged || orderByChanged) {
-          pageTokensRef.current = { 1: undefined };
-        }
-
-        const cutoffYear = new Date().getFullYear() - (yearsBack - 1);
-        const recentProgramYearIds = await getRecentProgramYearIds(yearsBack);
-        const recentYearFilter = recentProgramYearIds.length > 0
-          ? `(${recentProgramYearIds.map(id => `_vsi_programyearid_value eq ${id}`).join(' or ')})`
-          : `vsi_programyearidname ge '${cutoffYear}'`;
-
-        const filters = [recentYearFilter];
-        if (options?.serverFilter?.trim()) {
-          filters.push(`(${options.serverFilter.trim()})`);
-        }
-        if (normalizedSearch) {
-          filters.push(await buildParticipantSearchClause(normalizedSearch));
-        }
-
-        const baseOptions = {
-          maxPageSize: PAGE_SIZE,
-          select: [
-            'vsi_name',
-            '_vsi_participantid_value',
-            '_vsi_programyearid_value',
-            'vsi_enrolmentstatus',
-            'vsi_taskstatus',
-            'vsi_enrolmentfee',
-            'vsi_previousyearcalculatedenfee',
-            'vsi_administrativecostsharingfee',
-            'vsi_enrolmentfeecalculated',
-            'vsi_totalfeesowed',
-            'vsi_totalfeesowedcalculated',
-            'vsi_totalfeespaid',
-            'vsi_enrolmentfee',
-            'vsi_latepaymentfee',
-            'vsi_haspartners',
-            'vsi_incombinedfarm',
-            'vsi_sharepointdocumentfolder',
-            'modifiedon',
-            '_ownerid_value',
-            'vsi_enrollmentregionaloffice',
-            'vsi_farmingsector',
-            'vsi_bringforward',
-            'vsi_broughtforward',
-            'vsi_manualreview',
-            'vsi_enrolmentnoticesentdate',
-            'vsi_enrolmentfeesnonpenaltyduedate',
-            'vsi_enrolmentfeesfinaldeadlinedate',
-            'vsi_nonpenaltydeadlineremindersent',
-            'vsi_finaldeadlineremindersent',
-            'vsi_programyearoptoutdate',
-            'vsi_fortyfivedayletterstartdate',
-            'vsi_fortyfivedaycounterpaused',
-            'vsi_fortyfivedaypausedate',
-            'vsi_filereceiveddate',
-            'vsi_enrolmentfeespaiddate',
-            'vsi_prevyearpartnotverified',
-            'vsi_variancecalculation',
-            'vsi_isnewparticipant',
-            'vsi_fullyprovinciallyfunded',
-          ],
-          orderBy: serverOrderBy,
-          filter: filters.join(' and '),
-        };
-
-        if (page > 1 && typeof pageTokensRef.current[page] === 'undefined') {
-          const knownPages = Object.keys(pageTokensRef.current)
-            .map(k => Number(k))
-            .filter(k => Number.isFinite(k) && k >= 1 && k <= page)
-            .sort((a, b) => b - a);
-          const startPage = knownPages[0] ?? 1;
-          let traversalToken = pageTokensRef.current[startPage];
-
-          for (let p = startPage; p < page; p += 1) {
-            const probeResult = await Vsi_participantprogramyearsService.getAll({
-              ...baseOptions,
-              ...(traversalToken ? { skipToken: traversalToken } : {}),
-            });
-            const probeRaw = probeResult as unknown as Record<string, unknown>;
-            const nextToken = (probeRaw['skipToken'] ?? probeRaw['@odata.nextLink']) as string | undefined;
-            if (!nextToken) {
-              setError(`Page ${page} is out of range for this query.`);
-              return false;
-            }
-            pageTokensRef.current[p + 1] = nextToken;
-            traversalToken = nextToken;
-          }
-        }
-
-        const pageToken = pageTokensRef.current[page];
-        const result = await Vsi_participantprogramyearsService.getAll({
-          ...baseOptions,
-          ...(pageToken ? { skipToken: pageToken } : {}),
-        });
-
-        const pageRows = result.data ?? [];
-        const raw = result as unknown as Record<string, unknown>;
-        const nextToken = (raw['skipToken'] ?? raw['@odata.nextLink']) as string | undefined;
-
-        if (nextToken) {
-          pageTokensRef.current[page + 1] = nextToken;
-        } else {
-          delete pageTokensRef.current[page + 1];
-        }
-
-        setRows(pageRows);
-        setHasNextPage(Boolean(nextToken));
-        enrolmentRowsCache = pageRows;
-        return true;
-      }
-
       const cutoffYear = new Date().getFullYear() - (yearsBack - 1);
       const recentProgramYearIds = await getRecentProgramYearIds(yearsBack);
       const recentYearFilter = recentProgramYearIds.length > 0
         ? `(${recentProgramYearIds.map(id => `_vsi_programyearid_value eq ${id}`).join(' or ')})`
         : `vsi_programyearidname ge '${cutoffYear}'`;
+      const filters = [recentYearFilter];
+      if (serverFilter) filters.push(`(${serverFilter})`);
+      if (normalizedSearch) {
+        filters.push(await buildParticipantSearchClause(normalizedSearch));
+      }
 
-      // Use modifiedon ordering so all task-status types appear across pages evenly.
-      // vsi_taskstatus desc was previously used but caused only Approved records to fill
-      // the first page in large environments, leaving other statuses unreachable.
-      const baseOptions = {
-        maxPageSize: 2000,
-        select: [
-          'vsi_name',
-          '_vsi_participantid_value',
-          '_vsi_programyearid_value',
-          'vsi_enrolmentstatus',
-          'vsi_taskstatus',
-          'vsi_enrolmentfee',
-          'vsi_previousyearcalculatedenfee',
-          'vsi_administrativecostsharingfee',
-          'vsi_enrolmentfeecalculated',
-          'vsi_totalfeesowed',
-          'vsi_totalfeesowedcalculated',
-          'vsi_totalfeespaid',
-          'vsi_enrolmentfee',
-          'vsi_latepaymentfee',
-          'vsi_haspartners',
-          'vsi_incombinedfarm',
-          'vsi_sharepointdocumentfolder',
-          'modifiedon',
-          '_ownerid_value',
-          'vsi_enrollmentregionaloffice',
-          'vsi_farmingsector',
-          'vsi_bringforward',
-          'vsi_broughtforward',
-          'vsi_manualreview',
-          'vsi_enrolmentnoticesentdate',
-          'vsi_enrolmentfeesnonpenaltyduedate',
-          'vsi_enrolmentfeesfinaldeadlinedate',
-          'vsi_nonpenaltydeadlineremindersent',
-          'vsi_finaldeadlineremindersent',
-          'vsi_programyearoptoutdate',
-          'vsi_fortyfivedayletterstartdate',
-          'vsi_fortyfivedaycounterpaused',
-          'vsi_fortyfivedaypausedate',
-          'vsi_filereceiveddate',
-          'vsi_enrolmentfeespaiddate',
-          'vsi_prevyearpartnotverified',
-          'vsi_variancecalculation',
-          'vsi_isnewparticipant',
-          'vsi_fullyprovinciallyfunded',
-        ],
-        orderBy: ['modifiedon desc'],
-        filter: recentYearFilter,
-      };
+      const result = await fetchEnrolmentPage(
+        serviceOptions => Vsi_participantprogramyearsService.getAll(serviceOptions),
+        {
+          pageSize: ENROLMENT_PAGE_SIZE,
+          filter: filters.join(' and '),
+          orderBy: serverOrderBy,
+          pageToken: pageTokensRef.current[page],
+        },
+      );
 
-      const allRows: Vsi_participantprogramyears[] = [];
-      let skipToken: string | undefined;
-      do {
-        const result = await Vsi_participantprogramyearsService.getAll({
-          ...baseOptions,
-          ...(skipToken ? { skipToken } : {}),
-        });
-        const pageRows = result.data ?? [];
-        allRows.push(...pageRows);
-        const raw = result as unknown as Record<string, unknown>;
-        skipToken = (raw['skipToken'] ?? raw['@odata.nextLink']) as string | undefined;
-      } while (skipToken);
-
-      setRows(allRows);
-      setHasNextPage(false);
-      enrolmentRowsCache = allRows;
-      pageTokensRef.current = { 1: undefined };
-      searchKeyRef.current = '';
+      if (requestId !== requestIdRef.current) return false;
+      if (result.nextPageToken) {
+        pageTokensRef.current[page + 1] = result.nextPageToken;
+      } else {
+        delete pageTokensRef.current[page + 1];
+      }
+      setRows(result.rows);
+      setHasNextPage(result.hasNextPage);
+      pageTokensCache = pageTokensRef.current;
+      hasNextPageCache = result.hasNextPage;
+      enrolmentRowsCache = result.rows;
       return true;
     } catch (e: unknown) {
+      if (requestId !== requestIdRef.current) return false;
       console.error('Error fetching enrolments:', e);
       setError(e instanceof Error ? e.message : 'Failed to load enrolments');
       return false;
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
   }, [getRecentProgramYearIds]);
 
@@ -435,7 +295,7 @@ export function useEnrolmentData() {
     return () => { cancelled = true; };
   }, [rows]);
 
-  return { rows, setRows, loading, hasNextPage, pageSize: PAGE_SIZE, error, avatarUrls, fetchEnrolments, coreAppId, coreBaseUrl, fetchCoreAppId };
+  return { rows, setRows, loading, hasNextPage, pageSize: ENROLMENT_PAGE_SIZE, error, avatarUrls, fetchEnrolments, coreAppId, coreBaseUrl, fetchCoreAppId };
 }
 
 export function useSortedAndFilteredRows(

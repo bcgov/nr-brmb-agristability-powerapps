@@ -31,9 +31,21 @@ function Invoke-CheckedCommand {
   Write-Host "`n==> $Description" -ForegroundColor Cyan
   Write-Host "    $FilePath $($Arguments -join ' ')" -ForegroundColor DarkGray
 
-  & $FilePath @Arguments
-  if ($LASTEXITCODE -ne 0) {
-    throw "Command failed with exit code ${LASTEXITCODE}: $FilePath $($Arguments -join ' ')"
+  $previousErrorActionPreference = $ErrorActionPreference
+  try {
+    # Windows PowerShell 5.1 surfaces native stderr as ErrorRecord objects. npm
+    # writes warnings to stderr even when the command succeeds, so judge native
+    # command success by its exit code instead of treating stderr as terminating.
+    $ErrorActionPreference = 'Continue'
+    & $FilePath @Arguments
+    $commandExitCode = $LASTEXITCODE
+  }
+  finally {
+    $ErrorActionPreference = $previousErrorActionPreference
+  }
+
+  if ($commandExitCode -ne 0) {
+    throw "Command failed with exit code ${commandExitCode}: $FilePath $($Arguments -join ' ')"
   }
 }
 
@@ -331,9 +343,19 @@ foreach ($dataSource in $target.dataSources) {
     Assert-NotPlaceholder -Value $connectionId -Name "$Stage.$apiId.connectionId"
   }
 
+  $hasTable = (Test-HasProperty -Object $dataSource -PropertyName 'table') -and
+    -not [string]::IsNullOrWhiteSpace([string]$dataSource.table)
+  if ($apiId -eq 'shared_commondataserviceforapps' -and $hasTable -and $null -ne $config.dataverseTableMappings) {
+    # Current PAC versions require a dataset for this legacy connector/table
+    # form. The checked-in schema is restored above and all Dataverse mappings
+    # are injected below, so adding the same table here is redundant.
+    Write-Host "Skipping redundant legacy Dataverse table binding '$($dataSource.table)'." -ForegroundColor Yellow
+    continue
+  }
+
   $args = @('code', 'add-data-source', '-a', $apiId, '-c', $connectionId)
 
-  if ((Test-HasProperty -Object $dataSource -PropertyName 'table') -and -not [string]::IsNullOrWhiteSpace([string]$dataSource.table)) {
+  if ($hasTable) {
     $args += @('-t', [string]$dataSource.table)
   }
 
@@ -467,22 +489,26 @@ if (Test-Path -LiteralPath $powerConfigPath) {
 # Add flow connection references using the current environment's workflow IDs.
 if ($null -ne $config.flowReferences -and $config.flowReferences.Count -gt 0) {
   $flowListTempPath = [System.IO.Path]::GetTempFileName()
+  $flowListErrorTempPath = [System.IO.Path]::GetTempFileName()
   try {
     Write-Host "`n==> List invokable flows in current environment" -ForegroundColor Cyan
     Write-Host "    npx.cmd power-apps list-flows --json --no-color" -ForegroundColor DarkGray
-    $previousErrorActionPreference = $ErrorActionPreference
-    try {
-      # npm can emit harmless warnings on stderr; do not let those abort the deploy before exit code handling.
-      $ErrorActionPreference = 'Continue'
-      & 'npx.cmd' @('power-apps', 'list-flows', '--json', '--no-color') *> $flowListTempPath
-      $flowListExitCode = $LASTEXITCODE
-    }
-    finally {
-      $ErrorActionPreference = $previousErrorActionPreference
-    }
+    # PowerShell 5.1 converts native stderr into ErrorRecord text when streams are
+    # merged, which corrupts the JSON with NativeCommandError/RemoteException.
+    # Capture the streams separately and parse stdout only.
+    $flowListProcess = Start-Process `
+      -FilePath 'npx.cmd' `
+      -ArgumentList @('power-apps', 'list-flows', '--json', '--no-color') `
+      -NoNewWindow `
+      -Wait `
+      -PassThru `
+      -RedirectStandardOutput $flowListTempPath `
+      -RedirectStandardError $flowListErrorTempPath
+    $flowListExitCode = $flowListProcess.ExitCode
 
     if ($flowListExitCode -ne 0) {
-      throw "Command failed with exit code ${flowListExitCode}: npx.cmd power-apps list-flows --json --no-color"
+      $flowListError = Get-Content -LiteralPath $flowListErrorTempPath -Raw -ErrorAction SilentlyContinue
+      throw "Command failed with exit code ${flowListExitCode}: npx.cmd power-apps list-flows --json --no-color $flowListError"
     }
 
     $flowListText = Get-Content -LiteralPath $flowListTempPath -Raw
@@ -493,6 +519,9 @@ if ($null -ne $config.flowReferences -and $config.flowReferences.Count -gt 0) {
   finally {
     if (Test-Path -LiteralPath $flowListTempPath) {
       Remove-Item -LiteralPath $flowListTempPath -Force
+    }
+    if (Test-Path -LiteralPath $flowListErrorTempPath) {
+      Remove-Item -LiteralPath $flowListErrorTempPath -Force
     }
   }
 
