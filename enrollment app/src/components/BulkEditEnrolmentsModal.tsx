@@ -61,6 +61,8 @@ export function BulkEditEnrolmentsModal({
     [],
   );
 
+  const minDate = `${new Date().getFullYear()}-01-01`;
+
   const handleSubmit = () => {
     if (!canSubmit) return;
     setSubmitting(true);
@@ -144,6 +146,7 @@ export function BulkEditEnrolmentsModal({
                 <input
                   type="date"
                   value={finalDeadlineDate}
+                  min={minDate}
                   onChange={e => setFinalDeadlineDate(e.target.value)}
                   disabled={submitting}
                 />
@@ -153,6 +156,7 @@ export function BulkEditEnrolmentsModal({
                 <input
                   type="date"
                   value={lateFinalDeadlineDate}
+                  min={minDate}
                   onChange={e => setLateFinalDeadlineDate(e.target.value)}
                   disabled={submitting}
                 />

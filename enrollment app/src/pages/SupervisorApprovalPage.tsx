@@ -214,8 +214,8 @@ export function SupervisorApprovalPage() {
   const dismissToast = (id: number) => setToasts(prev => prev.filter(t => t.id !== id));
   const [columnOrder, setColumnOrder] = useState<SupervisorColumnKey[]>(() => saFilterCache?.columnOrder ?? DEFAULT_COLUMN_ORDER);
   const [colDragIdx, setColDragIdx] = useState<number | null>(null);
-  const [sortKey, setSortKey] = useState<SupervisorColumnKey | null>(() => saFilterCache?.sortKey ?? null);
-  const [sortDir, setSortDir] = useState<SortDir>(() => saFilterCache?.sortDir ?? 'asc');
+  const [sortKey, setSortKey] = useState<SupervisorColumnKey | null>(() => saFilterCache?.sortKey ?? 'enteredQueue');
+  const [sortDir, setSortDir] = useState<SortDir>(() => saFilterCache?.sortDir ?? 'desc');
   const [columnWidths, setColumnWidths] = useState<Partial<Record<SupervisorColumnKey, number>>>(() => saFilterCache?.columnWidths ?? DEFAULT_COLUMN_WIDTHS);
   const [columnFilters, setColumnFilters] = useState<Record<SupervisorColumnKey, Set<string>>>(() => saFilterCache?.columnFilters ?? createEmptyFilters());
   const [columnFilterOps, setColumnFilterOps] = useState<Record<SupervisorColumnKey, FilterOperator>>(() => saFilterCache?.columnFilterOps ?? DEFAULT_FILTER_OPS);
