@@ -5,8 +5,14 @@ import { RefreshCw } from 'lucide-react';
 import type { Vsi_participantprogramyears } from '../generated/models/Vsi_participantprogramyearsModel';
 import { Vsi_participantprogramyearsService } from '../generated/services/Vsi_participantprogramyearsService';
 import { CORE_APP_ID_FALLBACK, CORE_BASE_URL_FALLBACK } from '../constants/config';
+import { getCoreConfig } from '../hooks/useEnrolmentData';
+import { Vsi_automaticemailauditsService } from '../generated/services/Vsi_automaticemailauditsService';
 import { formatCurrencyOr, formatEnrolmentStatusDisplay, getEnrolmentStatusLabel } from '../utils/helpers';
+import { ColumnHeaderMenu } from '../components/ColumnHeaderMenu';
+import type { SortDir, FilterOperator } from '../types/enrollment';
 import '../styles/supervisor-approval.css';
+
+type DeadlineColumnKey = 'enrolmentName' | 'year' | 'participant' | 'pin' | 'enrolmentStatus' | 'totalFeesOwed' | 'noticeSentDate' | 'remainingDays' | 'reminderSent';
 
 type DeadlineReminderKind = 'nonPenalty' | 'finalDeadline';
 
@@ -35,6 +41,8 @@ type DeadlineReminderRow = {
 
 const EN_STATUS_ENROLMENT_NOTICE_SENT = 865520007;
 const EN_STATUS_ENROLLED_NOT_PAID = 865520008;
+const AUTOMATIC_EMAIL_TYPE = { NonPenaltyReminder: 865520001, FinalDeadlineReminder: 865520002 } as const;
+const AUTOMATIC_EMAIL_SENDSTATUS_SENT = 865520001;
 const PAGE_SIZE = 20;
 
 type PaginationPage = number | '...';
@@ -64,17 +72,6 @@ const getPaginationPages = (currentPage: number, totalPages: number): Pagination
 
 const normalizeGuid = (value?: string | null) => (value ?? '').replace(/[{}]/g, '').trim().toLowerCase();
 
-const startOfLocalDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
-
-const calculateRemainingDays = (deadline?: string): number | null => {
-  if (!deadline) return null;
-  const deadlineDate = new Date(deadline);
-  if (Number.isNaN(deadlineDate.getTime())) return null;
-  const today = startOfLocalDay(new Date());
-  const target = startOfLocalDay(deadlineDate);
-  return Math.ceil((target.getTime() - today.getTime()) / 86_400_000);
-};
-
 const formatDate = (value?: string) => {
   if (!value) return '-';
   const date = new Date(value);
@@ -84,7 +81,7 @@ const formatDate = (value?: string) => {
 
 const formatDays = (value: number | null) => {
   if (value == null) return '-';
-  if (value === 0) return 'Today';
+  if (value === 0) return '0';
   if (value < 0) return `${Math.abs(value)} day${Math.abs(value) === 1 ? '' : 's'} overdue`;
   return `${value} day${value === 1 ? '' : 's'}`;
 };
@@ -99,7 +96,9 @@ const getDisplayValue = (item: Vsi_participantprogramyears, annotationKey: strin
   return (raw[annotationKey] as string | undefined) ?? fallback ?? '-';
 };
 
-const toReminderRow = (item: Vsi_participantprogramyears): DeadlineReminderRow | null => {
+type AuditMap = Map<string, { nonPenalty: boolean; finalDeadline: boolean }>;
+
+const toReminderRow = (item: Vsi_participantprogramyears, auditMap: AuditMap | null): DeadlineReminderRow | null => {
   const itemId = normalizeGuid(item.vsi_participantprogramyearid);
   if (!itemId) return null;
 
@@ -112,9 +111,16 @@ const toReminderRow = (item: Vsi_participantprogramyears): DeadlineReminderRow |
     ? item.vsi_enrolmentfeesnonpenaltyduedate
     : item.vsi_enrolmentfeesfinaldeadlinedate;
 
-  const reminderSent = isNoticeSent
-    ? item.vsi_nonpenaltydeadlineremindersent ?? null
-    : item.vsi_finaldeadlineremindersent ?? null;
+  let reminderSent: boolean | null;
+  if (auditMap) {
+    const audits = auditMap.get(itemId);
+    reminderSent = isNoticeSent ? (audits?.nonPenalty ?? false) : (audits?.finalDeadline ?? false);
+  } else {
+    // Fallback to boolean fields while audit data is loading
+    reminderSent = isNoticeSent
+      ? item.vsi_nonpenaltydeadlineremindersent ?? null
+      : item.vsi_finaldeadlineremindersent ?? null;
+  }
 
   return {
     item,
@@ -127,7 +133,9 @@ const toReminderRow = (item: Vsi_participantprogramyears): DeadlineReminderRow |
     totalFeesOwed: item.vsi_totalfeesowed ?? item.vsi_totalfeesowedcalculated ?? null,
     noticeSentDate: item.vsi_enrolmentnoticesentdate,
     deadlineDate,
-    remainingDays: calculateRemainingDays(deadlineDate),
+    remainingDays: isNoticeSent
+      ? (item.vsi_nonpenaltydeadlinedaysleft ?? null)
+      : (item.vsi_finaldeadlinedaysdiff ?? null),
     reminderSent,
     kind: isNoticeSent ? 'nonPenalty' : 'finalDeadline',
   };
@@ -135,10 +143,22 @@ const toReminderRow = (item: Vsi_participantprogramyears): DeadlineReminderRow |
 
 export function DeadlineReminderPage() {
   const [items, setItems] = useState<Vsi_participantprogramyears[]>([]);
+  const [auditMap, setAuditMap] = useState<AuditMap | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshCounter, setRefreshCounter] = useState(0);
   const [page, setPage] = useState(1);
+  const [sortKey, setSortKey] = useState<DeadlineColumnKey>('remainingDays');
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
+  const [showUrgentOnly, setShowUrgentOnly] = useState(false);
+  const [enrolStatusColFilter, setEnrolStatusColFilter] = useState<Set<string>>(new Set());
+  const [enrolStatusColFilterOp, setEnrolStatusColFilterOp] = useState<FilterOperator>('equals');
+  const [yearColFilter, setYearColFilter] = useState<Set<string>>(new Set());
+  const [yearColFilterOp, setYearColFilterOp] = useState<FilterOperator>('equals');
+  const [reminderSentColFilter, setReminderSentColFilter] = useState<Set<string>>(new Set());
+  const onSort = (key: DeadlineColumnKey, dir: SortDir) => { setSortKey(key); setSortDir(dir); setPage(1); };
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  const noopWidthChange = () => {};
 
   useEffect(() => {
     let cancelled = false;
@@ -147,7 +167,9 @@ export function DeadlineReminderPage() {
       try {
         setLoading(true);
         setError(null);
-        const result = await Vsi_participantprogramyearsService.getAll({
+        setAuditMap(null);
+        const [result, auditResult] = await Promise.all([
+          Vsi_participantprogramyearsService.getAll({
           select: [
             'vsi_name',
             '_vsi_participantid_value',
@@ -160,11 +182,19 @@ export function DeadlineReminderPage() {
             'vsi_enrolmentfeesfinaldeadlinedate',
             'vsi_nonpenaltydeadlineremindersent',
             'vsi_finaldeadlineremindersent',
+            'vsi_nonpenaltydeadlinedaysleft',
+            'vsi_finaldeadlinedaysdiff',
           ],
           filter: `vsi_enrolmentstatus eq ${EN_STATUS_ENROLMENT_NOTICE_SENT} or vsi_enrolmentstatus eq ${EN_STATUS_ENROLLED_NOT_PAID}`,
           orderBy: ['vsi_enrolmentfeesfinaldeadlinedate asc'],
           maxPageSize: 5000,
-        });
+        }),
+          Vsi_automaticemailauditsService.getAll({
+            select: ['vsi_objectid', 'vsi_emailtype', 'vsi_sendstatus'],
+            filter: `vsi_sendstatus eq ${AUTOMATIC_EMAIL_SENDSTATUS_SENT} and (vsi_emailtype eq ${AUTOMATIC_EMAIL_TYPE.NonPenaltyReminder} or vsi_emailtype eq ${AUTOMATIC_EMAIL_TYPE.FinalDeadlineReminder})`,
+            maxPageSize: 5000,
+          }),
+        ]);
 
         if (cancelled) return;
         if (!result.success) {
@@ -172,6 +202,19 @@ export function DeadlineReminderPage() {
           setError(result.error?.message ?? 'Unable to load deadline reminders.');
           return;
         }
+
+        // Build audit lookup map: enrolmentId → { nonPenalty, finalDeadline }
+        const map: AuditMap = new Map();
+        for (const audit of auditResult.data ?? []) {
+          const id = normalizeGuid(audit.vsi_objectid);
+          if (!id) continue;
+          if (!map.has(id)) map.set(id, { nonPenalty: false, finalDeadline: false });
+          const entry = map.get(id)!;
+          const emailType = Number(audit.vsi_emailtype);
+          if (emailType === AUTOMATIC_EMAIL_TYPE.NonPenaltyReminder) entry.nonPenalty = true;
+          if (emailType === AUTOMATIC_EMAIL_TYPE.FinalDeadlineReminder) entry.finalDeadline = true;
+        }
+        setAuditMap(map);
 
         setItems(result.data ?? []);
         setPage(1);
@@ -188,20 +231,67 @@ export function DeadlineReminderPage() {
   }, [refreshCounter]);
 
   const rows = useMemo(() => {
-    return items
-      .map(toReminderRow)
-      .filter((row): row is DeadlineReminderRow => row !== null)
-      .sort((a, b) => {
-        const aDays = a.remainingDays ?? Number.POSITIVE_INFINITY;
-        const bDays = b.remainingDays ?? Number.POSITIVE_INFINITY;
-        if (aDays !== bDays) return aDays - bDays;
-        return a.item.vsi_name.localeCompare(b.item.vsi_name);
-      });
-  }, [items]);
+    const mapped = items
+      .map(item => toReminderRow(item, auditMap))
+      .filter((row): row is DeadlineReminderRow => row !== null);
 
-  const urgentRows = rows.filter(row => row.remainingDays != null && row.remainingDays <= 5 && row.reminderSent !== true);
-  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-  const pageRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+    mapped.sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case 'enrolmentName': cmp = (a.item.vsi_name ?? '').localeCompare(b.item.vsi_name ?? ''); break;
+        case 'year':          cmp = a.year.localeCompare(b.year); break;
+        case 'participant':   cmp = a.participantName.localeCompare(b.participantName); break;
+        case 'pin':           cmp = a.participantPin.localeCompare(b.participantPin); break;
+        case 'enrolmentStatus': cmp = a.enrolmentStatusLabel.localeCompare(b.enrolmentStatusLabel); break;
+        case 'totalFeesOwed': cmp = (a.totalFeesOwed ?? -Infinity) - (b.totalFeesOwed ?? -Infinity); break;
+        case 'noticeSentDate': cmp = (a.noticeSentDate ?? '').localeCompare(b.noticeSentDate ?? ''); break;
+        case 'remainingDays': cmp = (a.remainingDays ?? Infinity) - (b.remainingDays ?? Infinity); break;
+        case 'reminderSent':  cmp = Number(a.reminderSent ?? false) - Number(b.reminderSent ?? false); break;
+      }
+      if (cmp !== 0) return sortDir === 'asc' ? cmp : -cmp;
+      return (a.item.vsi_name ?? '').localeCompare(b.item.vsi_name ?? '');
+    });
+
+    return mapped;
+  }, [items, auditMap, sortKey, sortDir]);
+
+  const enrolStatusOptions = useMemo(() =>
+    [...new Set(rows.map(r => r.enrolmentStatusLabel))].filter(Boolean).sort(),
+  [rows]);
+  const yearOptions = useMemo(() =>
+    [...new Set(rows.map(r => r.year))].filter(Boolean).sort(),
+  [rows]);
+
+  const filteredRows = useMemo(() => {
+    let result = rows;
+    if (enrolStatusColFilter.size > 0) {
+      result = result.filter(r =>
+        enrolStatusColFilterOp === 'equals'
+          ? enrolStatusColFilter.has(r.enrolmentStatusLabel)
+          : !enrolStatusColFilter.has(r.enrolmentStatusLabel)
+      );
+    }
+    if (yearColFilter.size > 0) {
+      result = result.filter(r =>
+        yearColFilterOp === 'equals'
+          ? yearColFilter.has(r.year)
+          : !yearColFilter.has(r.year)
+      );
+    }
+    if (reminderSentColFilter.size > 0) {
+      result = result.filter(r => reminderSentColFilter.has(yesNoText(r.reminderSent)));
+    }
+    return result;
+  }, [rows, enrolStatusColFilter, enrolStatusColFilterOp, yearColFilter, yearColFilterOp, reminderSentColFilter]);
+
+  const enrolStatusFilterOptionLabels = useMemo(() =>
+    Object.fromEntries(enrolStatusOptions.map(s => [s, formatEnrolmentStatusDisplay(s)])),
+  [enrolStatusOptions]);
+
+  const urgentRows = filteredRows.filter(row => row.remainingDays != null && row.remainingDays <= 5 && row.reminderSent !== true);
+  const displayRows = showUrgentOnly ? urgentRows : filteredRows;
+  const totalPages = Math.max(1, Math.ceil(displayRows.length / PAGE_SIZE));
+  const pageRows = displayRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div className="sa-wrapper deadline-reminder-wrapper">
@@ -223,14 +313,24 @@ export function DeadlineReminderPage() {
       </div>
 
       <div className="deadline-reminder-summary" aria-label="Deadline reminder summary">
-        <div className="deadline-reminder-summary-item">
+        <button
+          type="button"
+          className={`deadline-reminder-summary-item${showUrgentOnly ? '' : ' active'}`}
+          onClick={() => { setShowUrgentOnly(false); setPage(1); }}
+          title="Show all records"
+        >
           <span className="deadline-reminder-summary-label">Total</span>
           <strong>{rows.length}</strong>
-        </div>
-        <div className="deadline-reminder-summary-item urgent">
+        </button>
+        <button
+          type="button"
+          className={`deadline-reminder-summary-item urgent${showUrgentOnly ? ' active' : ''}`}
+          onClick={() => { setShowUrgentOnly(true); setSortKey('remainingDays'); setSortDir('desc'); setPage(1); }}
+          title="Filter to records due within 5 days"
+        >
           <span className="deadline-reminder-summary-label">Due within 5 days</span>
           <strong>{urgentRows.length}</strong>
-        </div>
+        </button>
       </div>
 
       <div className="sa-card">
@@ -251,22 +351,32 @@ export function DeadlineReminderPage() {
             <table className="sa-table deadline-reminder-table">
               <thead>
                 <tr>
-                  <th>Enrolment Name</th>
-                  <th>Year</th>
-                  <th>Participant</th>
-                  <th>PIN</th>
-                  <th>Enrolment Status</th>
-                  <th>Total Fees Owed</th>
-                  <th>EN Notice Sent Date</th>
-                  <th>Remaining Days Until Deadline</th>
-                  <th>Reminder Sent</th>
+                  <ColumnHeaderMenu label="Enrolment Name"   sortKey="enrolmentName"   currentSortKey={sortKey} currentSortDir={sortDir} onSort={onSort} columnWidth={undefined} onColumnWidthChange={noopWidthChange} />
+                  <ColumnHeaderMenu label="Year"             sortKey="year"             currentSortKey={sortKey} currentSortDir={sortDir} onSort={onSort} columnWidth={undefined} onColumnWidthChange={noopWidthChange}
+                    filterOptions={yearOptions} selectedFilters={yearColFilter} filterOperator={yearColFilterOp}
+                    onFilterChange={v => { setYearColFilter(v); setPage(1); }}
+                    onFilterOperatorChange={setYearColFilterOp} />
+                  <ColumnHeaderMenu label="Participant"      sortKey="participant"      currentSortKey={sortKey} currentSortDir={sortDir} onSort={onSort} columnWidth={undefined} onColumnWidthChange={noopWidthChange} />
+                  <ColumnHeaderMenu label="PIN"              sortKey="pin"              currentSortKey={sortKey} currentSortDir={sortDir} onSort={onSort} columnWidth={undefined} onColumnWidthChange={noopWidthChange} />
+                  <ColumnHeaderMenu label="Enrolment Status" sortKey="enrolmentStatus"  currentSortKey={sortKey} currentSortDir={sortDir} onSort={onSort} columnWidth={undefined} onColumnWidthChange={noopWidthChange}
+                    filterOptions={enrolStatusOptions} filterOptionLabels={enrolStatusFilterOptionLabels}
+                    selectedFilters={enrolStatusColFilter} filterOperator={enrolStatusColFilterOp}
+                    onFilterChange={v => { setEnrolStatusColFilter(v); setPage(1); }}
+                    onFilterOperatorChange={setEnrolStatusColFilterOp} />
+                  <ColumnHeaderMenu label="Total Fees Owed"  sortKey="totalFeesOwed"   currentSortKey={sortKey} currentSortDir={sortDir} onSort={onSort} columnWidth={undefined} onColumnWidthChange={noopWidthChange} />
+                  <ColumnHeaderMenu label="EN Notice Sent Date" sortKey="noticeSentDate" currentSortKey={sortKey} currentSortDir={sortDir} onSort={onSort} columnWidth={undefined} onColumnWidthChange={noopWidthChange} />
+                  <ColumnHeaderMenu label="Remaining Days Until Deadline" sortKey="remainingDays" currentSortKey={sortKey} currentSortDir={sortDir} onSort={onSort} columnWidth={undefined} onColumnWidthChange={noopWidthChange} />
+                  <ColumnHeaderMenu label="Reminder Sent"   sortKey="reminderSent"     currentSortKey={sortKey} currentSortDir={sortDir} onSort={onSort} columnWidth={undefined} onColumnWidthChange={noopWidthChange}
+                    filterOptions={['Yes', 'No']} selectedFilters={reminderSentColFilter}
+                    onFilterChange={v => { setReminderSentColFilter(v); setPage(1); }} />
                 </tr>
               </thead>
               <tbody>
                 {pageRows.map(row => {
                   const isUrgent = row.remainingDays != null && row.remainingDays <= 5 && row.reminderSent !== true;
+                  const { coreAppId, coreBaseUrl } = getCoreConfig();
                   const participantHref = row.participantId
-                    ? `${CORE_BASE_URL_FALLBACK}?appid=${encodeURIComponent(CORE_APP_ID_FALLBACK)}&pagetype=entityrecord&etn=account&id=${encodeURIComponent(row.participantId)}`
+                    ? `${coreBaseUrl ?? CORE_BASE_URL_FALLBACK}?appid=${encodeURIComponent(coreAppId ?? CORE_APP_ID_FALLBACK)}&pagetype=entityrecord&etn=account&id=${encodeURIComponent(row.participantId)}`
                     : undefined;
 
                   return (
@@ -301,7 +411,7 @@ export function DeadlineReminderPage() {
         {!loading && !error && rows.length > 0 && (
           <div className="sa-pagination">
             <span>
-              {`Showing ${Math.min((page - 1) * PAGE_SIZE + 1, rows.length)}-${Math.min(page * PAGE_SIZE, rows.length)} of ${rows.length} result${rows.length !== 1 ? 's' : ''}`}
+              {`Showing ${Math.min((page - 1) * PAGE_SIZE + 1, displayRows.length)}-${Math.min(page * PAGE_SIZE, displayRows.length)} of ${displayRows.length} result${displayRows.length !== 1 ? 's' : ''}${showUrgentOnly ? ' (due within 5 days)' : ''}`}
             </span>
             <div className="sa-pagination-controls">
               <button type="button" className="sa-page-btn" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
@@ -325,4 +435,4 @@ export function DeadlineReminderPage() {
   );
 }
 
-export { calculateRemainingDays, toReminderRow };
+export { toReminderRow };
