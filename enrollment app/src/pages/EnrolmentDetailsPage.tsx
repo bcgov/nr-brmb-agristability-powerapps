@@ -18,7 +18,7 @@ import { type Vsi_automaticemailaudits } from '../generated/models/Vsi_automatic
 import { CORE_APP_ID_FALLBACK, CORE_BASE_URL_FALLBACK } from '../constants/config';
 import { formatEnrolmentStatusDisplay, getAvatarColor, getInitials, getTaskStatusLabel, navGuard } from '../utils/helpers';
 import { getCoreConfig, normalizeCoreBaseUrl } from '../hooks/useEnrolmentData';
-import { useFieldPermissions, canEditField } from '../hooks/useFieldPermissions';
+import { useFieldPermissions, canEditField, clearFieldPermissionsCache } from '../hooks/useFieldPermissions';
 import { useRole } from '../context/RoleContext';
 import { Toast, type ToastMessage, nextToastId } from '../components/Toast';
 import { EnrolmentPartnersPanel } from '../components/EnrolmentPartnersPanel';
@@ -319,9 +319,13 @@ export function EnrolmentDetailsPage() {
   const { source = 'dashboard', enrolmentId } = useParams<{ source?: string; enrolmentId: string }>();
   const navigate = useNavigate();
   const { activeRole } = useRole();
-  const canEdit = activeRole === 'SystemAdmin' || activeRole === 'Supervisor';
-  const { fieldPerms } = useFieldPermissions('vsi_participantprogramyear', activeRole === 'Supervisor');
+  const canEdit = activeRole === 'SystemAdmin' || activeRole === 'Supervisor' || activeRole === 'ENAdmin';
+  const { fieldPerms } = useFieldPermissions('vsi_participantprogramyear', false);
   const cef = (attr: string) => canEditField(fieldPerms, attr, canEdit);
+
+  // Clear the FSP cache on every mount so changes made in Dataverse are picked
+  // up without needing a full app reload.
+  useEffect(() => { clearFieldPermissionsCache(); }, []);
   const resolvedEnrolmentId = normalizeEnrolmentId(enrolmentId);
   const routeSource = source === 'supervisor' || source === 'deadline-reminders' ? source : 'dashboard';
 
@@ -896,6 +900,13 @@ export function EnrolmentDetailsPage() {
         setLateNoticeModal({
           type: 'error',
           message: 'Late Participant must be set to Yes before saving the Late Enrolment Notice Sent Date.',
+        });
+        return;
+      }
+      if (formState.vsi_enrolmentnoticesentdate) {
+        setLateNoticeModal({
+          type: 'error',
+          message: 'Enrolment Notice Sent Date must be blank before saving the Late Enrolment Notice Sent Date.',
         });
         return;
       }
