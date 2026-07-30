@@ -558,9 +558,6 @@ export function parseFetchXmlToAdvNodes(fetchxml: string | undefined | null): Ad
     function processFilter(filterEl: Element): AdvFilterNode | null {
       const ownLogic = (filterEl.getAttribute('type') ?? 'and').toUpperCase() as 'AND' | 'OR';
       const children: AdvFilterNode[] = [];
-      // In Dataverse fetchxml, sibling <filter type="or"> elements indicate
-      // the child should be OR-joined with its previous sibling (not AND).
-      let hasOrSiblingFilter = false;
 
       for (const child of Array.from(filterEl.children)) {
         if (child.tagName === 'condition') {
@@ -611,8 +608,6 @@ export function parseFetchXmlToAdvNodes(fetchxml: string | undefined | null): Ad
             });
           }
         } else if (child.tagName === 'filter') {
-          const siblingType = (child.getAttribute('type') ?? 'and').toUpperCase();
-          if (siblingType === 'OR') hasOrSiblingFilter = true;
           const nested = processFilter(child);
           if (nested) children.push(nested);
         }
@@ -620,9 +615,7 @@ export function parseFetchXmlToAdvNodes(fetchxml: string | undefined | null): Ad
 
       if (children.length === 0) return null;
       if (children.length === 1 && children[0].kind === 'row') return children[0];
-      // If any sibling filter declared OR, that's the effective join between siblings
-      const logic = hasOrSiblingFilter ? 'OR' : ownLogic;
-      return { kind: 'group', id: nextFilterId(), logic, children };
+      return { kind: 'group', id: nextFilterId(), logic: ownLogic, children };
     }
 
     const entityEl = doc.querySelector('entity');
