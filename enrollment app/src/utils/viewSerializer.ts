@@ -180,8 +180,11 @@ export function generateFetchXml(
   }
 
   let filterXml = '';
-  if (filterParts.length === 1) filterXml = filterParts[0];
-  else if (filterParts.length > 1) filterXml = `<filter type="and">${filterParts.join('')}</filter>`;
+  if (filterParts.length > 0) {
+    // Always wrap in <filter type="and"> — bare <condition> elements are not valid
+    // as direct children of <entity> in Dataverse fetchxml.
+    filterXml = `<filter type="and">${filterParts.join('')}</filter>`;
+  }
 
   return `<fetch><entity name="vsi_participantprogramyear">${attrs}${filterXml}<order attribute="vsi_name" descending="false"/></entity></fetch>`;
 }
