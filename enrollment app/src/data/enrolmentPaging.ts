@@ -1,6 +1,6 @@
 export const ENROLMENT_PRIMARY_KEY = 'vsi_participantprogramyearid';
 
-export const ENROLMENT_PAGE_SIZE = 100;
+export const ENROLMENT_PAGE_SIZE = 300;
 
 export function escapeODataString(value: string): string {
   return value.replace(/'/g, "''");
