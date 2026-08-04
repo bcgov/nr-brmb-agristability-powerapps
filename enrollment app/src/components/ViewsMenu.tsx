@@ -39,6 +39,12 @@ function buildViewInfo(v: PersonalView): string[] {
   }
 
   const filterParts: string[] = [];
+  if (v.filters?.partnerships)      filterParts.push('Has Partners or In Combined Farm');
+  if (v.filters?.verifiedCalc)      filterParts.push('Verified EN Calculated');
+  if (v.filters?.unverifiedCalc)    filterParts.push('Unverified EN Calculated');
+  if (v.filters?.fortyFiveDayLetter) filterParts.push('45 Day Letter');
+  if (v.filters?.flagged)           filterParts.push('Flagged');
+  if (v.filters?.varianceAlert)     filterParts.push('Variance Alert');
   if (v.taskStatusFilter?.length) filterParts.push(`Task Status: ${v.taskStatusFilter.join(', ')}`);
   if (v.enrolStatusFilter?.length) filterParts.push(`Enrolment Status: ${v.enrolStatusFilter.join(', ')}`);
   if (v.yearFilter?.length) filterParts.push(`Year: ${v.yearFilter.join(', ')}`);

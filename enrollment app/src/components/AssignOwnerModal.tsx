@@ -56,8 +56,8 @@ export function AssignOwnerModal({
     users.map(u => ({
       ...u,
       group: g.sysAdmin.has(u.systemUserId) ? 'System Administrator'
-        : g.admin.has(u.systemUserId) ? 'Enrolment Admin'
         : g.queue.has(u.systemUserId) ? 'Supervisor Approval Queue Member'
+        : g.admin.has(u.systemUserId) ? 'Enrolment Admin'
         : g.verifier.has(u.systemUserId) ? 'Verifier Team Member'
         : undefined,
     }));

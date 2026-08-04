@@ -123,6 +123,12 @@ button:focus-visible {
   margin-bottom: 0.85rem;
 }
 
+.calc-enrolment-status {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin-top: 0.1rem;
+}
+
 .calc-toolbar {
   display: flex;
   align-items: center;
