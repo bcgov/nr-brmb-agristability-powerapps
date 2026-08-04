@@ -117,8 +117,8 @@ function applyGroupBadges(
   return users.map(u => ({
     ...u,
     group: sysAdmin.has(u.systemUserId) ? 'System Administrator'
-      : admin.has(u.systemUserId) ? 'Enrolment Admin'
       : queue.has(u.systemUserId) ? 'Supervisor Approval Queue Member'
+      : admin.has(u.systemUserId) ? 'Enrolment Admin'
       : verifier.has(u.systemUserId) ? 'Verifier Team Member'
       : undefined,
   }));

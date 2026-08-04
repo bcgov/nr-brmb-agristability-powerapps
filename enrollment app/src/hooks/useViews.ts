@@ -197,16 +197,6 @@ export function useViews(state: ViewState, setters: {
   }, []);
 
   const applyView = useCallback((view: ViewPayload & { id?: string; name?: string; source?: string }) => {
-    console.debug('[Views][applyView]', (view as { name?: string }).name ?? view, {
-      taskStatusFilter: view.taskStatusFilter,
-      enrolStatusFilter: view.enrolStatusFilter,
-      yearFilter: view.yearFilter,
-      ownerFilter: view.ownerFilter,
-      taskFilterOp: view.taskFilterOp,
-      enrolFilterOp: view.enrolFilterOp,
-      advFilterNodes: view.advFilterNodes,
-      filters: view.filters,
-    });
     setters.setVisibleColumnKeys(ensureRequiredColumns(view.visibleColumnKeys));
     setters.setColumnWidths({ ...view.columnWidths });
     setters.setSortKey(view.sortKey);
@@ -286,14 +276,6 @@ export function useViews(state: ViewState, setters: {
 
       if (uqResult.status === 'fulfilled') {
         const userqueries = uqResult.value.data ?? [];
-        console.debug('[Views][loadViews] raw userqueries count:', userqueries.length,
-          'filter was:', `returnedtypecode eq '${USERQUERY_ENTITY}'`);
-        userqueries.forEach(uq => console.debug('[Views][loadViews] raw uq:', {
-          id: uq.userqueryid, name: uq.name,
-          returnedtypecode: uq.returnedtypecode,
-          hasLayoutjson: !!uq.layoutjson,
-          hasFetchxml: !!uq.fetchxml,
-        }));
         personal = await addOwnerNamesToPersonalViews(userqueries.map(uq => userqueryToView(uq)), userqueries);
       } else {
         console.error('[Views] Failed to load personal views:', uqResult.reason);
@@ -371,14 +353,18 @@ export function useViews(state: ViewState, setters: {
 
   const handleSaveAsNew = useCallback(async (name: string) => {
     setSaveError(null);
+    // Ensure the entity object type code is resolved before generating layoutxml —
+    // without it the <grid object="..."> attribute is missing and Dataverse rejects the save.
+    await resolveEntityObjectTypeCode();
     const snap = captureCurrentSnapshot();
     // Only send fields that Dataverse accepts on create.
     // statecode/statuscode are managed by Dataverse and must NOT be included.
+    const fetchxmlValue = generateFetchXml(snap.visibleColumnKeys, snap.advFilterNodes as unknown[], snap);
     const payload = {
       name,
       returnedtypecode: USERQUERY_ENTITY,
       querytype: USERQUERY_TYPE,
-      fetchxml: generateFetchXml(snap.visibleColumnKeys, snap.advFilterNodes as unknown[], snap),
+      fetchxml: fetchxmlValue,
       layoutjson: JSON.stringify(snap),
       layoutxml: generateLayoutXml(snap.visibleColumnKeys, snap.columnWidths),
     };
@@ -435,11 +421,14 @@ export function useViews(state: ViewState, setters: {
     const view = savedViews.find(v => v.id === activeViewId);
     if (!view || view.source !== 'personal') return;
     const snap = captureCurrentSnapshot();
+    // Ensure the entity object type code is resolved before generating layoutxml.
+    await resolveEntityObjectTypeCode();
+    const fetchxmlValue = generateFetchXml(snap.visibleColumnKeys, snap.advFilterNodes as unknown[], snap);
     try {
       await UserqueriesService.update(activeViewId, {
         layoutjson: JSON.stringify(snap),
         layoutxml: generateLayoutXml(snap.visibleColumnKeys, snap.columnWidths),
-        fetchxml: generateFetchXml(snap.visibleColumnKeys, snap.advFilterNodes as unknown[], snap),
+        fetchxml: fetchxmlValue,
       });
       setSavedViews(prev => prev.map(v => v.id === activeViewId ? { ...v, ...snap } : v));
       applyView({ ...view, ...snap });

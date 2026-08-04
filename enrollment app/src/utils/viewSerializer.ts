@@ -117,6 +117,12 @@ export function generateFetchXml(
     ownerFilter?: string[];
     taskFilterOp?: FilterOperator;
     enrolFilterOp?: FilterOperator;
+    filters?: {
+      partnerships?: boolean;
+      verifiedCalc?: boolean;
+      unverifiedCalc?: boolean;
+      fortyFiveDayLetter?: boolean;
+    };
   }
 ): string {
   const includedKeys = keys.filter(k => !LAYOUT_XML_EXCLUDED_KEYS.has(k));
@@ -177,6 +183,20 @@ export function generateFetchXml(
     const conds = ownerValues.map(o => `<condition attribute="owneridname" operator="eq" value="${escapeXmlAttr(o)}"/>`);
     if (conds.length === 1) filterParts.push(conds[0]);
     else filterParts.push(`<filter type="or">${conds.join('')}</filter>`);
+  }
+
+  // Quick filter checkboxes — encode so they survive layoutjson cache misses
+  if (quickFilters?.filters?.partnerships) {
+    filterParts.push('<filter type="or"><condition attribute="vsi_haspartners" operator="eq" value="1"/><condition attribute="vsi_incombinedfarm" operator="eq" value="1"/></filter>');
+  }
+  if (quickFilters?.filters?.verifiedCalc) {
+    filterParts.push('<condition attribute="vsi_enrolmentstatus" operator="eq" value="865520006"/>');
+  }
+  if (quickFilters?.filters?.unverifiedCalc) {
+    filterParts.push('<condition attribute="vsi_enrolmentstatus" operator="eq" value="865520005"/>');
+  }
+  if (quickFilters?.filters?.fortyFiveDayLetter) {
+    filterParts.push('<condition attribute="vsi_enrolmentstatus" operator="eq" value="865520010"/>');
   }
 
   let filterXml = '';
@@ -382,29 +402,9 @@ function stripChipFieldNodes(nodes: AdvFilterNode[]): AdvFilterNode[] {
 }
 
 export function userqueryToView(uq: Userqueries): PersonalView {
-  console.debug('[Views][userqueryToView] raw record', {
-    id: uq.userqueryid,
-    name: uq.name,
-    returnedtypecode: uq.returnedtypecode,
-    hasLayoutjson: !!uq.layoutjson,
-    layoutjsonLength: uq.layoutjson?.length ?? 0,
-    layoutjsonPreview: uq.layoutjson ? uq.layoutjson.slice(0, 200) : null,
-    hasFetchxml: !!uq.fetchxml,
-    fetchxmlPreview: uq.fetchxml ? uq.fetchxml.slice(0, 400) : null,
-    hasLayoutxml: !!uq.layoutxml,
-  });
   try {
     const payload: ViewPayload = JSON.parse(uq.layoutjson ?? '{}');
     if (payload.visibleColumnKeys) {
-      console.debug('[Views][userqueryToView] PATH=layoutjson', uq.name, {
-        visibleColumnKeys: payload.visibleColumnKeys,
-        taskStatusFilter: payload.taskStatusFilter,
-        enrolStatusFilter: payload.enrolStatusFilter,
-        yearFilter: payload.yearFilter,
-        ownerFilter: payload.ownerFilter,
-        advFilterNodes: payload.advFilterNodes,
-        filters: payload.filters,
-      });
       const mergedFilters = { ...DEFAULT_VIEW_SNAPSHOT.filters, ...payload.filters };
       // Fall back to parsing fetchxml for advFilterNodes if layoutjson didn't
       // persist them (e.g. Dataverse may not return layoutjson immediately after create).
@@ -423,43 +423,27 @@ export function userqueryToView(uq: Userqueries): PersonalView {
         advFilterNodes,
         filters: mergedFilters,
       };
-      console.debug('[Views][userqueryToView] RESULT (layoutjson path)', uq.name, {
-        taskStatusFilter: result.taskStatusFilter,
-        enrolStatusFilter: result.enrolStatusFilter,
-        yearFilter: result.yearFilter,
-        ownerFilter: result.ownerFilter,
-        advFilterNodes: result.advFilterNodes,
-      });
       return result;
     }
-    console.debug('[Views][userqueryToView] layoutjson present but missing visibleColumnKeys — using fallback', uq.name,
-      { layoutjsonKeys: Object.keys(payload) });
-  } catch (e) {
-    console.debug('[Views][userqueryToView] layoutjson parse error — using fallback', uq.name, e);
-  }
+  } catch { /* layoutjson not in our format */ }
   const xmlCols = parseLayoutXml(uq.layoutxml);
   const rawFallbackNodes = parseFetchXmlToAdvNodes(uq.fetchxml);
   const quickFilters = parseFetchXmlToQuickFilters(uq.fetchxml);
-  console.debug('[Views][userqueryToView] PATH=fallback/fetchxml', uq.name, {
-    xmlColsFound: xmlCols?.length ?? 0,
-    rawAdvNodeCount: rawFallbackNodes.length,
-    quickFilters,
-  });
-  // Strip chip-field nodes — they are now captured via quickFilters, so keeping
-  // them in advFilterNodes would cause duplicate filtering in effectiveFilterNodes.
-  const advFilterNodes = serializeFilterNodes(stripChipFieldNodes(rawFallbackNodes));
+  // Also recover checkbox quick-filter flags (partnerships, verifiedCalc, etc.)
+  // that are encoded in fetchxml as conditions but not in parseFetchXmlToQuickFilters.
+  const fetchFilters = parseFetchXmlToFilters(uq.fetchxml);
+  const mergedFallbackFilters = { ...DEFAULT_VIEW_SNAPSHOT.filters, ...fetchFilters };
+  // Strip chip-field nodes and quick-filter nodes to avoid duplicate filtering.
+  const strippedFallbackNodes = stripChipFieldNodes(
+    stripQuickFilterNodes(rawFallbackNodes, mergedFallbackFilters)
+  );
+  const advFilterNodes = serializeFilterNodes(strippedFallbackNodes);
   const snapshot: ViewPayload = {
     ...(xmlCols ? { ...DEFAULT_VIEW_SNAPSHOT, visibleColumnKeys: xmlCols } : { ...DEFAULT_VIEW_SNAPSHOT }),
     advFilterNodes,
     ...quickFilters,
+    filters: mergedFallbackFilters,
   };
-  console.debug('[Views][userqueryToView] RESULT (fallback path)', uq.name, {
-    taskStatusFilter: snapshot.taskStatusFilter,
-    enrolStatusFilter: snapshot.enrolStatusFilter,
-    yearFilter: snapshot.yearFilter,
-    ownerFilter: snapshot.ownerFilter,
-    advFilterNodes: snapshot.advFilterNodes,
-  });
   return { id: uq.userqueryid, name: uq.name, source: 'personal', ownerName: uq.owneridname || undefined, ...snapshot };
 }
 
@@ -623,7 +607,12 @@ export function parseFetchXmlToAdvNodes(fetchxml: string | undefined | null): Ad
     if (!filterEl) return [];
 
     const result = processFilter(filterEl);
-    return result ? [result] : [];
+    if (!result) return [];
+    // Our generateFetchXml wraps all filter parts in a single <filter type="and">.
+    // Hoist its children back to the top level so we reconstruct the original
+    // flat advFilterNodes structure instead of a spurious AND wrapper group.
+    if (result.kind === 'group' && result.logic === 'AND') return result.children;
+    return [result];
   } catch {
     return [];
   }

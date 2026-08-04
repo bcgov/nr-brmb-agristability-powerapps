@@ -30,7 +30,7 @@ import {
 } from '../services/enrolmentPartners';
 import { resolveCurrentSystemUser } from '../utils/currentUser';
 import { buildCoreEntityRecordHref, normalizeEnrolmentId, openInNewTab } from '../utils/deepLinks';
-import { formatCurrencyOr, getAvatarColor, getInitials, getTaskStatusLabel } from '../utils/helpers';
+import { formatCurrencyOr, formatEnrolmentStatusDisplay, getAvatarColor, getEnrolmentStatusLabel, getInitials, getTaskStatusLabel } from '../utils/helpers';
 import { CORE_APP_ID_FALLBACK, CORE_BASE_URL_FALLBACK } from '../constants/config';
 
 const BENEFIT_MARGIN_COUNT = 5;
@@ -1380,6 +1380,9 @@ export function EnrolmentCalculationPage() {
           ? <a className="details-participant-name" href={participantHref} target="_blank" rel="noopener noreferrer">{participantName || (loading ? 'Loading...' : '-')}</a>
           : <span className="details-participant-name">{participantName || (loading ? 'Loading...' : '-')}</span>
         }
+        <span className="calc-enrolment-status">
+          {record ? formatEnrolmentStatusDisplay(getEnrolmentStatusLabel(record.vsi_enrolmentstatus)) || '—' : (loading ? '...' : '—')}
+        </span>
       </div>
 
       <div className="calc-toolbar">
