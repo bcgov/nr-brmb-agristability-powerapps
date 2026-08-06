@@ -57,6 +57,8 @@ export function ColumnHeaderMenu<K extends string = string>({
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<MenuView>('main');
   const [operatorOpen, setOperatorOpen] = useState(false);
+  const [draftFilters, setDraftFilters] = useState<Set<string>>(() => new Set(selectedFilters ?? []));
+  const [draftOperator, setDraftOperator] = useState<FilterOperator>(() => filterOperator ?? 'equals');
   const menuRef = useRef<HTMLDivElement>(null);
   const anchorRef = useRef<HTMLSpanElement>(null);
   const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
@@ -90,11 +92,24 @@ export function ColumnHeaderMenu<K extends string = string>({
   const isSorted = currentSortKey === sortKey;
   const hasFilter = selectedFilters && selectedFilters.size > 0;
 
+  const openFilterView = () => {
+    setDraftFilters(new Set(selectedFilters ?? []));
+    setDraftOperator(filterOperator ?? 'equals');
+    setView('filter');
+  };
+
+  const applyFilter = () => {
+    onFilterChange?.(new Set(draftFilters));
+    if (onFilterOperatorChange) onFilterOperatorChange(draftOperator);
+    close();
+  };
+
   const toggle = (val: string) => {
-    if (!selectedFilters || !onFilterChange) return;
-    const next = new Set(selectedFilters);
-    if (next.has(val)) next.delete(val); else next.add(val);
-    onFilterChange(next);
+    setDraftFilters(current => {
+      const next = new Set(current);
+      if (next.has(val)) next.delete(val); else next.add(val);
+      return next;
+    });
   };
 
   return (
@@ -133,7 +148,7 @@ export function ColumnHeaderMenu<K extends string = string>({
                 {filterOptions && (
                   <>
                     <div className="chm-divider" />
-                    <button className="chm-item" onClick={() => setView('filter')}>
+                    <button className="chm-item" onClick={openFilterView}>
                       <span className="chm-icon"><Filter size={14} /></span> Filter by
                     </button>
                     {filterShortcuts && filterShortcuts.map(sc => (
@@ -164,13 +179,13 @@ export function ColumnHeaderMenu<K extends string = string>({
                 {onFilterOperatorChange && (
                   <div className="chm-operator-wrapper">
                     <button className="chm-operator-btn" onClick={() => setOperatorOpen(o => !o)}>
-                      {filterOperator === 'notEquals' ? 'Does not equal' : 'Equals'}
+                      {draftOperator === 'notEquals' ? 'Does not equal' : 'Equals'}
                       <span className="chm-operator-chevron">&#x25BE;</span>
                     </button>
                     {operatorOpen && (
                       <div className="chm-operator-dropdown">
-                        <button className={`chm-operator-opt${filterOperator === 'equals' ? ' active' : ''}`} onClick={() => { onFilterOperatorChange('equals'); setOperatorOpen(false); }}>Equals</button>
-                        <button className={`chm-operator-opt${filterOperator === 'notEquals' ? ' active' : ''}`} onClick={() => { onFilterOperatorChange('notEquals'); setOperatorOpen(false); }}>Does not equal</button>
+                        <button className={`chm-operator-opt${draftOperator === 'equals' ? ' active' : ''}`} onClick={() => { setDraftOperator('equals'); setOperatorOpen(false); }}>Equals</button>
+                        <button className={`chm-operator-opt${draftOperator === 'notEquals' ? ' active' : ''}`} onClick={() => { setDraftOperator('notEquals'); setOperatorOpen(false); }}>Does not equal</button>
                       </div>
                     )}
                   </div>
@@ -178,13 +193,13 @@ export function ColumnHeaderMenu<K extends string = string>({
                 <div className="chm-values">
                   {filterOptions.map(opt => (
                     <label key={opt} className="chm-value-item">
-                      <input type="checkbox" checked={selectedFilters.has(opt)} onChange={() => toggle(opt)} />
+                      <input type="checkbox" checked={draftFilters.has(opt)} onChange={() => toggle(opt)} />
                       <span>{filterOptionLabels?.[opt] ?? opt}</span>
                     </label>
                   ))}
                 </div>
                 <div className="chm-filter-actions">
-                  <button className="chm-apply" onClick={close}>Apply</button>
+                  <button className="chm-apply" onClick={applyFilter}>Apply</button>
                   <button className="chm-clear" onClick={() => { onFilterChange(new Set()); close(); }}>Clear filter</button>
                 </div>
               </div>

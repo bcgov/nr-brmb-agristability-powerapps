@@ -1,6 +1,12 @@
 export const ENROLMENT_PRIMARY_KEY = 'vsi_participantprogramyearid';
 
 export const ENROLMENT_PAGE_SIZE = 300;
+export const MIN_ENROLMENT_SEARCH_LENGTH = 3;
+
+export function normalizeEnrolmentSearchTerm(value: string): string {
+  const normalized = value.trim();
+  return normalized.length >= MIN_ENROLMENT_SEARCH_LENGTH ? normalized : '';
+}
 
 export function escapeODataString(value: string): string {
   return value.replace(/'/g, "''");

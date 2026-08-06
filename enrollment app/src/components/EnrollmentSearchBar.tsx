@@ -17,8 +17,8 @@ export function EnrollmentSearchBar({ value, onChange }: Props) {
           value={value}
           onChange={(event) => onChange(event.target.value)}
           className="search-input"
-          placeholder="Search PIN, Farm/Corp, Participant"
-          aria-label="Search by PIN, Farm/Corp name, or Participant name"
+          placeholder="Search PIN, Farm/Corp, Participant (3+ characters)"
+          aria-label="Search by PIN, Farm/Corp name, or Participant name; enter at least 3 characters"
         />
       </div>
     </div>
