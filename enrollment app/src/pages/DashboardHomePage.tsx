@@ -5,7 +5,13 @@ import { Columns2, Filter, FilterX, Info, RefreshCw } from 'lucide-react';
 import type { SortKey, SortDir, FilterOperator, AdvFilterNode, LogicOp, QuickFilterState } from '../types/enrollment';
 import { DEFAULT_VISIBLE_KEYS } from '../constants/columns';
 import { getEnrolmentEnFeeVarianceThreshold } from '../constants/varianceThreshold';
-import { buildEnrolmentOrderBy } from '../data/enrolmentPaging';
+import { buildEnrolmentOrderBy, normalizeEnrolmentSearchTerm } from '../data/enrolmentPaging';
+import {
+  countDeadlineReminders,
+  countNewParticipants,
+  countSupervisorApprovalQueue,
+  countVerifierSupervisorTasks,
+} from '../data/worklistCounts';
 import { countActiveNodes } from '../utils/filterTree';
 import { useEnrolmentData, useSortedAndFilteredRows, clearEnrolmentCache, hasEnrolmentCache, patchEnrolmentCache, buildParticipantSearchClause } from '../hooks/useEnrolmentData';
 import { useRole } from '../context/RoleContext';
@@ -68,6 +74,14 @@ function parseProgramYearStart(value: unknown): number | null {
   const match = trimmed.match(/(19|20)\d{2}/);
   return match ? Number(match[0]) : null;
 }
+type WorklistCount = number | null | undefined;
+
+function formatWorklistCount(value: WorklistCount): string {
+  if (value === null) return '?';
+  if (value === undefined) return '?';
+  return value.toLocaleString();
+}
+
 
 export function DashboardHomePage() {
   const { activeRole, demoYearsWindow } = useRole();
@@ -119,6 +133,13 @@ export function DashboardHomePage() {
   const [showApproveFeesModal, setShowApproveFeesModal] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [programYearIdsByLabel, setProgramYearIdsByLabel] = useState<Record<string, string[]>>({});
+  const [worklistCounts, setWorklistCounts] = useState<{
+    newParticipants: WorklistCount;
+    supervisorApproval: WorklistCount;
+    deadlineReminders: WorklistCount;
+  }>({ newParticipants: null, supervisorApproval: null, deadlineReminders: null });
+  const [worklistCountRefreshCounter, setWorklistCountRefreshCounter] = useState(0);
+
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(() => dashboardFilterCache?.searchQuery ?? '');
   const latestChangeStampRef = useRef<string | null>(null);
   const lastServerQueryKeyRef = useRef<string | null>(null);
@@ -145,8 +166,8 @@ export function DashboardHomePage() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-    }, 500);
+      setDebouncedSearchQuery(normalizeEnrolmentSearchTerm(searchQuery));
+    }, 700);
     return () => window.clearTimeout(timer);
   }, [searchQuery]);
 
@@ -189,6 +210,33 @@ export function DashboardHomePage() {
       ? `(${ids.map(id => `_vsi_programyearid_value eq ${id}`).join(' or ')})`
       : `vsi_programyearidname ge '${cutoffYear}'`;
   }, [getRecentProgramYearMetadata]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const recentFilterPromise = getRecentProgramYearFilter();
+      const results = await Promise.allSettled([
+        recentFilterPromise.then(countNewParticipants),
+        activeRole === 'Verifier'
+          ? recentFilterPromise.then(countVerifierSupervisorTasks)
+          : countSupervisorApprovalQueue(),
+        countDeadlineReminders(),
+      ]);
+
+      if (cancelled) return;
+      const getValue = (result: PromiseSettledResult<number>): WorklistCount =>
+        result.status === 'fulfilled' ? result.value : undefined;
+      setWorklistCounts({
+        newParticipants: getValue(results[0]),
+        supervisorApproval: getValue(results[1]),
+        deadlineReminders: getValue(results[2]),
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeRole, getRecentProgramYearFilter, worklistCountRefreshCounter]);
 
   useEffect(() => {
     let cancelled = false;
@@ -653,6 +701,7 @@ export function DashboardHomePage() {
     reloadViews(false);
     setSortKey('modifiedOn');
     setSortDir('desc');
+    setWorklistCountRefreshCounter(value => value + 1);
   }, [reloadFirstPage, fetchCoreAppId, reloadViews]);
 
   const handleSelectViewAndClose = useCallback((id: string | null) => {
@@ -897,14 +946,14 @@ export function DashboardHomePage() {
                   setCurrentPage(1);
                 }
               }}>
-                New Participants
+                New Participants ({formatWorklistCount(worklistCounts.newParticipants)})
               </button>
             </div>
             <div className="worklist-item">
               <Info size={14} className="worklist-icon" />
               {activeRole === 'Verifier' ? (
                 <button className="worklist-link" onClick={() => applyWorklistFilter('taskStatus', 'Supervisor')}>
-                  Pending supervisor&rsquo;s approval
+                  Pending supervisor&rsquo;s approval ({formatWorklistCount(worklistCounts.supervisorApproval)})
                 </button>
               ) : (
                 <Link
@@ -912,14 +961,14 @@ export function DashboardHomePage() {
                   className="worklist-link"
                   onClick={() => clearSaCache()}
                 >
-                  Pending supervisor&rsquo;s approval
+                  Pending supervisor&rsquo;s approval ({formatWorklistCount(worklistCounts.supervisorApproval)})
                 </Link>
               )}
             </div>
             <div className="worklist-item">
               <Info size={14} className="worklist-icon" />
               <Link to="/deadline-reminders" className="worklist-link">
-                Deadline reminders
+                Deadline reminders ({formatWorklistCount(worklistCounts.deadlineReminders)})
               </Link>
             </div>
           </div>

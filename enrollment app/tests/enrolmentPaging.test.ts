@@ -8,6 +8,7 @@ import {
   buildEnrolmentOrderBy,
   escapeODataString,
   fetchEnrolmentPage,
+  normalizeEnrolmentSearchTerm,
   type EnrolmentGetAllOptions,
 } from '../src/data/enrolmentPaging.ts';
 
@@ -72,6 +73,12 @@ test('direct search covers PIN, farm/corporation, and partnership names', () => 
     buildEnrolmentDirectSearchFilter("O'Brien"),
     "contains(vsi_name, 'O''Brien') or contains(new_combinedfarmname, 'O''Brien') or contains(vsi_partnershipnames, 'O''Brien')",
   );
+});
+
+test('search starts only after at least three non-whitespace characters', () => {
+  assert.equal(normalizeEnrolmentSearchTerm(''), '');
+  assert.equal(normalizeEnrolmentSearchTerm('  ab  '), '');
+  assert.equal(normalizeEnrolmentSearchTerm('  abc  '), 'abc');
 });
 
 test('surfaces generated service errors', async () => {

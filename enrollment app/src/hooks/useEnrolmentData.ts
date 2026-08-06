@@ -21,7 +21,7 @@ import { Vsi_armsconfigurationsService } from '../generated/services/Vsi_armscon
 import { Vsi_participantprogramyearsService } from '../generated/services/Vsi_participantprogramyearsService';
 import { Vsi_programyearsService } from '../generated/services/Vsi_programyearsService';
 import { Office365UsersService } from '../generated/services/Office365UsersService';
-import { ENROLMENT_PAGE_SIZE, buildEnrolmentDirectSearchFilter, escapeODataString, fetchEnrolmentPage } from '../data/enrolmentPaging';
+import { ENROLMENT_PAGE_SIZE, buildEnrolmentDirectSearchFilter, escapeODataString, fetchEnrolmentPage, normalizeEnrolmentSearchTerm } from '../data/enrolmentPaging';
 import type {
   SortKey,
   SortDir,
@@ -197,7 +197,7 @@ export function useEnrolmentData() {
     const requestId = ++requestIdRef.current;
     const page = Math.max(1, options?.page ?? 1);
     const yearsBack = Math.min(10, Math.max(1, options?.yearsBack ?? 5));
-    const normalizedSearch = (options?.searchTerm ?? '').trim();
+    const normalizedSearch = normalizeEnrolmentSearchTerm(options?.searchTerm ?? '');
     const serverFilter = options?.serverFilter?.trim() ?? '';
     const serverOrderBy = options?.orderBy?.length
       ? options.orderBy
