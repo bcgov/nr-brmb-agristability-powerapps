@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } fro
 import { Link } from 'react-router-dom';
 import { Columns2, Filter, FilterX, Info, RefreshCw } from 'lucide-react';
 
-import type { SortKey, SortDir, FilterOperator, AdvFilterNode, LogicOp, QuickFilterState } from '../types/enrollment';
+import type { SortKey, SortDir, FilterOperator, AdvFilterNode, LogicOp, QuickFilterState, AdvFilterField } from '../types/enrollment';
 import { DEFAULT_VISIBLE_KEYS } from '../constants/columns';
 import { getEnrolmentEnFeeVarianceThreshold } from '../constants/varianceThreshold';
 import { buildEnrolmentOrderBy, normalizeEnrolmentSearchTerm } from '../data/enrolmentPaging';
@@ -12,7 +12,7 @@ import {
   countSupervisorApprovalQueue,
   countVerifierSupervisorTasks,
 } from '../data/worklistCounts';
-import { countActiveNodes } from '../utils/filterTree';
+import { countActiveNodes, nextFilterId } from '../utils/filterTree';
 import { useEnrolmentData, useSortedAndFilteredRows, clearEnrolmentCache, hasEnrolmentCache, patchEnrolmentCache, buildParticipantSearchClause } from '../hooks/useEnrolmentData';
 import { useRole } from '../context/RoleContext';
 import { resolveCurrentSystemUser } from '../utils/currentUser';
@@ -60,6 +60,32 @@ type DashboardFilterCache = {
   advFilterNodes: AdvFilterNode[];
   advLogicOp: LogicOp;
   currentPage: number;
+};
+
+type NumberColumnFilter = {
+  operator: 'equals' | 'notEquals' | 'hasValue' | 'hasNoValue' | 'greaterThan' | 'greaterThanOrEqual' | 'lessThan' | 'lessThanOrEqual';
+  value: string;
+};
+
+const NUMBER_COLUMN_FIELD_BY_KEY: Partial<Record<SortKey, AdvFilterField>> = {
+  fee: 'fee',
+  totalFeesOwedCalculated: 'totalFeesOwedCalculated',
+  totalFeesPaid: 'totalFeesPaid',
+  enrolmentFee: 'fee',
+  latePay: 'latePay',
+  nonPenaltyDeadlineDaysLeft: 'nonPenaltyDeadlineDaysLeft',
+  finalDeadlineDaysDiff: 'finalDeadlineDaysDiff',
+  lateFinalDeadlineDaysDiff: 'lateFinalDeadlineDaysDiff',
+};
+
+const NUMBER_COLUMN_KEY_BY_FIELD: Partial<Record<AdvFilterField, SortKey>> = {
+  fee: 'fee',
+  totalFeesOwedCalculated: 'totalFeesOwedCalculated',
+  totalFeesPaid: 'totalFeesPaid',
+  latePay: 'latePay',
+  nonPenaltyDeadlineDaysLeft: 'nonPenaltyDeadlineDaysLeft',
+  finalDeadlineDaysDiff: 'finalDeadlineDaysDiff',
+  lateFinalDeadlineDaysDiff: 'lateFinalDeadlineDaysDiff',
 };
 
 let dashboardFilterCache: DashboardFilterCache | null = null;
@@ -273,7 +299,7 @@ export function DashboardHomePage() {
     if (filters.fortyFiveDayLetter) clauses.push('vsi_enrolmentstatus eq 865520010');
     if (filters.partnerships) clauses.push('(vsi_haspartners eq true or vsi_incombinedfarm eq true)');
     if (filters.flagged) {
-      clauses.push(`(vsi_prevyearpartnotverified eq true or (vsi_isnewparticipant ne true and vsi_enrolmentfee ne null and vsi_previousyearcalculatedenfee eq null) or (vsi_variancecalculation ge ${varianceThreshold} or vsi_variancecalculation le -${varianceThreshold}))`);
+      clauses.push(`((vsi_prevyearpartnotverified eq true and vsi_isnewparticipant ne true) or (vsi_isnewparticipant ne true and vsi_enrolmentfee ne null and vsi_previousyearcalculatedenfee eq null) or (vsi_variancecalculation ge ${varianceThreshold} or vsi_variancecalculation le -${varianceThreshold}))`);
     }
 
     const taskCodes = [...taskStatusFilter]
@@ -310,9 +336,15 @@ export function DashboardHomePage() {
             enrolmentNoticeSentDate: 'vsi_enrolmentnoticesentdate',
             totalFeesOwed: 'vsi_totalfeesowed',
             fullyProvinciallyFunded: 'vsi_fullyprovinciallyfunded',
-            pin: 'vsi_name', fee: 'vsi_enrolmentfee',
+            pin: 'vsi_name', fee: 'vsi_totalfeesowedcalculated',
             hasPartners: 'vsi_haspartners', inCombinedFarm: 'vsi_incombinedfarm',
             isNewParticipant: 'vsi_isnewparticipant',
+            totalFeesOwedCalculated: 'vsi_totalfeesowedcalculated',
+            totalFeesPaid: 'vsi_totalfeespaid',
+            latePay: 'vsi_latepaymentfee',
+            nonPenaltyDeadlineDaysLeft: 'vsi_nonpenaltydeadlinedaysleft',
+            finalDeadlineDaysDiff: 'vsi_finaldeadlinedaysdiff',
+            lateFinalDeadlineDaysDiff: 'vsi_latefinaldeadlinedaysdiff',
           };
           const col = fieldMap[node.field];
           if (!col) return '';
@@ -372,11 +404,37 @@ export function DashboardHomePage() {
           return node.operator === 'equals' ? clause : `not ${clause}`;
         }
 
+        if (node.field === 'fee' || node.field === 'totalFeesOwed' || node.field === 'totalFeesOwedCalculated' || node.field === 'totalFeesPaid' || node.field === 'latePay' || node.field === 'nonPenaltyDeadlineDaysLeft' || node.field === 'finalDeadlineDaysDiff' || node.field === 'lateFinalDeadlineDaysDiff') {
+          const numericFields: Partial<Record<string, string>> = {
+            fee: 'vsi_totalfeesowedcalculated',
+            totalFeesOwed: 'vsi_totalfeesowedcalculated',
+            totalFeesOwedCalculated: 'vsi_totalfeesowedcalculated',
+            totalFeesPaid: 'vsi_totalfeespaid',
+            latePay: 'vsi_latepaymentfee',
+            nonPenaltyDeadlineDaysLeft: 'vsi_nonpenaltydeadlinedaysleft',
+            finalDeadlineDaysDiff: 'vsi_finaldeadlinedaysdiff',
+            lateFinalDeadlineDaysDiff: 'vsi_latefinaldeadlinedaysdiff',
+          };
+          const field = numericFields[node.field];
+          if (!field) return '';
+          const num = Number(node.textValue);
+          if (!Number.isFinite(num)) return '';
+          switch (node.operator) {
+            case 'equals': return `${field} eq ${num}`;
+            case 'notEquals': return `${field} ne ${num}`;
+            case 'greaterThan': return `${field} gt ${num}`;
+            case 'greaterThanOrEqual': return `${field} ge ${num}`;
+            case 'lessThan': return `${field} lt ${num}`;
+            case 'lessThanOrEqual': return `${field} le ${num}`;
+            default: return '';
+          }
+        }
+
         const text = node.textValue?.trim() ?? '';
         if (!text) return '';
         const safe = escapeODataLiteral(text);
         const numericFields: Partial<Record<string, string>> = {
-          fee: 'vsi_enrolmentfee',
+          fee: 'vsi_totalfeesowedcalculated',
           totalFeesOwed: 'vsi_totalfeesowedcalculated', // legacy alias
           totalFeesOwedCalculated: 'vsi_totalfeesowedcalculated',
           totalFeesPaid: 'vsi_totalfeespaid', latePay: 'vsi_latepaymentfee',
@@ -590,6 +648,41 @@ export function DashboardHomePage() {
     setCurrentPage(1);
     setSelectedIds(new Set());
   }, []);
+  const setNumberColumnFilterAndReset = useCallback((key: SortKey, next: NumberColumnFilter | null) => {
+    const field = NUMBER_COLUMN_FIELD_BY_KEY[key];
+    if (!field) return;
+    setAdvFilterNodes(prev => {
+      const remaining = prev.filter(node => !(node.kind === 'row' && node.field === field));
+      if (!next) return remaining;
+      return [...remaining, {
+        kind: 'row' as const,
+        id: nextFilterId(),
+        field,
+        operator: next.operator,
+        values: new Set<string>(),
+        textValue: next.value,
+      }];
+    });
+    setCurrentPage(1);
+    setSelectedIds(new Set());
+  }, []);
+
+  const numberColumnFilters = useMemo(() => {
+    const result: Partial<Record<SortKey, NumberColumnFilter>> = {};
+    const visit = (nodes: AdvFilterNode[]) => {
+      for (const node of nodes) {
+        if (node.kind === 'group') {
+          visit(node.children);
+          continue;
+        }
+        const key = NUMBER_COLUMN_KEY_BY_FIELD[node.field];
+        if (!key) continue;
+        result[key] = { operator: node.operator as NumberColumnFilter['operator'], value: node.textValue ?? '' };
+      }
+    };
+    visit(advFilterNodes);
+    return result;
+  }, [advFilterNodes]);
 
   // Build the combined node list shown in Edit Filters:
   // quick filters (except flagged) + column header filters + existing adv nodes.
@@ -1022,6 +1115,8 @@ export function DashboardHomePage() {
             ownerFilter={ownerFilter}
             onOwnerFilterChange={setOwnerFilterAndReset}
             ownerFilterShortcuts={currentUserDisplayName ? [{ label: 'Assigned to me', values: new Set([currentUserDisplayName]) }] : undefined}
+            numberColumnFilters={numberColumnFilters}
+            onNumberColumnFilterChange={setNumberColumnFilterAndReset}
             sortKey={sortKey}
             sortDir={sortDir}
             onSort={setSort}

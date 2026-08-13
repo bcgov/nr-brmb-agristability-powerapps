@@ -22,6 +22,7 @@ import { ConfirmActionModal } from '../components/ConfirmActionModal';
 import { Toast, nextToastId } from '../components/Toast';
 import type { ToastMessage } from '../components/Toast';
 import type { FilterOperator, SortDir } from '../types/enrollment';
+import { formatDateOnlyForDisplay } from '../utils/date';
 import '../styles/supervisor-approval.css';
 import { CORE_APP_ID_FALLBACK, CORE_BASE_URL_FALLBACK } from '../constants/config';
 import { getCoreConfig } from '../hooks/useEnrolmentData';
@@ -168,9 +169,8 @@ function getRowId(item: Vsi_participantprogramyears): string | null {
 
 function formatWorkedOn(value?: string): string {
   if (!value) return '—';
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleDateString();
+  const formatted = formatDateOnlyForDisplay(value);
+  return formatted || '—';
 }
 
 function normalizeGuid(value?: string | null): string {

@@ -368,7 +368,7 @@ export function useSortedAndFilteredRows(
         return (row.vsi_programyearidname
           ?? raw['_vsi_programyearid_value@OData.Community.Display.V1.FormattedValue']
           ?? '') as string;
-      case 'fee': return String(row.vsi_enrolmentfee ?? '');
+      case 'fee': return String(row.vsi_totalfeesowedcalculated ?? '');
       case 'hasPartners': return row.vsi_haspartners === true ? 'Yes' : 'No';
       case 'inCombinedFarm': return row.vsi_incombinedfarm === true ? 'Yes' : 'No';
       case 'isNewParticipant': return row.vsi_isnewparticipant === true ? 'Yes' : 'No';
@@ -380,6 +380,9 @@ export function useSortedAndFilteredRows(
       case 'totalFeesOwedCalculated': return String(row.vsi_totalfeesowedcalculated ?? '');
       case 'totalFeesPaid': return String(row.vsi_totalfeespaid ?? '');
       case 'latePay': return String(row.vsi_latepaymentfee ?? '');
+      case 'nonPenaltyDeadlineDaysLeft': return String(row.vsi_nonpenaltydeadlinedaysleft ?? '');
+      case 'finalDeadlineDaysDiff': return String(row.vsi_finaldeadlinedaysdiff ?? '');
+      case 'lateFinalDeadlineDaysDiff': return String(row.vsi_latefinaldeadlinedaysdiff ?? '');
       case 'regionalOffice': return Vsi_participantprogramyearsvsi_enrollmentregionaloffice[row.vsi_enrollmentregionaloffice as keyof typeof Vsi_participantprogramyearsvsi_enrollmentregionaloffice] ?? '';
       case 'farmingSector': return Vsi_participantprogramyearsvsi_farmingsector[row.vsi_farmingsector as keyof typeof Vsi_participantprogramyearsvsi_farmingsector] ?? '';
       case 'modifiedOn': return row.modifiedon ?? '';
@@ -402,6 +405,22 @@ export function useSortedAndFilteredRows(
       if (fr.values.size === 0) return true;
       const inSet = fr.values.has(val);
       return fr.operator === 'equals' ? inSet : !inSet;
+    }
+    if (fieldType === 'number') {
+      if (fr.operator === 'hasValue') return val !== '';
+      if (fr.operator === 'hasNoValue') return val === '';
+      const num = Number(val);
+      const search = Number(fr.textValue);
+      if (!Number.isFinite(num) || !Number.isFinite(search)) return true;
+      switch (fr.operator) {
+        case 'equals': return num === search;
+        case 'notEquals': return num !== search;
+        case 'greaterThan': return num > search;
+        case 'greaterThanOrEqual': return num >= search;
+        case 'lessThan': return num < search;
+        case 'lessThanOrEqual': return num <= search;
+        default: return true;
+      }
     }
     if (!fr.textValue) return true;
     const lower = val.toLowerCase();
@@ -455,7 +474,7 @@ export function useSortedAndFilteredRows(
   }, []);
 
   const isFlaggedByVariance = useCallback((row: Vsi_participantprogramyears): boolean => {
-    if (row.vsi_prevyearpartnotverified === true) return true;
+    if (row.vsi_prevyearpartnotverified === true && row.vsi_isnewparticipant !== true) return true;
     if (row.vsi_isnewparticipant !== true && row.vsi_enrolmentfee != null && row.vsi_previousyearcalculatedenfee == null) return true;
     const variance = row.vsi_variancecalculation != null ? row.vsi_variancecalculation * 100 : null;
     if (variance == null) return false;

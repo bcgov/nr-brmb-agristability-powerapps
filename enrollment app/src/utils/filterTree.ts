@@ -97,6 +97,8 @@ export function summarizeGroup(group: AdvFilterGroup): string {
       const labels: Record<string, string> = {
         equals: 'Equals', notEquals: 'Does not equal', contains: 'Contains',
         notContains: 'Does not contain', beginsWith: 'Begins with', endsWith: 'Ends with',
+        greaterThan: 'Greater than', greaterThanOrEqual: 'Greater than or equal to',
+        lessThan: 'Less than', lessThanOrEqual: 'Less than or equal to',
       };
       return labels[(c as AdvFilterRow).operator] ?? '';
     })

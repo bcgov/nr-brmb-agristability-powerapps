@@ -9,6 +9,7 @@ import {
 import { CORE_APP_ID_FALLBACK, CORE_BASE_URL_FALLBACK } from '../constants/config';
 import type { SortKey } from '../types/enrollment';
 import { getEnrolmentEnFeeVarianceThreshold } from '../constants/varianceThreshold';
+import { formatDateOnlyForDisplay } from '../utils/date';
 import {
   getEnrolmentStatusLabel, getTaskStatusLabel, taskStatusIcon,
   formatCurrency, getInitials, getAvatarColor,
@@ -29,7 +30,11 @@ export function renderCell(
   const yesNo = (v: unknown) => (v === 1 || v === true) ? 'Yes' : (v === 0 || v === false) ? 'No' : '';
   const enumLabel = (map: Record<number, string>, v: unknown) =>
     v != null ? map[Number(v)] ?? String(v) : '';
-  const fmtDate = (v: unknown) => { if (!v) return ''; try { return new Date(v as string).toLocaleDateString(); } catch { return String(v); } };
+  const fmtDate = (v: unknown) => {
+    if (!v) return '';
+    const formatted = formatDateOnlyForDisplay(typeof v === 'string' ? v : undefined);
+    return formatted || String(v);
+  };
   const source = (row as RowWithSource)._source ?? 'dashboard';
   switch (key) {
     case 'pin': {
@@ -131,7 +136,7 @@ export function renderCell(
       const threshold = getEnrolmentEnFeeVarianceThreshold();
       const variance = row.vsi_variancecalculation != null ? row.vsi_variancecalculation * 100 : null;
       const reasons: string[] = [];
-      if (row.vsi_prevyearpartnotverified === true) {
+      if (row.vsi_prevyearpartnotverified === true && row.vsi_isnewparticipant !== true) {
         reasons.push('Previous year partnership not verified.');
       }
       if (row.vsi_isnewparticipant !== true && row.vsi_enrolmentfee != null && row.vsi_previousyearcalculatedenfee == null) {
@@ -191,6 +196,9 @@ export function renderCell(
     case 'lateParticipant': return <td key={key}>{yesNo(row.vsi_fullyprovinciallyfunded)}</td>;
     case 'enrolNoticeDate': return <td key={key}>{fmtDate(row.vsi_enrolmentnoticesentdate)}</td>;
     case 'lateEnrolNoticeDate': return <td key={key}>{fmtDate(row.vsi_lateenrolmentnoticesentdate)}</td>;
+    case 'nonPenaltyDeadlineDaysLeft': return <td key={key}>{row.vsi_nonpenaltydeadlinedaysleft ?? ''}</td>;
+    case 'finalDeadlineDaysDiff': return <td key={key}>{row.vsi_finaldeadlinedaysdiff ?? ''}</td>;
+    case 'lateFinalDeadlineDaysDiff': return <td key={key}>{row.vsi_latefinaldeadlinedaysdiff ?? ''}</td>;
     case 'enrolmentOptedOutDate': return <td key={key}>{fmtDate(row.vsi_programyearoptoutdate)}</td>;
     case 'fileReceivedDate': return <td key={key}>{fmtDate(row.vsi_filereceiveddate)}</td>;
     case 'feesPaidDate': return <td key={key}>{fmtDate(row.vsi_enrolmentfeespaiddate)}</td>;

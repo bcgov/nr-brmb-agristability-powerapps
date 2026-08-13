@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { type Vsi_enrolmenthistories } from '../generated/models/Vsi_enrolmenthistoriesModel';
 import { Vsi_enrolmenthistoriesService } from '../generated/services/Vsi_enrolmenthistoriesService';
 import { getAvatarColor, getInitials } from '../utils/helpers';
+import { formatDateOnlyForDisplay } from '../utils/date';
 
 const formatCad = (value: number | undefined): string => {
   if (value == null || Number.isNaN(Number(value))) return '---';
@@ -11,9 +12,8 @@ const formatCad = (value: number | undefined): string => {
 
 const formatDate = (value: string | undefined): string => {
   if (!value) return '---';
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return '---';
-  return d.toLocaleDateString('en-CA', { year: 'numeric', month: 'numeric', day: 'numeric' });
+  const formatted = formatDateOnlyForDisplay(value, 'en-CA');
+  return formatted || '---';
 };
 
 const yesNoText = (value: unknown): string => {

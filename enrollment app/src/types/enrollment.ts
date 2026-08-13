@@ -7,6 +7,7 @@ export type SortKey =
   | 'sharepoint' | 'totalFeesOwedCalculated' | 'totalFeesPaid'
   | 'enrolmentFee' | 'latePay' | 'regionalOffice' | 'farmingSector'
   | 'bringForward' | 'broughtForward' | 'hasPartners' | 'inCombinedFarm'
+  | 'nonPenaltyDeadlineDaysLeft' | 'finalDeadlineDaysDiff' | 'lateFinalDeadlineDaysDiff'
   | 'manualReview' | 'enrolNoticeDate' | 'lateEnrolNoticeDate' | 'fileReceivedDate' | 'feesPaidDate'
   | 'enrolmentOptedOutDate'
   | 'modifiedOn' | 'owner' | 'flagged' | 'isNewParticipant' | 'lateParticipant';
@@ -28,8 +29,8 @@ export type AdvFilterField =
   | 'hasPartners' | 'inCombinedFarm' | 'isNewParticipant' | 'fullyProvinciallyFunded'
   | 'bringForward' | 'broughtForward' | 'manualReview'
   | 'regionalOffice' | 'farmingSector'
-  | 'modifiedOn' | 'enrolmentNoticeSentDate' | 'lateEnrolmentNoticeSentDate' | 'enrolmentOptedOutDate' | 'fileReceivedDate' | 'feesPaidDate';
-export type AdvFilterOp = 'equals' | 'notEquals' | 'contains' | 'notContains' | 'beginsWith' | 'endsWith' | 'hasValue' | 'hasNoValue';
+    | 'modifiedOn' | 'enrolmentNoticeSentDate' | 'lateEnrolmentNoticeSentDate' | 'nonPenaltyDeadlineDaysLeft' | 'finalDeadlineDaysDiff' | 'lateFinalDeadlineDaysDiff' | 'enrolmentOptedOutDate' | 'fileReceivedDate' | 'feesPaidDate';
+export type AdvFilterOp = 'equals' | 'notEquals' | 'contains' | 'notContains' | 'beginsWith' | 'endsWith' | 'hasValue' | 'hasNoValue' | 'greaterThan' | 'greaterThanOrEqual' | 'lessThan' | 'lessThanOrEqual';
 export type LogicOp = 'AND' | 'OR';
 
 export interface AdvFilterRow {

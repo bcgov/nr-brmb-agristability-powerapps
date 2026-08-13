@@ -387,19 +387,6 @@ const formatDaysValue = (value: number | undefined): string => {
   return `${days} day${Math.abs(days) === 1 ? '' : 's'}`;
 };
 
-const getDaysUntilDate = (value: string | undefined): number | undefined => {
-  const dateValue = toDateInputValue(value);
-  if (!dateValue) return undefined;
-
-  const target = new Date(`${dateValue}T00:00:00Z`);
-  if (Number.isNaN(target.getTime())) return undefined;
-
-  const now = new Date();
-  const todayUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-  const targetUtc = Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), target.getUTCDate());
-  return Math.trunc((targetUtc - todayUtc) / 86400000);
-};
-
 const isUrgentDays = (value: number | undefined): boolean =>
   value != null && Number.isFinite(Number(value)) && Number(value) >= 0 && Number(value) <= 7;
 
@@ -576,13 +563,6 @@ export function EnrolmentDetailsPage() {
         return db - da;
       });
 
-      console.debug('[audit-history] raw rows sample', rows.slice(0, 2));
-      console.debug('[audit-history] changedata sample', rows.slice(0, 2).map(row => ({
-        auditid: row.auditid,
-        changedata: row.changedata,
-        objecttypecode: row.objecttypecode,
-        operation: row.operation,
-      })));
       const userIdSet = new Set<string>();
       for (const row of rows) {
         const raw = row as unknown as Record<string, unknown>;
@@ -683,10 +663,6 @@ export function EnrolmentDetailsPage() {
         if (!value) return value;
 
         const normalizedValue = value.trim();
-        if (normalizedValue && /[0-9a-fA-F-]{36}/.test(normalizedValue) && !/[,;]/.test(normalizedValue) && !normalizedValue.includes(' ')) {
-          console.debug('[audit-history] guid-only lookup candidate', { fieldName, value: normalizedValue });
-        }
-
         const bareGuidMatch = normalizedValue.match(/^\{?([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\}?$/);
         if (bareGuidMatch) {
           const id = bareGuidMatch[1].replace(/[{}]/g, '').toLowerCase();
@@ -1487,8 +1463,7 @@ export function EnrolmentDetailsPage() {
 
   const nonPenaltyDaysLeft = record.vsi_nonpenaltydeadlinedaysleft;
   const finalDeadlineDaysLeft = record.vsi_finaldeadlinedaysdiff;
-  const lateFinalDeadlineDaysLeft = record.vsi_latefinaldeadlinedaysdiff
-    ?? getDaysUntilDate(record.vsi_lateenrolmentfeesfinaldeadlinedate);
+  const lateFinalDeadlineDaysLeft = record.vsi_latefinaldeadlinedaysdiff;
 
 
   return (
