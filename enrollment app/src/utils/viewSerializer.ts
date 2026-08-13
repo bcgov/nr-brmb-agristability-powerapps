@@ -2,6 +2,7 @@ import type { SortKey, PersonalView, ViewPayload, QuickFilterState, AdvFilterNod
 import type { Userqueries } from '../generated/models/UserqueriesModel';
 import type { Savedqueries } from '../generated/models/SavedqueriesModel';
 import { SORTKEY_TO_FIELD, FIELD_TO_SORTKEY, DEFAULT_VIEW_SNAPSHOT, ACTIVE_VIEW_KEY } from '../constants/columns';
+import { getEnrolmentEnFeeVarianceThreshold } from '../constants/varianceThreshold';
 import { nextFilterId, serializeFilterNodes, deserializeFilterNodes } from './filterTree';
 import { Vsi_participantprogramyearsvsi_taskstatus, Vsi_participantprogramyearsvsi_enrolmentstatus, Vsi_participantprogramyearsvsi_enrollmentregionaloffice, Vsi_participantprogramyearsvsi_farmingsector } from '../generated/models/Vsi_participantprogramyearsModel';
 import { Vsi_participantprogramyearsService } from '../generated/services/Vsi_participantprogramyearsService';
@@ -216,6 +217,7 @@ const ADV_FIELD_TO_ATTR: Partial<Record<AdvFilterField, string>> = {
   enrolStatus:             'vsi_enrolmentstatus',
   pin:                     'vsi_name',
   fee:                     'vsi_totalfeesowedcalculated',
+  flagged:                 'vsi_variancecalculation',
   totalFeesOwedCalculated: 'vsi_totalfeesowedcalculated',
   totalFeesPaid:           'vsi_totalfeespaid',
   latePay:                 'vsi_latepaymentfee',
@@ -261,6 +263,27 @@ function advRowToConditions(node: AdvFilterNode & { kind: 'row' }): string {
   if (node.operator === 'hasNoValue') return `<condition attribute="${attr}" operator="null"/>`;
 
   // Boolean fields (Yes/No)
+  if (node.field === 'flagged') {
+    if (node.values.size === 0) return '';
+    const varianceThreshold = getEnrolmentEnFeeVarianceThreshold() / 100;
+    const varianceThresholdText = Number.isFinite(varianceThreshold)
+      ? varianceThreshold.toString()
+      : '0.2';
+    const flaggedExpr = `<filter type="or"><condition attribute="vsi_prevyearpartnotverified" operator="eq" value="1"/><condition attribute="vsi_previousyearcalculatedenfee" operator="null"/><condition attribute="vsi_variancecalculation" operator="ge" value="${varianceThresholdText}"/><condition attribute="vsi_variancecalculation" operator="le" value="-${varianceThresholdText}"/></filter>`;
+    const yesSelected = node.values.has('Yes');
+    const noSelected = node.values.has('No');
+    if (yesSelected && noSelected) return '';
+    if (!yesSelected && !noSelected) return '';
+    if (node.operator === 'notEquals') {
+      return yesSelected
+        ? `<filter type="not">${flaggedExpr}</filter>`
+        : flaggedExpr;
+    }
+    return yesSelected
+      ? flaggedExpr
+      : `<filter type="not">${flaggedExpr}</filter>`;
+  }
+
   if (node.field === 'hasPartners' || node.field === 'inCombinedFarm' || node.field === 'isNewParticipant' || node.field === 'fullyProvinciallyFunded' || node.field === 'bringForward' || node.field === 'broughtForward' || node.field === 'manualReview') {
     if (node.values.size === 0) return '';
     const op = node.operator === 'notEquals' ? 'ne' : 'eq';
