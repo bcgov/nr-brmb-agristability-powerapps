@@ -107,6 +107,7 @@ function FilterRowEditor({
   const fieldType = row.field ? ADV_FIELD_OPTIONS[row.field] : null;
   const choiceOpts = fieldType === 'choice' ? getChoiceOptions(row.field, choiceOptionsByField) : [];
   const formatChoiceLabel = (opt: string) => row.field === 'enrolStatus' ? formatEnrolmentStatusDisplay(opt) : opt;
+  const isNumberField = fieldType === 'number';
   const [valDropdownOpen, setValDropdownOpen] = useState(false);
   const valBtnRef = useRef<HTMLButtonElement>(null);
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
@@ -153,10 +154,21 @@ function FilterRowEditor({
         value={row.operator}
         onChange={e => onChange({ operator: e.target.value as AdvFilterOp })}
       >
-        {fieldType === 'choice' || fieldType === 'number' ? (
+        {fieldType === 'choice' ? (
           <>
             <option value="equals">Equals</option>
             <option value="notEquals">Does not equal</option>
+          </>
+        ) : fieldType === 'number' ? (
+          <>
+            <option value="equals">Equals</option>
+            <option value="notEquals">Does not equal</option>
+            <option value="hasValue">Contains data</option>
+            <option value="hasNoValue">Does not contain data</option>
+            <option value="greaterThan">Greater than</option>
+            <option value="greaterThanOrEqual">Greater than or equal to</option>
+            <option value="lessThan">Less than</option>
+            <option value="lessThanOrEqual">Less than or equal to</option>
           </>
         ) : ['enrolmentNoticeSentDate', 'lateEnrolmentNoticeSentDate', 'enrolmentOptedOutDate', 'fileReceivedDate', 'feesPaidDate'].includes(row.field) ? (
           <>
@@ -197,7 +209,7 @@ function FilterRowEditor({
       ) : (
         <input
           className="ef-cell ef-cell-val ef-text-input"
-          type={row.field === 'fee' || row.field === 'totalFeesOwedCalculated' || row.field === 'totalFeesPaid' || row.field === 'latePay' ? 'number' : 'text'}
+          type={isNumberField ? 'number' : 'text'}
           value={row.textValue}
           placeholder="Value"
           onChange={e => onChange({ textValue: e.target.value })}

@@ -40,6 +40,8 @@ type Props = {
   ownerFilter: Set<string>;
   onOwnerFilterChange: (value: Set<string>) => void;
   ownerFilterShortcuts?: Array<{ label: string; values: Set<string> }>;
+  numberColumnFilters: Partial<Record<SortKey, { operator: 'equals' | 'notEquals' | 'hasValue' | 'hasNoValue' | 'greaterThan' | 'greaterThanOrEqual' | 'lessThan' | 'lessThanOrEqual'; value: string }>>;
+  onNumberColumnFilterChange: (key: SortKey, next: { operator: 'equals' | 'notEquals' | 'hasValue' | 'hasNoValue' | 'greaterThan' | 'greaterThanOrEqual' | 'lessThan' | 'lessThanOrEqual'; value: string } | null) => void;
   sortKey: SortKey | null;
   sortDir: SortDir;
   onSort: (key: SortKey, dir: SortDir) => void;
@@ -81,6 +83,8 @@ export function EnrolmentDataTable({
   ownerFilter,
   onOwnerFilterChange,
   ownerFilterShortcuts,
+  numberColumnFilters,
+  onNumberColumnFilterChange,
   sortKey,
   sortDir,
   onSort,
@@ -92,6 +96,16 @@ export function EnrolmentDataTable({
 }: Props) {
   const lastClickedIdxRef = useRef<number>(-1);
   const isEmptyState = allRowsCount === 0 || pagedRows.length === 0;
+  const numberFilterableKeys = new Set<SortKey>([
+    'fee',
+    'totalFeesOwedCalculated',
+    'totalFeesPaid',
+    'enrolmentFee',
+    'latePay',
+    'nonPenaltyDeadlineDaysLeft',
+    'finalDeadlineDaysDiff',
+    'lateFinalDeadlineDaysDiff',
+  ]);
 
   return (
     <div className={`enrolment-table-container${isEmptyState ? ' is-empty' : ''}`}>
@@ -160,6 +174,7 @@ export function EnrolmentDataTable({
                 <ColumnHeaderMenu
                   key={k}
                   label={def?.label || 'N/A'}
+                  sortLabelMode={def.icon === 'number' ? 'number' : def.icon === 'date' ? 'date' : 'text'}
                   sortKey={k}
                   currentSortKey={sortKey}
                   currentSortDir={sortDir}
@@ -167,6 +182,14 @@ export function EnrolmentDataTable({
                   columnWidth={columnWidths[k]}
                   thStyle={k === 'year' ? { textAlign: 'center' } : k === 'fee' ? { textAlign: 'center' } : undefined}
                   onColumnWidthChange={onColumnWidthChange(k)}
+                  numberFilterOperator={numberColumnFilters[k]?.operator}
+                  numberFilterValue={numberColumnFilters[k]?.value ?? ''}
+                  onNumberFilterApply={numberFilterableKeys.has(k)
+                    ? (next) => onNumberColumnFilterChange(k, next)
+                    : undefined}
+                  onNumberFilterClear={numberFilterableKeys.has(k)
+                    ? () => onNumberColumnFilterChange(k, null)
+                    : undefined}
                   dragProps={dragProps}
                   {...extra}
                 />

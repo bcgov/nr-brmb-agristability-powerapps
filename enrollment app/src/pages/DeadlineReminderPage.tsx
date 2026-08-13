@@ -8,13 +8,13 @@ import { CORE_APP_ID_FALLBACK, CORE_BASE_URL_FALLBACK } from '../constants/confi
 import { getCoreConfig } from '../hooks/useEnrolmentData';
 import { Vsi_automaticemailauditsService } from '../generated/services/Vsi_automaticemailauditsService';
 import { formatCurrencyOr, formatEnrolmentStatusDisplay, getEnrolmentStatusLabel } from '../utils/helpers';
+import { formatDateOnlyForDisplay } from '../utils/date';
 import { ColumnHeaderMenu } from '../components/ColumnHeaderMenu';
 import type { SortDir, FilterOperator } from '../types/enrollment';
+import { getReminderRemainingDays, hasEnrolmentNoticeSentDate, isDueWithinFiveDays, resolveReminderKind, shouldIncludeReminderRow, type ReminderKind } from './deadlineReminderUtils';
 import '../styles/supervisor-approval.css';
 
 type DeadlineColumnKey = 'enrolmentName' | 'year' | 'participant' | 'pin' | 'enrolmentStatus' | 'totalFeesOwed' | 'noticeSentDate' | 'remainingDays' | 'reminderSent';
-
-type DeadlineReminderKind = 'nonPenalty' | 'finalDeadline';
 
 function getParticipantPinFromEnrolmentName(value: string | null | undefined): string {
   const text = value?.trim() ?? '';
@@ -36,12 +36,12 @@ type DeadlineReminderRow = {
   deadlineDate?: string;
   remainingDays: number | null;
   reminderSent: boolean | null;
-  kind: DeadlineReminderKind;
+  kind: ReminderKind;
 };
 
 const EN_STATUS_ENROLMENT_NOTICE_SENT = 865520007;
 const EN_STATUS_ENROLLED_NOT_PAID = 865520008;
-const AUTOMATIC_EMAIL_TYPE = { NonPenaltyReminder: 865520001, FinalDeadlineReminder: 865520002 } as const;
+const AUTOMATIC_EMAIL_TYPE = { NonPenaltyReminder: 865520001, FinalDeadlineReminder: 865520002, LateEnrolmentReminder: 865520007 } as const;
 const AUTOMATIC_EMAIL_SENDSTATUS_SENT = 865520001;
 const PAGE_SIZE = 20;
 
@@ -74,15 +74,14 @@ const normalizeGuid = (value?: string | null) => (value ?? '').replace(/[{}]/g, 
 
 const formatDate = (value?: string) => {
   if (!value) return '-';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '-';
-  return date.toLocaleDateString();
+  const formatted = formatDateOnlyForDisplay(value);
+  return formatted || '-';
 };
 
 const formatDays = (value: number | null) => {
   if (value == null) return '-';
   if (value === 0) return '0';
-  if (value < 0) return `${Math.abs(value)} day${Math.abs(value) === 1 ? '' : 's'} overdue`;
+  if (value < 0) return `${value} day${Math.abs(value) === 1 ? '' : 's'}`;
   return `${value} day${value === 1 ? '' : 's'}`;
 };
 
@@ -91,35 +90,57 @@ const yesNoText = (value: boolean | null) => {
   return value ? 'Yes' : 'No';
 };
 
+const isUrgentForStyling = (remainingDays: number | null): boolean =>
+  remainingDays != null && remainingDays >= 0 && remainingDays <= 5;
+
 const getDisplayValue = (item: Vsi_participantprogramyears, annotationKey: string, fallback?: string) => {
   const raw = item as unknown as Record<string, unknown>;
   return (raw[annotationKey] as string | undefined) ?? fallback ?? '-';
 };
 
-type AuditMap = Map<string, { nonPenalty: boolean; finalDeadline: boolean }>;
+type AuditMap = Map<string, { nonPenalty: boolean; finalDeadline: boolean; lateFinalDeadline: boolean }>;
 
 const toReminderRow = (item: Vsi_participantprogramyears, auditMap: AuditMap | null): DeadlineReminderRow | null => {
   const itemId = normalizeGuid(item.vsi_participantprogramyearid);
   if (!itemId) return null;
 
   const status = Number(item.vsi_enrolmentstatus);
-  const isNoticeSent = status === EN_STATUS_ENROLMENT_NOTICE_SENT;
-  const isEnrolledNotPaid = status === EN_STATUS_ENROLLED_NOT_PAID;
-  if (!isNoticeSent && !isEnrolledNotPaid) return null;
+  const kind = resolveReminderKind(status, hasEnrolmentNoticeSentDate(item.vsi_lateenrolmentnoticesentdate));
+  if (kind == null) return null;
 
-  const deadlineDate = isNoticeSent
+  const noticeSentDate = kind === 'lateFinalDeadline'
+    ? item.vsi_lateenrolmentnoticesentdate
+    : item.vsi_enrolmentnoticesentdate;
+  if (!hasEnrolmentNoticeSentDate(noticeSentDate)) return null;
+
+  const deadlineDate = kind === 'nonPenalty'
     ? item.vsi_enrolmentfeesnonpenaltyduedate
-    : item.vsi_enrolmentfeesfinaldeadlinedate;
+    : kind === 'finalDeadline'
+      ? item.vsi_enrolmentfeesfinaldeadlinedate
+      : item.vsi_lateenrolmentfeesfinaldeadlinedate;
+  const remainingDays = getReminderRemainingDays(
+    kind,
+    item.vsi_nonpenaltydeadlinedaysleft,
+    item.vsi_finaldeadlinedaysdiff,
+    item.vsi_latefinaldeadlinedaysdiff,
+  );
+  if (remainingDays == null) return null;
 
   let reminderSent: boolean | null;
   if (auditMap) {
     const audits = auditMap.get(itemId);
-    reminderSent = isNoticeSent ? (audits?.nonPenalty ?? false) : (audits?.finalDeadline ?? false);
+    reminderSent = kind === 'nonPenalty'
+      ? (audits?.nonPenalty ?? false)
+      : kind === 'finalDeadline'
+        ? (audits?.finalDeadline ?? false)
+        : (audits?.lateFinalDeadline ?? false);
   } else {
     // Fallback to boolean fields while audit data is loading
-    reminderSent = isNoticeSent
+    reminderSent = kind === 'nonPenalty'
       ? item.vsi_nonpenaltydeadlineremindersent ?? null
-      : item.vsi_finaldeadlineremindersent ?? null;
+      : kind === 'finalDeadline'
+        ? item.vsi_finaldeadlineremindersent ?? null
+        : item.vsi_latefinaldeadlineremindersent ?? null;
   }
 
   return {
@@ -131,13 +152,11 @@ const toReminderRow = (item: Vsi_participantprogramyears, auditMap: AuditMap | n
     year: getDisplayValue(item, '_vsi_programyearid_value@OData.Community.Display.V1.FormattedValue', item.vsi_programyearidname),
     enrolmentStatusLabel: getEnrolmentStatusLabel(item.vsi_enrolmentstatus) || '-',
     totalFeesOwed: item.vsi_totalfeesowed ?? item.vsi_totalfeesowedcalculated ?? null,
-    noticeSentDate: item.vsi_enrolmentnoticesentdate,
+    noticeSentDate,
     deadlineDate,
-    remainingDays: isNoticeSent
-      ? (item.vsi_nonpenaltydeadlinedaysleft ?? null)
-      : (item.vsi_finaldeadlinedaysdiff ?? null),
+    remainingDays,
     reminderSent,
-    kind: isNoticeSent ? 'nonPenalty' : 'finalDeadline',
+    kind,
   };
 };
 
@@ -168,6 +187,7 @@ export function DeadlineReminderPage() {
         setLoading(true);
         setError(null);
         setAuditMap(null);
+        setItems([]);
         const [result, auditResult] = await Promise.all([
           Vsi_participantprogramyearsService.getAll({
           select: [
@@ -180,18 +200,22 @@ export function DeadlineReminderPage() {
             'vsi_enrolmentnoticesentdate',
             'vsi_enrolmentfeesnonpenaltyduedate',
             'vsi_enrolmentfeesfinaldeadlinedate',
+            'vsi_lateenrolmentnoticesentdate',
+            'vsi_lateenrolmentfeesfinaldeadlinedate',
             'vsi_nonpenaltydeadlineremindersent',
             'vsi_finaldeadlineremindersent',
+            'vsi_latefinaldeadlineremindersent',
             'vsi_nonpenaltydeadlinedaysleft',
             'vsi_finaldeadlinedaysdiff',
+            'vsi_latefinaldeadlinedaysdiff',
           ],
-          filter: `vsi_enrolmentstatus eq ${EN_STATUS_ENROLMENT_NOTICE_SENT} or vsi_enrolmentstatus eq ${EN_STATUS_ENROLLED_NOT_PAID}`,
+          filter: `((vsi_enrolmentstatus eq ${EN_STATUS_ENROLMENT_NOTICE_SENT} and ((vsi_lateenrolmentnoticesentdate ne null and vsi_latefinaldeadlinedaysdiff ne null) or (vsi_lateenrolmentnoticesentdate eq null and vsi_enrolmentnoticesentdate ne null and vsi_nonpenaltydeadlinedaysleft ne null))) or (vsi_enrolmentstatus eq ${EN_STATUS_ENROLLED_NOT_PAID} and ((vsi_lateenrolmentnoticesentdate ne null and vsi_latefinaldeadlinedaysdiff ne null) or (vsi_lateenrolmentnoticesentdate eq null and vsi_enrolmentnoticesentdate ne null and vsi_finaldeadlinedaysdiff ne null))))`,
           orderBy: ['vsi_enrolmentfeesfinaldeadlinedate asc'],
           maxPageSize: 5000,
         }),
           Vsi_automaticemailauditsService.getAll({
             select: ['vsi_objectid', 'vsi_emailtype', 'vsi_sendstatus'],
-            filter: `vsi_sendstatus eq ${AUTOMATIC_EMAIL_SENDSTATUS_SENT} and (vsi_emailtype eq ${AUTOMATIC_EMAIL_TYPE.NonPenaltyReminder} or vsi_emailtype eq ${AUTOMATIC_EMAIL_TYPE.FinalDeadlineReminder})`,
+            filter: `vsi_sendstatus eq ${AUTOMATIC_EMAIL_SENDSTATUS_SENT} and (vsi_emailtype eq ${AUTOMATIC_EMAIL_TYPE.NonPenaltyReminder} or vsi_emailtype eq ${AUTOMATIC_EMAIL_TYPE.FinalDeadlineReminder} or vsi_emailtype eq ${AUTOMATIC_EMAIL_TYPE.LateEnrolmentReminder})`,
             maxPageSize: 5000,
           }),
         ]);
@@ -208,11 +232,12 @@ export function DeadlineReminderPage() {
         for (const audit of auditResult.data ?? []) {
           const id = normalizeGuid(audit.vsi_objectid);
           if (!id) continue;
-          if (!map.has(id)) map.set(id, { nonPenalty: false, finalDeadline: false });
+          if (!map.has(id)) map.set(id, { nonPenalty: false, finalDeadline: false, lateFinalDeadline: false });
           const entry = map.get(id)!;
           const emailType = Number(audit.vsi_emailtype);
           if (emailType === AUTOMATIC_EMAIL_TYPE.NonPenaltyReminder) entry.nonPenalty = true;
           if (emailType === AUTOMATIC_EMAIL_TYPE.FinalDeadlineReminder) entry.finalDeadline = true;
+          if (emailType === AUTOMATIC_EMAIL_TYPE.LateEnrolmentReminder) entry.lateFinalDeadline = true;
         }
         setAuditMap(map);
 
@@ -233,7 +258,8 @@ export function DeadlineReminderPage() {
   const rows = useMemo(() => {
     const mapped = items
       .map(item => toReminderRow(item, auditMap))
-      .filter((row): row is DeadlineReminderRow => row !== null);
+      .filter((row): row is DeadlineReminderRow => row !== null)
+      .filter(row => shouldIncludeReminderRow(row));
 
     mapped.sort((a, b) => {
       let cmp = 0;
@@ -288,7 +314,7 @@ export function DeadlineReminderPage() {
     Object.fromEntries(enrolStatusOptions.map(s => [s, formatEnrolmentStatusDisplay(s)])),
   [enrolStatusOptions]);
 
-  const urgentRows = filteredRows.filter(row => row.remainingDays != null && row.remainingDays <= 5 && row.reminderSent !== true);
+  const urgentRows = filteredRows.filter(isDueWithinFiveDays);
   const displayRows = showUrgentOnly ? urgentRows : filteredRows;
   const totalPages = Math.max(1, Math.ceil(displayRows.length / PAGE_SIZE));
   const pageRows = displayRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -297,7 +323,7 @@ export function DeadlineReminderPage() {
     <div className="sa-wrapper deadline-reminder-wrapper">
       <div>
         <h1 className="sa-page-title">Deadline Reminder View</h1>
-        <p className="sa-page-subtitle">Monitor enrolments approaching non-penalty and penalty payment deadlines.</p>
+        <p className="sa-page-subtitle">Monitor enrolments approaching non-penalty, penalty, and late enrolment payment deadlines.</p>
       </div>
 
       <div className="sa-filters-bar">
@@ -316,7 +342,7 @@ export function DeadlineReminderPage() {
         <button
           type="button"
           className={`deadline-reminder-summary-item${showUrgentOnly ? '' : ' active'}`}
-          onClick={() => { setShowUrgentOnly(false); setPage(1); }}
+          onClick={() => { setShowUrgentOnly(false); setSortKey('remainingDays'); setSortDir('asc'); setPage(1); }}
           title="Show all records"
         >
           <span className="deadline-reminder-summary-label">Total</span>
@@ -325,7 +351,7 @@ export function DeadlineReminderPage() {
         <button
           type="button"
           className={`deadline-reminder-summary-item urgent${showUrgentOnly ? ' active' : ''}`}
-          onClick={() => { setShowUrgentOnly(true); setSortKey('remainingDays'); setSortDir('desc'); setPage(1); }}
+          onClick={() => { setShowUrgentOnly(true); setSortKey('remainingDays'); setSortDir('asc'); setPage(1); }}
           title="Filter to records due within 5 days"
         >
           <span className="deadline-reminder-summary-label">Due within 5 days</span>
@@ -337,7 +363,7 @@ export function DeadlineReminderPage() {
         <div className="sa-card-header">
           <div className="sa-card-title-block">
             <h2 className="sa-card-title">Deadline Reminders</h2>
-            <p className="sa-card-subtitle">Rows turn red when the selected deadline is 5 days away or overdue and no reminder has been sent.</p>
+            <p className="sa-card-subtitle">Rows turn red when the selected deadline is within 5 days, including 0 days.</p>
           </div>
         </div>
 
@@ -363,9 +389,9 @@ export function DeadlineReminderPage() {
                     selectedFilters={enrolStatusColFilter} filterOperator={enrolStatusColFilterOp}
                     onFilterChange={v => { setEnrolStatusColFilter(v); setPage(1); }}
                     onFilterOperatorChange={setEnrolStatusColFilterOp} />
-                  <ColumnHeaderMenu label="Total Fees Owed"  sortKey="totalFeesOwed"   currentSortKey={sortKey} currentSortDir={sortDir} onSort={onSort} columnWidth={undefined} onColumnWidthChange={noopWidthChange} />
-                  <ColumnHeaderMenu label="EN Notice Sent Date" sortKey="noticeSentDate" currentSortKey={sortKey} currentSortDir={sortDir} onSort={onSort} columnWidth={undefined} onColumnWidthChange={noopWidthChange} />
-                  <ColumnHeaderMenu label="Remaining Days Until Deadline" sortKey="remainingDays" currentSortKey={sortKey} currentSortDir={sortDir} onSort={onSort} columnWidth={undefined} onColumnWidthChange={noopWidthChange} />
+                  <ColumnHeaderMenu label="Total Fees Owed"  sortLabelMode="number" sortKey="totalFeesOwed"   currentSortKey={sortKey} currentSortDir={sortDir} onSort={onSort} columnWidth={undefined} onColumnWidthChange={noopWidthChange} />
+                  <ColumnHeaderMenu label="EN Notice Sent Date" sortLabelMode="date" sortKey="noticeSentDate" currentSortKey={sortKey} currentSortDir={sortDir} onSort={onSort} columnWidth={undefined} onColumnWidthChange={noopWidthChange} />
+                  <ColumnHeaderMenu label="Remaining Days Until Deadline" sortLabelMode="number" sortKey="remainingDays" currentSortKey={sortKey} currentSortDir={sortDir} onSort={onSort} columnWidth={undefined} onColumnWidthChange={noopWidthChange} />
                   <ColumnHeaderMenu label="Reminder Sent"   sortKey="reminderSent"     currentSortKey={sortKey} currentSortDir={sortDir} onSort={onSort} columnWidth={undefined} onColumnWidthChange={noopWidthChange}
                     filterOptions={['Yes', 'No']} selectedFilters={reminderSentColFilter}
                     onFilterChange={v => { setReminderSentColFilter(v); setPage(1); }} />
@@ -373,7 +399,7 @@ export function DeadlineReminderPage() {
               </thead>
               <tbody>
                 {pageRows.map(row => {
-                  const isUrgent = row.remainingDays != null && row.remainingDays <= 5 && row.reminderSent !== true;
+                  const isUrgent = isUrgentForStyling(row.remainingDays);
                   const { coreAppId, coreBaseUrl } = getCoreConfig();
                   const participantHref = row.participantId
                     ? `${coreBaseUrl ?? CORE_BASE_URL_FALLBACK}?appid=${encodeURIComponent(coreAppId ?? CORE_APP_ID_FALLBACK)}&pagetype=entityrecord&etn=account&id=${encodeURIComponent(row.participantId)}`

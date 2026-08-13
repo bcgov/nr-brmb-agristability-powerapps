@@ -148,7 +148,7 @@ export function getSortValue(row: Vsi_participantprogramyears, key: SortKey): st
         ?? '') as string;
     case 'taskStatus': return getTaskStatusLabel(row.vsi_taskstatus);
     case 'enrolStatus': return getEnrolmentStatusLabel(row.vsi_enrolmentstatus);
-    case 'fee': return Number(row.vsi_enrolmentfee) || 0;
+    case 'fee': return Number(row.vsi_totalfeesowedcalculated) || 0;
     case 'owner': {
       return (row.owneridname
         ?? raw['_ownerid_value@OData.Community.Display.V1.FormattedValue']
@@ -173,6 +173,10 @@ export function getSortValue(row: Vsi_participantprogramyears, key: SortKey): st
     case 'broughtForward': return row.vsi_broughtforward === true ? 1 : 0;
     case 'manualReview': return row.vsi_manualreview === true ? 1 : 0;
     case 'enrolNoticeDate': return row.vsi_enrolmentnoticesentdate ?? '';
+    case 'lateEnrolNoticeDate': return row.vsi_lateenrolmentnoticesentdate ?? '';
+    case 'nonPenaltyDeadlineDaysLeft': return Number(row.vsi_nonpenaltydeadlinedaysleft) || 0;
+    case 'finalDeadlineDaysDiff': return Number(row.vsi_finaldeadlinedaysdiff) || 0;
+    case 'lateFinalDeadlineDaysDiff': return Number(row.vsi_latefinaldeadlinedaysdiff) || 0;
     case 'enrolmentOptedOutDate': return row.vsi_programyearoptoutdate ?? '';
     case 'fileReceivedDate': return row.vsi_filereceiveddate ?? '';
     case 'feesPaidDate': return row.vsi_enrolmentfeespaiddate ?? '';

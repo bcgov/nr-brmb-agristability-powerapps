@@ -215,7 +215,7 @@ const ADV_FIELD_TO_ATTR: Partial<Record<AdvFilterField, string>> = {
   taskStatus:              'vsi_taskstatus',
   enrolStatus:             'vsi_enrolmentstatus',
   pin:                     'vsi_name',
-  fee:                     'vsi_enrolmentfee',
+  fee:                     'vsi_totalfeesowedcalculated',
   totalFeesOwedCalculated: 'vsi_totalfeesowedcalculated',
   totalFeesPaid:           'vsi_totalfeespaid',
   latePay:                 'vsi_latepaymentfee',
@@ -231,6 +231,9 @@ const ADV_FIELD_TO_ATTR: Partial<Record<AdvFilterField, string>> = {
   modifiedOn:              'modifiedon',
   enrolmentNoticeSentDate: 'vsi_enrolmentnoticesentdate',
   lateEnrolmentNoticeSentDate: 'vsi_lateenrolmentnoticesentdate',
+  nonPenaltyDeadlineDaysLeft: 'vsi_nonpenaltydeadlinedaysleft',
+  finalDeadlineDaysDiff:    'vsi_finaldeadlinedaysdiff',
+  lateFinalDeadlineDaysDiff: 'vsi_latefinaldeadlinedaysdiff',
   enrolmentOptedOutDate:   'vsi_programyearoptoutdate',
   fileReceivedDate:        'vsi_filereceiveddate',
   feesPaidDate:            'vsi_enrolmentfeespaiddate',
@@ -279,6 +282,22 @@ function advRowToConditions(node: AdvFilterNode & { kind: 'row' }): string {
     if (conds.length === 1) return conds[0];
     const joinType = node.operator === 'notEquals' ? 'and' : 'or';
     return `<filter type="${joinType}">${conds.join('')}</filter>`;
+  }
+
+  if (node.field === 'fee' || node.field === 'totalFeesOwedCalculated' || node.field === 'totalFeesPaid' || node.field === 'latePay' || node.field === 'nonPenaltyDeadlineDaysLeft' || node.field === 'finalDeadlineDaysDiff' || node.field === 'lateFinalDeadlineDaysDiff') {
+    const num = Number(node.textValue);
+    if (!Number.isFinite(num)) return '';
+    const opMap: Record<string, string> = {
+      equals: 'eq',
+      notEquals: 'ne',
+      greaterThan: 'gt',
+      greaterThanOrEqual: 'ge',
+      lessThan: 'lt',
+      lessThanOrEqual: 'le',
+    };
+    const fetchOp = opMap[node.operator];
+    if (!fetchOp) return '';
+    return `<condition attribute="${attr}" operator="${fetchOp}" value="${num}"/>`;
   }
 
   // Text fields

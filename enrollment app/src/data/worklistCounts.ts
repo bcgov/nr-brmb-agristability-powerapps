@@ -1,12 +1,22 @@
 import { QueueitemsService } from '../generated/services/QueueitemsService';
 import { QueuesService } from '../generated/services/QueuesService';
+import { Vsi_automaticemailauditsService } from '../generated/services/Vsi_automaticemailauditsService';
 import { Vsi_participantprogramyearsService } from '../generated/services/Vsi_participantprogramyearsService';
+import {
+  buildDeadlineReminderEligibilityClause,
+  getReminderRemainingDays,
+  hasEnrolmentNoticeSentDate,
+  resolveReminderKind,
+  shouldIncludeReminderRow,
+} from '../pages/deadlineReminderUtils';
 
 const COUNT_PAGE_SIZE = 5000;
 const SUPERVISOR_QUEUE_NAME = 'Supervisor Approval Queue';
 const SUPERVISOR_TASK_STATUS = 865520001;
-const ENROLMENT_NOTICE_SENT_STATUS = 865520007;
-const ENROLLED_NOT_PAID_STATUS = 865520008;
+const AUTOMATIC_EMAIL_SENDSTATUS_SENT = 865520001;
+const AUTOMATIC_EMAIL_TYPE_NON_PENALTY = 865520001;
+const AUTOMATIC_EMAIL_TYPE_FINAL_DEADLINE = 865520002;
+const AUTOMATIC_EMAIL_TYPE_LATE_ENROLMENT = 865520007;
 
 const normalizeGuid = (value?: string | null) =>
   (value ?? '').replace(/[{}]/g, '').trim().toLowerCase();
@@ -43,10 +53,98 @@ export function countVerifierSupervisorTasks(recentProgramYearFilter: string): P
   return countEnrolments(`(${recentProgramYearFilter}) and vsi_taskstatus eq ${SUPERVISOR_TASK_STATUS}`);
 }
 
-export function countDeadlineReminders(): Promise<number> {
-  return countEnrolments(
-    `vsi_enrolmentstatus eq ${ENROLMENT_NOTICE_SENT_STATUS} or vsi_enrolmentstatus eq ${ENROLLED_NOT_PAID_STATUS}`,
-  );
+export async function countDeadlineReminders(): Promise<number> {
+  const enrolmentFilter = buildDeadlineReminderEligibilityClause();
+
+  const enrolmentRows = [] as NonNullable<Awaited<ReturnType<typeof Vsi_participantprogramyearsService.getAll>>['data']>;
+  let enrolmentSkipToken: string | undefined;
+  do {
+    const enrolments = await Vsi_participantprogramyearsService.getAll({
+      select: [
+        'vsi_participantprogramyearid',
+        'vsi_enrolmentstatus',
+        'vsi_lateenrolmentnoticesentdate',
+        'vsi_nonpenaltydeadlinedaysleft',
+        'vsi_finaldeadlinedaysdiff',
+        'vsi_latefinaldeadlinedaysdiff',
+      ],
+      filter: enrolmentFilter,
+      maxPageSize: COUNT_PAGE_SIZE,
+      ...(enrolmentSkipToken ? { skipToken: enrolmentSkipToken } : {}),
+    });
+
+    if (!enrolments.success) {
+      throw new Error(enrolments.error?.message ?? 'Unable to count deadline reminders.');
+    }
+
+    enrolmentRows.push(...(enrolments.data ?? []));
+    enrolmentSkipToken = enrolments.skipToken;
+  } while (enrolmentSkipToken);
+
+  const auditRows = [] as NonNullable<Awaited<ReturnType<typeof Vsi_automaticemailauditsService.getAll>>['data']>;
+  let auditSkipToken: string | undefined;
+  do {
+    const audits = await Vsi_automaticemailauditsService.getAll({
+      select: ['vsi_objectid', 'vsi_emailtype', 'vsi_sendstatus'],
+      filter: `vsi_sendstatus eq ${AUTOMATIC_EMAIL_SENDSTATUS_SENT} and (vsi_emailtype eq ${AUTOMATIC_EMAIL_TYPE_NON_PENALTY} or vsi_emailtype eq ${AUTOMATIC_EMAIL_TYPE_FINAL_DEADLINE} or vsi_emailtype eq ${AUTOMATIC_EMAIL_TYPE_LATE_ENROLMENT})`,
+      maxPageSize: COUNT_PAGE_SIZE,
+      ...(auditSkipToken ? { skipToken: auditSkipToken } : {}),
+    });
+
+    if (!audits.success) {
+      throw new Error(audits.error?.message ?? 'Unable to count deadline reminders.');
+    }
+
+    auditRows.push(...(audits.data ?? []));
+    auditSkipToken = audits.skipToken;
+  } while (auditSkipToken);
+
+  const auditMap = new Map<string, { nonPenalty: boolean; finalDeadline: boolean; lateFinalDeadline: boolean }>();
+  for (const audit of auditRows) {
+    const id = normalizeGuid(audit.vsi_objectid);
+    if (!id) continue;
+    if (!auditMap.has(id)) {
+      auditMap.set(id, { nonPenalty: false, finalDeadline: false, lateFinalDeadline: false });
+    }
+    const entry = auditMap.get(id)!;
+    const emailType = Number(audit.vsi_emailtype);
+    if (emailType === AUTOMATIC_EMAIL_TYPE_NON_PENALTY) entry.nonPenalty = true;
+    if (emailType === AUTOMATIC_EMAIL_TYPE_FINAL_DEADLINE) entry.finalDeadline = true;
+    if (emailType === AUTOMATIC_EMAIL_TYPE_LATE_ENROLMENT) entry.lateFinalDeadline = true;
+  }
+
+  let total = 0;
+  for (const item of enrolmentRows) {
+    const itemId = normalizeGuid(item.vsi_participantprogramyearid);
+    if (!itemId) continue;
+
+    const kind = resolveReminderKind(
+      Number(item.vsi_enrolmentstatus),
+      hasEnrolmentNoticeSentDate(item.vsi_lateenrolmentnoticesentdate),
+    );
+    if (kind == null) continue;
+
+    const remainingDays = getReminderRemainingDays(
+      kind,
+      item.vsi_nonpenaltydeadlinedaysleft,
+      item.vsi_finaldeadlinedaysdiff,
+      item.vsi_latefinaldeadlinedaysdiff,
+    );
+    if (remainingDays == null) continue;
+
+    const auditsForRow = auditMap.get(itemId);
+    const reminderSent = kind === 'nonPenalty'
+      ? (auditsForRow?.nonPenalty ?? false)
+      : kind === 'finalDeadline'
+        ? (auditsForRow?.finalDeadline ?? false)
+        : (auditsForRow?.lateFinalDeadline ?? false);
+
+    if (shouldIncludeReminderRow({ remainingDays, reminderSent })) {
+      total += 1;
+    }
+  }
+
+  return total;
 }
 
 export async function countSupervisorApprovalQueue(): Promise<number> {
