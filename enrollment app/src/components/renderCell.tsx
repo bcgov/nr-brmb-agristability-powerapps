@@ -190,6 +190,7 @@ export function renderCell(
     case 'isNewParticipant': return <td key={key}>{yesNo(row.vsi_isnewparticipant)}</td>;
     case 'lateParticipant': return <td key={key}>{yesNo(row.vsi_fullyprovinciallyfunded)}</td>;
     case 'enrolNoticeDate': return <td key={key}>{fmtDate(row.vsi_enrolmentnoticesentdate)}</td>;
+    case 'lateEnrolNoticeDate': return <td key={key}>{fmtDate(row.vsi_lateenrolmentnoticesentdate)}</td>;
     case 'enrolmentOptedOutDate': return <td key={key}>{fmtDate(row.vsi_programyearoptoutdate)}</td>;
     case 'fileReceivedDate': return <td key={key}>{fmtDate(row.vsi_filereceiveddate)}</td>;
     case 'feesPaidDate': return <td key={key}>{fmtDate(row.vsi_enrolmentfeespaiddate)}</td>;

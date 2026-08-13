@@ -35,8 +35,8 @@ export function getEnrolmentStatusLabel(value: unknown): string {
 
 const ENROLMENT_STATUS_DISPLAY: Record<string, string> = {
   Initialized: 'Initialized',
+  VerifiedENCalculated: 'Verified EN Calculated',
   UnverifiedENCalculated: 'Unverified EN Calculated',
-  VerifiedENCalculalted: 'Verified EN Calculated',
   EnrolmentNoticeSent: 'Enrolment Notice Sent',
   Enrolled_NotPaid: 'Enrolled, Not Paid',
   Enrolled: 'Enrolled',

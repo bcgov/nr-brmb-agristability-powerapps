@@ -9,10 +9,16 @@ import {
   type Vsi_participantprogramyearsvsi_enrolmentstatus as EnrolmentStatusValue,
 } from '../generated/models/Vsi_participantprogramyearsModel';
 import { AccountsService } from '../generated/services/AccountsService';
+import { QueuesService } from '../generated/services/QueuesService';
+import { SystemusersService } from '../generated/services/SystemusersService';
+import { TeamsService } from '../generated/services/TeamsService';
 import { Vsi_automaticemailauditsService } from '../generated/services/Vsi_automaticemailauditsService';
 import { Vsi_participantprogramyearsService } from '../generated/services/Vsi_participantprogramyearsService';
 import { Vsi_armsconfigurationsService } from '../generated/services/Vsi_armsconfigurationsService';
 import { Vsi_enrolmenthistoriesService } from '../generated/services/Vsi_enrolmenthistoriesService';
+import { AuditsService } from '../generated/services/AuditsService';
+import { BusinessunitsService } from '../generated/services/BusinessunitsService';
+import { MicrosoftDataverseService } from '../generated/services/MicrosoftDataverseService';
 import { type Vsi_enrolmenthistories } from '../generated/models/Vsi_enrolmenthistoriesModel';
 import { type Vsi_automaticemailaudits } from '../generated/models/Vsi_automaticemailauditsModel';
 import { CORE_APP_ID_FALLBACK, CORE_BASE_URL_FALLBACK } from '../constants/config';
@@ -39,6 +45,7 @@ import {
   type EnrolmentPartnerListRsrc,
   type PartnerComparisonRow,
 } from '../services/enrolmentPartners';
+import { extractLookupReferences, extractSystemUserGuids, formatAuditValueForDisplay } from '../utils/auditValueFormatting';
 
 type DateField =
   | 'vsi_enrolmentnoticesentdate'
@@ -117,6 +124,9 @@ const DETAIL_SELECT = [
   'vsi_nonpenaltydeadlinedaysleft',
   'vsi_finaldeadlinedaysdiff',
   'vsi_latefinaldeadlinedaysdiff',
+  'vsi_nonpenaltydeadlineremindersent',
+  'vsi_finaldeadlineremindersent',
+  'vsi_latefinaldeadlineremindersent',
   'vsi_administrativecostsharingfee',
   'vsi_latepaymentfee',
   'vsi_adjustedlateenrolmentfee',
@@ -142,7 +152,7 @@ const yesNoText = (value: unknown): string => {
 const AUTOMATIC_EMAIL_TYPE = {
   NonPenaltyReminder: 865520001,
   FinalDeadlineReminder: 865520002,
-  LateEnrolmentReminder: 865520003,
+  LateEnrolmentReminder: 865520007,
 } as const;
 
 const AUTOMATIC_EMAIL_SENDSTATUS_SENT = 865520001;
@@ -199,6 +209,207 @@ const toBooleanFlag = (value: unknown): boolean | null => {
   return null;
 };
 
+type AuditChangedField = {
+  name: string;
+  oldValue: string;
+  newValue: string;
+};
+
+type AuditHistoryEntry = {
+  auditId: string;
+  changedDate: string;
+  changedBy: string;
+  event: string;
+  changedFields: AuditChangedField[];
+};
+
+const resolveAttributeDisplayName = (attr: Record<string, unknown>, logicalName?: string): string | undefined => {
+  const displayName = attr['DisplayName'] as Record<string, unknown> | string | undefined;
+  if (typeof displayName === 'string' && displayName.trim()) return displayName.trim();
+
+  const userLocalizedLabel = (displayName as Record<string, unknown> | undefined)?.['UserLocalizedLabel'] as Record<string, unknown> | undefined;
+  const userLabel = typeof userLocalizedLabel?.['Label'] === 'string' ? userLocalizedLabel['Label']?.trim() : undefined;
+  if (userLabel) return userLabel;
+
+  const localizedLabels = (displayName as Record<string, unknown> | undefined)?.['LocalizedLabels'] as Array<Record<string, unknown>> | undefined;
+  const englishLabel = localizedLabels?.find(item => Number(item?.['LanguageCode']) === 1033)?.['Label'];
+  const firstLabel = localizedLabels?.[0]?.['Label'];
+  const localizedText = typeof englishLabel === 'string' ? englishLabel.trim() : typeof firstLabel === 'string' ? firstLabel.trim() : undefined;
+  if (localizedText) return localizedText;
+
+  const title = typeof attr['title'] === 'string' ? attr['title'].trim() : undefined;
+  if (title) return title;
+
+  const schemaName = typeof attr['x-ms-schema-name'] === 'string' ? attr['x-ms-schema-name'].trim() : undefined;
+  if (schemaName) return schemaName;
+
+  const dataverseAttribute = typeof attr['x-ms-dataverse-attribute'] === 'string' ? attr['x-ms-dataverse-attribute'].trim() : undefined;
+  if (dataverseAttribute) return dataverseAttribute;
+
+  return logicalName?.trim() || (typeof attr['LogicalName'] === 'string' ? attr['LogicalName']?.trim() : undefined);
+};
+
+const extractMetadataAttributes = (value: unknown): Array<{ logicalName: string; metadata: Record<string, unknown> }> => {
+  if (!value || typeof value !== 'object') return [];
+
+  const root = value as Record<string, unknown>;
+  const schema = root.schema as Record<string, unknown> | undefined;
+  const properties = schema?.properties as Record<string, unknown> | undefined;
+  if (properties && typeof properties === 'object') {
+    return Object.entries(properties)
+      .filter(([key, entry]) => !!key && !!entry && typeof entry === 'object')
+      .map(([key, entry]) => ({ logicalName: key, metadata: entry as Record<string, unknown> }));
+  }
+
+  const queue: unknown[] = [value];
+  const results: Array<{ logicalName: string; metadata: Record<string, unknown> }> = [];
+
+  while (queue.length > 0) {
+    const current = queue.pop();
+    if (Array.isArray(current)) {
+      queue.push(...current);
+      continue;
+    }
+    if (!current || typeof current !== 'object') continue;
+
+    const record = current as Record<string, unknown>;
+    const logicalName = typeof record.LogicalName === 'string' ? record.LogicalName.trim() : '';
+    const hasDisplayName = !!record.DisplayName || !!record.SchemaName || !!record.title || !!record['x-ms-dataverse-attribute'];
+    if (logicalName && hasDisplayName) {
+      results.push({ logicalName, metadata: record as Record<string, unknown> });
+    }
+
+    for (const child of Object.values(record)) {
+      if (child && typeof child === 'object') queue.push(child);
+    }
+  }
+
+  return results;
+};
+
+const normalizeAuditValue = (value: unknown): string => {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (Array.isArray(value)) return value.map(item => normalizeAuditValue(item)).filter(Boolean).join('; ');
+  if (typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    const direct =
+      record['value'] ??
+      record['Value'] ??
+      record['formattedValue'] ??
+      record['FormattedValue'] ??
+      record['name'] ??
+      record['Name'] ??
+      record['displayName'] ??
+      record['DisplayName'] ??
+      record['label'] ??
+      record['Label'] ??
+      record['text'] ??
+      record['Text'] ??
+      record['id'] ??
+      record['ID'] ??
+      record['guid'] ??
+      record['GUID'];
+    if (direct != null) return normalizeAuditValue(direct);
+
+    const preferFields = ['displayName', 'DisplayName', 'name', 'Name', 'label', 'Label', 'text', 'Text'];
+    const preferred = preferFields
+      .map(key => record[key])
+      .find(candidate => candidate != null && String(candidate).trim().length > 0);
+    if (preferred != null) return normalizeAuditValue(preferred);
+
+    const jsonText = JSON.stringify(value);
+    return jsonText === '{}' ? '' : jsonText;
+  }
+  return String(value);
+};
+
+function parseAuditChangedata(changedata: string | undefined): AuditChangedField[] {
+  if (!changedata) return [];
+
+  // Attempt JSON parse (newer Dataverse versions)
+  try {
+    const parsed = JSON.parse(changedata) as Record<string, unknown>;
+    const attrs = parsed['changedAttributes'] as Array<Record<string, unknown>> | undefined;
+    if (Array.isArray(attrs)) {
+      return attrs.map(attr => {
+        const logicalName = String(
+          attr['logicalName'] ??
+          attr['logicalname'] ??
+          attr['name'] ??
+          attr['Name'] ??
+          attr['attributeName'] ??
+          attr['attributename'] ??
+          attr['fieldName'] ??
+          attr['fieldname'] ??
+          attr['LogicalName'] ??
+          attr['AttributeName'] ??
+          attr['AttributeName'] ??
+          ''
+        );
+        const oldRaw = attr['oldValue'] ?? attr['OldValue'] ?? attr['old'] ?? attr['oldValueObject'];
+        const newRaw = attr['newValue'] ?? attr['NewValue'] ?? attr['new'] ?? attr['newValueObject'];
+        const oldDisplay = attr['oldName'] != null
+          ? String(attr['oldName'])
+          : normalizeAuditValue(oldRaw);
+        const newDisplay = attr['newName'] != null
+          ? String(attr['newName'])
+          : normalizeAuditValue(newRaw);
+        return { name: logicalName, oldValue: oldDisplay, newValue: newDisplay };
+      });
+    }
+
+    const objectEntries = Object.entries(parsed)
+      .filter(([key]) => !['changedAttributes', 'changeAttributes'].includes(key));
+    if (objectEntries.length > 0) {
+      return objectEntries.map(([key, value]) => {
+        const record = typeof value === 'object' && value !== null ? value as Record<string, unknown> : {};
+        const oldRaw = record['oldValue'] ?? record['OldValue'] ?? record['old'];
+        const newRaw = record['newValue'] ?? record['NewValue'] ?? record['new'];
+        return {
+          name: key,
+          oldValue: normalizeAuditValue(oldRaw),
+          newValue: normalizeAuditValue(newRaw),
+        };
+      });
+    }
+  } catch {
+    // fall through to XML parse
+  }
+
+  // Attempt XML parse (traditional Dataverse format)
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(changedata, 'text/xml');
+    const fields = Array.from(doc.querySelectorAll('field'));
+    return fields.map(field => {
+      const oldValue =
+        field.getAttribute('oldvalue') ??
+        field.getAttribute('OldValue') ??
+        field.getAttribute('oldName') ??
+        field.getAttribute('logicalName') ??
+        field.getAttribute('name') ??
+        field.querySelector('OldValue, oldvalue, oldValue')?.textContent ??
+        '';
+      const newValue =
+        field.getAttribute('value') ??
+        field.getAttribute('newvalue') ??
+        field.getAttribute('NewValue') ??
+        field.getAttribute('newName') ??
+        field.querySelector('NewValue, newvalue, newValue')?.textContent ??
+        '';
+      return {
+        name: field.getAttribute('name') ?? field.getAttribute('logicalname') ?? field.getAttribute('attributeName') ?? '',
+        oldValue,
+        newValue,
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
 const ACCOUNT_OPT_OUT_SELECT = [
   'vsi_quitagristabilityprogram',
   'vsi_quitagristabilityprogramname',
@@ -238,6 +449,19 @@ const formatDaysValue = (value: number | undefined): string => {
   if (value == null || Number.isNaN(Number(value))) return '---';
   const days = Math.trunc(Number(value));
   return `${days} day${Math.abs(days) === 1 ? '' : 's'}`;
+};
+
+const getDaysUntilDate = (value: string | undefined): number | undefined => {
+  const dateValue = toDateInputValue(value);
+  if (!dateValue) return undefined;
+
+  const target = new Date(`${dateValue}T00:00:00Z`);
+  if (Number.isNaN(target.getTime())) return undefined;
+
+  const now = new Date();
+  const todayUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const targetUtc = Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), target.getUTCDate());
+  return Math.trunc((targetUtc - todayUtc) / 86400000);
 };
 
 const isUrgentDays = (value: number | undefined): boolean =>
@@ -363,6 +587,268 @@ export function EnrolmentDetailsPage() {
   const [showHistory, setShowHistory] = useState(false);
   const [historyRecords, setHistoryRecords] = useState<Vsi_enrolmenthistories[]>([]);
   const [emailAuditRows, setEmailAuditRows] = useState<Vsi_automaticemailaudits[] | null>(null);
+
+  const [showAuditHistory, setShowAuditHistory] = useState(false);
+  const [auditHistoryRows, setAuditHistoryRows] = useState<AuditHistoryEntry[]>([]);
+  const [auditHistoryLoading, setAuditHistoryLoading] = useState(false);
+  const [auditHistoryError, setAuditHistoryError] = useState<string | null>(null);
+  const [auditFilterField, setAuditFilterField] = useState('');
+  const [auditFieldLabels, setAuditFieldLabels] = useState<Map<string, string>>(new Map());
+  const [auditFilterOptions, setAuditFilterOptions] = useState<Array<{ logicalName: string; displayName: string }>>([]);
+  const [hoveredAuditEventKey, setHoveredAuditEventKey] = useState<string | null>(null);
+
+  const loadAuditHistory = async () => {
+    if (!resolvedEnrolmentId) return;
+    setShowAuditHistory(true);
+    setAuditHistoryLoading(true);
+    setAuditHistoryError(null);
+    setAuditFilterField('');
+
+    const { dataverseOrgUrl } = getCoreConfig();
+    const organizationUrl = (dataverseOrgUrl ?? coreBaseUrl ?? CORE_BASE_URL_FALLBACK)
+      .replace(/\/main\.aspx.*$/i, '')
+      .replace(/\/?$/, '');
+    const orgUrl = organizationUrl || window.location.origin;
+
+    try {
+      const [auditResult, metaResult] = await Promise.allSettled([
+        AuditsService.getAll({
+          select: ['auditid', 'createdon', 'action', 'operation', 'changedata', '_userid_value', 'objecttypecode'],
+          filter: `_objectid_value eq '${resolvedEnrolmentId}'`,
+          maxPageSize: 100,
+        }),
+        (async () => {
+          const result = await MicrosoftDataverseService.GetMetadataForGetEntityWithOrganization(organizationUrl, 'vsi_participantprogramyears');
+          const payload = result?.data as Record<string, unknown> | undefined;
+          return extractMetadataAttributes(payload);
+        })(),
+      ]);
+
+      const labelMap = new Map<string, string>();
+      if (metaResult.status === 'fulfilled') {
+        const attrs = metaResult.value ?? [];
+        for (const attr of attrs) {
+          const logicalName = attr.logicalName || '';
+          const label = resolveAttributeDisplayName(attr.metadata, logicalName);
+          if (logicalName && label) labelMap.set(logicalName, label);
+        }
+      } else {
+        try {
+          const fallback = await fetch(
+            `${orgUrl}/api/data/v9.2/EntityDefinitions(LogicalName='vsi_participantprogramyears')/Attributes?$select=LogicalName,DisplayName&$top=500`,
+            { headers: { 'OData-MaxVersion': '4.0', 'OData-Version': '4.0', Accept: 'application/json' }, credentials: 'include' },
+          );
+          const fallbackJson = await fallback.json() as { value?: Array<{ LogicalName: string; DisplayName?: { UserLocalizedLabel?: { Label?: string } } }> };
+          const attrs = fallbackJson.value ?? [];
+          for (const attr of attrs) {
+            const logicalName = typeof attr.LogicalName === 'string' ? attr.LogicalName.trim() : '';
+            const label = attr.DisplayName?.UserLocalizedLabel?.Label ?? attr.LogicalName;
+            if (logicalName && label) labelMap.set(logicalName, label);
+          }
+        } catch {
+          // Ignore fallback failures; the UI can continue with the raw field names.
+        }
+      }
+      const sorted = Array.from(labelMap.entries())
+        .map(([logicalName, displayName]) => ({ logicalName, displayName }))
+        .sort((a, b) => a.displayName.localeCompare(b.displayName));
+      setAuditFieldLabels(labelMap);
+      setAuditFilterOptions(sorted);
+
+      // Process audit rows
+      const rows = (auditResult.status === 'fulfilled' ? auditResult.value.data : null) ?? [];
+      rows.sort((a, b) => {
+        const da = a.createdon ? new Date(a.createdon).getTime() : 0;
+        const db = b.createdon ? new Date(b.createdon).getTime() : 0;
+        return db - da;
+      });
+
+      console.debug('[audit-history] raw rows sample', rows.slice(0, 2));
+      console.debug('[audit-history] changedata sample', rows.slice(0, 2).map(row => ({
+        auditid: row.auditid,
+        changedata: row.changedata,
+        objecttypecode: row.objecttypecode,
+        operation: row.operation,
+      })));
+      const userIdSet = new Set<string>();
+      for (const row of rows) {
+        const raw = row as unknown as Record<string, unknown>;
+        const changedByCandidate =
+          (raw['useridname'] as string | undefined) ??
+          (raw['_userid_value@OData.Community.Display.V1.FormattedValue'] as string | undefined) ??
+          (raw['_userid_value'] as string | undefined) ??
+          '';
+        for (const value of [changedByCandidate, ...(parseAuditChangedata(raw['changedata'] as string | undefined).flatMap(field => [field.oldValue, field.newValue]))]) {
+          for (const id of extractSystemUserGuids(value)) {
+            userIdSet.add(id.toLowerCase());
+          }
+        }
+      }
+
+      const lookupDisplayMap = new Map<string, string>();
+      const lookupResolvers: Record<string, (id: string) => Promise<string | null>> = {
+        systemuser: async (id) => {
+          const result = await SystemusersService.get(id, { select: ['systemuserid', 'fullname', 'domainname', 'internalemailaddress'] });
+          const user = result.data;
+          return user?.fullname ?? user?.domainname ?? user?.internalemailaddress ?? null;
+        },
+        account: async (id) => {
+          const result = await AccountsService.get(id, { select: ['accountid', 'name'] });
+          return result.data?.name ?? null;
+        },
+        queue: async (id) => {
+          const result = await QueuesService.get(id, { select: ['queueid', 'name'] });
+          return result.data?.name ?? null;
+        },
+        team: async (id) => {
+          const result = await TeamsService.get(id, { select: ['teamid', 'name'] });
+          return result.data?.name ?? null;
+        },
+        vsi_enrolmenthistory: async (id) => {
+          const result = await Vsi_enrolmenthistoriesService.get(id, { select: ['vsi_enrolmenthistoryid', 'vsi_name'] });
+          return result.data?.vsi_name ?? null;
+        },
+        businessunit: async (id) => {
+          const result = await BusinessunitsService.get(id, { select: ['businessunitid', 'name'] });
+          return result.data?.name ?? null;
+        },
+        businessunits: async (id) => {
+          const result = await BusinessunitsService.get(id, { select: ['businessunitid', 'name'] });
+          return result.data?.name ?? null;
+        },
+        owningbusinessunit: async (id) => {
+          const result = await BusinessunitsService.get(id, { select: ['businessunitid', 'name'] });
+          return result.data?.name ?? null;
+        },
+        owningbusinessunits: async (id) => {
+          const result = await BusinessunitsService.get(id, { select: ['businessunitid', 'name'] });
+          return result.data?.name ?? null;
+        },
+      };
+
+      const refs = new Map<string, { entityName: string; id: string }>();
+      for (const row of rows) {
+        const raw = row as unknown as Record<string, unknown>;
+        const values = [
+          (raw['useridname'] as string | undefined) ?? '',
+          ...parseAuditChangedata(raw['changedata'] as string | undefined).flatMap(field => [field.oldValue, field.newValue]),
+        ];
+        for (const value of values) {
+          for (const lookup of extractLookupReferences(value)) {
+            const key = `${lookup.entityName.toLowerCase()}:${lookup.id}`;
+            refs.set(key, { entityName: lookup.entityName.toLowerCase(), id: lookup.id });
+          }
+        }
+      }
+
+      for (const ref of refs.values()) {
+        const resolver = lookupResolvers[ref.entityName];
+        if (!resolver) continue;
+        try {
+          const name = await resolver(ref.id);
+          if (name) {
+            const entityKey = `${ref.entityName}:${ref.id}`;
+            const idKey = ref.id;
+            lookupDisplayMap.set(entityKey, name);
+            lookupDisplayMap.set(idKey, name);
+          }
+        } catch {
+          // Ignore lookup failures and leave the raw value in place.
+        }
+      }
+
+      const getEntityNameForField = (fieldName: string): string | null => {
+        const normalized = fieldName.toLowerCase();
+        if (normalized.includes('businessunit') || normalized.includes('owningbusinessunit')) return 'businessunit';
+        if (normalized.includes('businessunitid')) return 'businessunit';
+        if (normalized.includes('enrolmenthistory') || normalized.includes('primaryenrolmenthistory')) return 'vsi_enrolmenthistory';
+        if (normalized.includes('systemuser') || normalized.includes('owner') || normalized.includes('userid') || normalized.includes('modifiedby') || normalized.includes('createdby')) return 'systemuser';
+        return null;
+      };
+
+      const resolveAuditLookupValue = async (fieldName: string | null | undefined, value: string): Promise<string> => {
+        if (!value) return value;
+
+        const normalizedValue = value.trim();
+        if (normalizedValue && /[0-9a-fA-F-]{36}/.test(normalizedValue) && !/[,;]/.test(normalizedValue) && !normalizedValue.includes(' ')) {
+          console.debug('[audit-history] guid-only lookup candidate', { fieldName, value: normalizedValue });
+        }
+
+        const bareGuidMatch = normalizedValue.match(/^\{?([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\}?$/);
+        if (bareGuidMatch) {
+          const id = bareGuidMatch[1].replace(/[{}]/g, '').toLowerCase();
+          const entityName = getEntityNameForField(fieldName ?? '');
+          if (entityName) {
+            const resolver = lookupResolvers[entityName];
+            if (resolver) {
+              try {
+                const name = await resolver(id);
+                if (name) {
+                  lookupDisplayMap.set(`${entityName}:${id}`, name);
+                  lookupDisplayMap.set(id, name);
+                  return name;
+                }
+              } catch {
+                // Ignore direct lookup failures.
+              }
+            }
+          }
+        }
+
+        const refs = extractLookupReferences(value);
+        for (const ref of refs) {
+          const resolver = lookupResolvers[ref.entityName.toLowerCase()];
+          if (!resolver) continue;
+          try {
+            const name = await resolver(ref.id);
+            if (name) {
+              const entityKey = `${ref.entityName.toLowerCase()}:${ref.id}`;
+              lookupDisplayMap.set(entityKey, name);
+              lookupDisplayMap.set(ref.id, name);
+            }
+          } catch {
+            // Ignore lookup failures.
+          }
+        }
+
+        return formatAuditValueForDisplay(value, lookupDisplayMap, fieldName) || '—';
+      };
+
+      const resolvedRows = await Promise.all(rows.map(async r => {
+        const raw = r as unknown as Record<string, unknown>;
+        const changedBy =
+          (raw['useridname'] as string | undefined) ??
+          (raw['_userid_value@OData.Community.Display.V1.FormattedValue'] as string | undefined) ??
+          (raw['_userid_value'] as string | undefined) ??
+          '';
+        const event =
+          (raw['actionname'] as string | undefined) ??
+          (raw['action@OData.Community.Display.V1.FormattedValue'] as string | undefined) ??
+          String(r.action ?? '');
+        const parsedFields = await Promise.all(parseAuditChangedata(r.changedata).map(async field => ({
+          ...field,
+          oldValue: await resolveAuditLookupValue(field.name, field.oldValue) || '—',
+          newValue: await resolveAuditLookupValue(field.name, field.newValue) || '—',
+        })));
+        return {
+          auditId: r.auditid,
+          changedDate: r.createdon,
+          changedBy: await resolveAuditLookupValue('systemuser', changedBy) || '---',
+          event,
+          changedFields: parsedFields,
+        };
+      }));
+
+      setAuditHistoryRows(resolvedRows);
+      if (auditResult.status === 'rejected') {
+        setAuditHistoryError(auditResult.reason instanceof Error ? auditResult.reason.message : 'Unable to load audit history.');
+      }
+    } catch (e: unknown) {
+      setAuditHistoryError(e instanceof Error ? e.message : 'Unable to load audit history.');
+    } finally {
+      setAuditHistoryLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!resolvedEnrolmentId) return;
@@ -568,6 +1054,31 @@ export function EnrolmentDetailsPage() {
       })
       .catch(() => {});
   }, [coreAppId]);
+
+  const [refreshing, setRefreshing] = useState(false);
+
+  const refreshRecord = async () => {
+    if (!resolvedEnrolmentId) return;
+    setRefreshing(true);
+    try {
+      let result = await Vsi_participantprogramyearsService.get(resolvedEnrolmentId, {
+        select: [...DETAIL_SELECT],
+      });
+      if (!result?.data) {
+        result = await Vsi_participantprogramyearsService.get(resolvedEnrolmentId);
+      }
+      const loaded = result.data;
+      if (loaded) {
+        setRecord(loaded);
+        setFormState(initialFormFromRecord(loaded));
+        addToast('Record refreshed.', 'success');
+      }
+    } catch {
+      addToast('Unable to refresh record.', 'error');
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
     if (!resolvedEnrolmentId) {
@@ -903,13 +1414,6 @@ export function EnrolmentDetailsPage() {
         });
         return;
       }
-      if (formState.vsi_enrolmentnoticesentdate) {
-        setLateNoticeModal({
-          type: 'error',
-          message: 'Enrolment Notice Sent Date must be blank before saving the Late Enrolment Notice Sent Date.',
-        });
-        return;
-      }
       if (!formState.vsi_lateenrolmentfeesfinaldeadlinedate) {
         setLateNoticeModal({
           type: 'error',
@@ -1065,7 +1569,8 @@ export function EnrolmentDetailsPage() {
 
   const nonPenaltyDaysLeft = record.vsi_nonpenaltydeadlinedaysleft;
   const finalDeadlineDaysLeft = record.vsi_finaldeadlinedaysdiff;
-  const lateFinalDeadlineDaysLeft = record.vsi_latefinaldeadlinedaysdiff;
+  const lateFinalDeadlineDaysLeft = record.vsi_latefinaldeadlinedaysdiff
+    ?? getDaysUntilDate(record.vsi_lateenrolmentfeesfinaldeadlinedate);
 
 
   return (
@@ -1182,6 +1687,23 @@ export function EnrolmentDetailsPage() {
             </div>
 
             <div className="details-link-field">
+              <button
+                type="button"
+                className="calc-outline-btn"
+                onClick={() => { void refreshRecord(); }}
+                disabled={refreshing}
+                title="Refresh this enrolment record"
+              >
+                {refreshing ? 'Refreshing…' : 'Refresh'}
+              </button>
+              <button
+                type="button"
+                className="calc-outline-btn"
+                onClick={() => { void loadAuditHistory(); }}
+                title="View audit history for this enrolment record"
+              >
+                Audit History
+              </button>
               {record.vsi_sharepointdocumentfolder ? (
                 <a
                   className="calc-outline-btn calc-sharepoint-btn"
@@ -1448,7 +1970,9 @@ export function EnrolmentDetailsPage() {
 
             <div className="details-field">
               <span className="details-label">Reminder Sent</span>
-              <strong className="details-value-strong">{yesNoText(emailReminderAuditState.lateFinalDeadline)}</strong>
+              <strong className="details-value-strong">
+                {yesNoText(emailReminderAuditState.lateFinalDeadline)}
+              </strong>
             </div>
           </div>
         </div>
@@ -1568,6 +2092,113 @@ export function EnrolmentDetailsPage() {
       )}
 
       <Toast toasts={toasts} onDismiss={dismissToast} />
+
+      {showAuditHistory && (
+        <div className="modal-overlay" onClick={() => setShowAuditHistory(false)}>
+          <div className="audit-history-modal modal-box" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Audit History</h3>
+              <button type="button" className="audit-history-close-btn" onClick={() => setShowAuditHistory(false)}>Close</button>
+            </div>
+            <div className="audit-history-filter-row">
+              <label className="audit-history-filter-label" htmlFor="audit-field-filter">Filter on:</label>
+              <select
+                id="audit-field-filter"
+                className="audit-history-filter-select"
+                value={auditFilterField}
+                onChange={e => setAuditFilterField(e.target.value)}
+              >
+                <option value="">All Fields</option>
+                {auditFilterOptions.length > 0
+                  ? auditFilterOptions.map(opt => (
+                    <option key={opt.logicalName} value={opt.logicalName}>{opt.displayName}</option>
+                  ))
+                  : null}
+              </select>
+            </div>
+            <div className="audit-history-body">
+              {auditHistoryLoading && <p className="audit-history-loading">Loading audit history...</p>}
+              {auditHistoryError && <p className="audit-history-error">{auditHistoryError}</p>}
+              {!auditHistoryLoading && !auditHistoryError && (() => {
+                const filteredRows = auditHistoryRows.map(entry => {
+                  if (!auditFilterField) return entry;
+                  const matchedFields = entry.changedFields.filter(f => f.name === auditFilterField);
+                  return matchedFields.length > 0 ? { ...entry, changedFields: matchedFields } : null;
+                }).filter((entry): entry is AuditHistoryEntry => entry !== null);
+                return (
+                  <table className="audit-history-table">
+                    <thead>
+                      <tr>
+                        <th className="audit-history-th">Changed Date</th>
+                        <th className="audit-history-th">Changed By</th>
+                        <th className="audit-history-th">Event</th>
+                        <th className="audit-history-th">Changed Field</th>
+                        <th className="audit-history-th">Old Value</th>
+                        <th className="audit-history-th">New Value</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredRows.length === 0 && (
+                        <tr>
+                          <td className="audit-history-td" colSpan={6}>No audit history found.</td>
+                        </tr>
+                      )}
+                      {filteredRows.map(entry => {
+                        const dateStr = entry.changedDate
+                          ? new Date(entry.changedDate).toLocaleString('en-CA', {
+                              year: 'numeric', month: 'numeric', day: 'numeric',
+                              hour: 'numeric', minute: '2-digit',
+                            })
+                          : '---';
+                        const eventGroupKey = `${entry.auditId}-${entry.changedBy}-${entry.event}-${dateStr}`;
+                        const isHoveredEvent = hoveredAuditEventKey === eventGroupKey;
+
+                        if (entry.changedFields.length === 0) {
+                          return (
+                            <tr
+                              key={entry.auditId}
+                              className={`audit-history-tr ${isHoveredEvent ? 'audit-history-tr-hovered' : ''}`}
+                              onMouseEnter={() => setHoveredAuditEventKey(eventGroupKey)}
+                              onMouseLeave={() => setHoveredAuditEventKey(null)}
+                            >
+                              <td className="audit-history-td audit-history-td-date">{dateStr}</td>
+                              <td className="audit-history-td">{entry.changedBy || '---'}</td>
+                              <td className="audit-history-td audit-history-td-event">{entry.event || '---'}</td>
+                              <td className="audit-history-td audit-history-td-muted" colSpan={3}>—</td>
+                            </tr>
+                          );
+                        }
+
+                        return entry.changedFields.map((field, idx) => (
+                          <tr
+                            key={`${entry.auditId}-${idx}`}
+                            className={`audit-history-tr ${isHoveredEvent ? 'audit-history-tr-hovered' : ''}`}
+                            onMouseEnter={() => setHoveredAuditEventKey(eventGroupKey)}
+                            onMouseLeave={() => setHoveredAuditEventKey(null)}
+                          >
+                            {idx === 0 && (
+                              <>
+                                <td className="audit-history-td audit-history-td-date" rowSpan={entry.changedFields.length}>{dateStr}</td>
+                                <td className="audit-history-td" rowSpan={entry.changedFields.length}>{entry.changedBy || '---'}</td>
+                                <td className="audit-history-td audit-history-td-event" rowSpan={entry.changedFields.length}>{entry.event || '---'}</td>
+                              </>
+                            )}
+                            <td className="audit-history-td audit-history-td-field">
+                              {auditFieldLabels.get(field.name) || field.name}
+                            </td>
+                            <td className="audit-history-td">{field.oldValue || '—'}</td>
+                            <td className="audit-history-td">{field.newValue || '—'}</td>
+                          </tr>
+                        ));
+                      })}
+                    </tbody>
+                  </table>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
 
       {pendingNavPath && (
         <div className="modal-overlay">

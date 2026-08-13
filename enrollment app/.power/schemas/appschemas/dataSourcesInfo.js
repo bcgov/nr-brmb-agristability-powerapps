@@ -1,4 +1,4 @@
-/*!
+﻿/*!
  * Copyright (C) Microsoft Corporation. All rights reserved.
  * This file is auto-generated. Do not modify it manually.
  * Changes to this file may be overwritten.
@@ -3527,6 +3527,20 @@ export const dataSourcesInfo = {
     "tableId": "",
     "version": "",
     "primaryKey": "accountid",
+    "dataSourceType": "Dataverse",
+    "apis": {}
+  },
+  "businessunits": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "businessunitid",
+    "dataSourceType": "Dataverse",
+    "apis": {}
+  },
+  "audits": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "auditid",
     "dataSourceType": "Dataverse",
     "apis": {}
   },

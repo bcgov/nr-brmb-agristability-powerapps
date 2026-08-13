@@ -231,6 +231,86 @@ function Patch-UserqueriesSharingApis {
 }
 
 
+function Patch-DataverseTableEntries {
+  <#
+  .SYNOPSIS
+    Re-injects Dataverse table entries that pac wipes after regeneration.
+    Currently restores: audits, businessunits.
+  #>
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$FilePath
+  )
+
+  if (-not (Test-Path -LiteralPath $FilePath)) {
+    Write-Host "  Skipping patch - file not found: $FilePath" -ForegroundColor Yellow
+    return
+  }
+
+  $content = [System.IO.File]::ReadAllText($FilePath)
+  $changed = $false
+
+  $auditEntry = @'
+  "audits": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "auditid",
+    "dataSourceType": "Dataverse",
+    "apis": {}
+  },
+'@
+
+  $businessunitsEntry = @'
+  "businessunits": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "businessunitid",
+    "dataSourceType": "Dataverse",
+    "apis": {}
+  },
+'@
+
+  if ($content -notmatch '"audits"') {
+    # Insert after the "accounts" block
+    $accountsIdx = $content.IndexOf('"accounts"')
+    if ($accountsIdx -ge 0) {
+      $closingBrace = $content.IndexOf('}', $content.IndexOf('"apis"', $accountsIdx))
+      $insertAfter = $content.IndexOf(',', $closingBrace)
+      if ($insertAfter -ge 0) {
+        $content = $content.Substring(0, $insertAfter + 1) + "`n" + $auditEntry.TrimStart("`n") + $content.Substring($insertAfter + 1)
+        $changed = $true
+        Write-Host "  Injected 'audits' entry into $FilePath" -ForegroundColor Green
+      }
+    } else {
+      Write-Host "  Warning: 'accounts' anchor not found in $FilePath - audits entry not injected." -ForegroundColor Yellow
+    }
+  } else {
+    Write-Host "  'audits' already present: $FilePath" -ForegroundColor DarkGray
+  }
+
+  if ($content -notmatch '"businessunits"') {
+    $accountsIdx = $content.IndexOf('"accounts"')
+    if ($accountsIdx -ge 0) {
+      $closingBrace = $content.IndexOf('}', $content.IndexOf('"apis"', $accountsIdx))
+      $insertAfter = $content.IndexOf(',', $closingBrace)
+      if ($insertAfter -ge 0) {
+        $content = $content.Substring(0, $insertAfter + 1) + "`n" + $businessunitsEntry.TrimStart("`n") + $content.Substring($insertAfter + 1)
+        $changed = $true
+        Write-Host "  Injected 'businessunits' entry into $FilePath" -ForegroundColor Green
+      }
+    } else {
+      Write-Host "  Warning: 'accounts' anchor not found in $FilePath - businessunits entry not injected." -ForegroundColor Yellow
+    }
+  } else {
+    Write-Host "  'businessunits' already present: $FilePath" -ForegroundColor DarkGray
+  }
+
+  if ($changed) {
+    [System.IO.File]::WriteAllText($FilePath, $content, [System.Text.Encoding]::UTF8)
+  }
+}
+
+
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $powerConfigPath = Join-Path $repoRoot 'power.config.json'
 
@@ -349,6 +429,11 @@ Write-Host "`n==> Patch userqueries sharing APIs in dataSourcesInfo" -Foreground
 $dataSourcesInfoDir = Join-Path $repoRoot '.power\schemas\appschemas'
 Patch-UserqueriesSharingApis -FilePath (Join-Path $dataSourcesInfoDir 'dataSourcesInfo.ts')
 Patch-UserqueriesSharingApis -FilePath (Join-Path $dataSourcesInfoDir 'dataSourcesInfo.js')
+
+# Patch dataSourcesInfo files to restore Dataverse table entries wiped by pac regeneration
+Write-Host "`n==> Patch Dataverse table entries (audits, businessunits) in dataSourcesInfo" -ForegroundColor Cyan
+Patch-DataverseTableEntries -FilePath (Join-Path $dataSourcesInfoDir 'dataSourcesInfo.ts')
+Patch-DataverseTableEntries -FilePath (Join-Path $dataSourcesInfoDir 'dataSourcesInfo.js')
 
 # Inject Dataverse table mappings into databaseReferences after PAC creates default.cds
 if ($null -ne $config.dataverseTableMappings -and (Test-Path -LiteralPath $powerConfigPath)) {
@@ -553,6 +638,8 @@ if (-not $SkipBuild.IsPresent) {
   Write-Host "`n==> Re-patch userqueries sharing APIs (pre-build safety check)" -ForegroundColor Cyan
   Patch-UserqueriesSharingApis -FilePath (Join-Path $dataSourcesInfoDir 'dataSourcesInfo.ts')
   Patch-UserqueriesSharingApis -FilePath (Join-Path $dataSourcesInfoDir 'dataSourcesInfo.js')
+  Patch-DataverseTableEntries -FilePath (Join-Path $dataSourcesInfoDir 'dataSourcesInfo.ts')
+  Patch-DataverseTableEntries -FilePath (Join-Path $dataSourcesInfoDir 'dataSourcesInfo.js')
 
   Invoke-CheckedCommand -FilePath 'npm.cmd' -Arguments @('run', 'build') -Description 'Build app'
 }
