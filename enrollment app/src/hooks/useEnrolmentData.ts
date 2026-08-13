@@ -369,6 +369,16 @@ export function useSortedAndFilteredRows(
           ?? raw['_vsi_programyearid_value@OData.Community.Display.V1.FormattedValue']
           ?? '') as string;
       case 'fee': return String(row.vsi_totalfeesowedcalculated ?? '');
+      case 'flagged': {
+        const isFlagged =
+          (row.vsi_prevyearpartnotverified === true && row.vsi_isnewparticipant !== true)
+          || (row.vsi_isnewparticipant !== true && row.vsi_enrolmentfee != null && row.vsi_previousyearcalculatedenfee == null)
+          || ((() => {
+            const variance = row.vsi_variancecalculation != null ? row.vsi_variancecalculation * 100 : null;
+            return variance != null && Math.abs(variance) >= getEnrolmentEnFeeVarianceThreshold();
+          })());
+        return isFlagged ? 'Yes' : 'No';
+      }
       case 'hasPartners': return row.vsi_haspartners === true ? 'Yes' : 'No';
       case 'inCombinedFarm': return row.vsi_incombinedfarm === true ? 'Yes' : 'No';
       case 'isNewParticipant': return row.vsi_isnewparticipant === true ? 'Yes' : 'No';

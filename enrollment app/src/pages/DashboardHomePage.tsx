@@ -88,6 +88,28 @@ const NUMBER_COLUMN_KEY_BY_FIELD: Partial<Record<AdvFilterField, SortKey>> = {
   lateFinalDeadlineDaysDiff: 'lateFinalDeadlineDaysDiff',
 };
 
+const BOOLEAN_COLUMN_FIELD_BY_KEY: Partial<Record<SortKey, AdvFilterField>> = {
+  flagged: 'flagged',
+  hasPartners: 'hasPartners',
+  inCombinedFarm: 'inCombinedFarm',
+  isNewParticipant: 'isNewParticipant',
+  lateParticipant: 'fullyProvinciallyFunded',
+  bringForward: 'bringForward',
+  broughtForward: 'broughtForward',
+  manualReview: 'manualReview',
+};
+
+const BOOLEAN_COLUMN_KEY_BY_FIELD: Partial<Record<AdvFilterField, SortKey>> = {
+  flagged: 'flagged',
+  hasPartners: 'hasPartners',
+  inCombinedFarm: 'inCombinedFarm',
+  isNewParticipant: 'isNewParticipant',
+  fullyProvinciallyFunded: 'lateParticipant',
+  bringForward: 'bringForward',
+  broughtForward: 'broughtForward',
+  manualReview: 'manualReview',
+};
+
 let dashboardFilterCache: DashboardFilterCache | null = null;
 
 function parseProgramYearStart(value: unknown): number | null {
@@ -404,6 +426,15 @@ export function DashboardHomePage() {
           return node.operator === 'equals' ? clause : `not ${clause}`;
         }
 
+        if (node.field === 'flagged') {
+          const values = [...node.values];
+          if (values.length === 0) return '';
+          const flaggedExpr = `((vsi_prevyearpartnotverified eq true and vsi_isnewparticipant ne true) or (vsi_isnewparticipant ne true and vsi_enrolmentfee ne null and vsi_previousyearcalculatedenfee eq null) or (vsi_variancecalculation ge ${varianceThreshold} or vsi_variancecalculation le -${varianceThreshold}))`;
+          const clauses = values.map(v => (v.toLowerCase() === 'yes' ? flaggedExpr : `not ${flaggedExpr}`));
+          const clause = clauses.length === 1 ? clauses[0] : `(${clauses.join(' or ')})`;
+          return node.operator === 'equals' ? clause : `not (${clause})`;
+        }
+
         if (node.field === 'fee' || node.field === 'totalFeesOwed' || node.field === 'totalFeesOwedCalculated' || node.field === 'totalFeesPaid' || node.field === 'latePay' || node.field === 'nonPenaltyDeadlineDaysLeft' || node.field === 'finalDeadlineDaysDiff' || node.field === 'lateFinalDeadlineDaysDiff') {
           const numericFields: Partial<Record<string, string>> = {
             fee: 'vsi_totalfeesowedcalculated',
@@ -667,6 +698,46 @@ export function DashboardHomePage() {
     setSelectedIds(new Set());
   }, []);
 
+  const setBooleanColumnFilterAndReset = useCallback((key: SortKey, nextValues: Set<string>) => {
+    const field = BOOLEAN_COLUMN_FIELD_BY_KEY[key];
+    if (!field) return;
+    setAdvFilterNodes(prev => {
+      const remaining = prev.filter(node => !(node.kind === 'row' && node.field === field));
+      if (nextValues.size === 0) return remaining;
+      return [...remaining, {
+        kind: 'row' as const,
+        id: nextFilterId(),
+        field,
+        operator: 'equals',
+        values: new Set(nextValues),
+        textValue: '',
+      }];
+    });
+    setCurrentPage(1);
+    setSelectedIds(new Set());
+  }, []);
+
+  const setBooleanColumnFilterOperatorAndReset = useCallback((key: SortKey, nextOperator: FilterOperator) => {
+    const field = BOOLEAN_COLUMN_FIELD_BY_KEY[key];
+    if (!field) return;
+    setAdvFilterNodes(prev => {
+      const target = prev.find(node => node.kind === 'row' && node.field === field);
+      const nextValues = target?.kind === 'row' ? new Set(target.values) : new Set<string>();
+      const remaining = prev.filter(node => !(node.kind === 'row' && node.field === field));
+      if (nextValues.size === 0) return remaining;
+      return [...remaining, {
+        kind: 'row' as const,
+        id: nextFilterId(),
+        field,
+        operator: nextOperator,
+        values: nextValues,
+        textValue: '',
+      }];
+    });
+    setCurrentPage(1);
+    setSelectedIds(new Set());
+  }, []);
+
   const numberColumnFilters = useMemo(() => {
     const result: Partial<Record<SortKey, NumberColumnFilter>> = {};
     const visit = (nodes: AdvFilterNode[]) => {
@@ -678,6 +749,26 @@ export function DashboardHomePage() {
         const key = NUMBER_COLUMN_KEY_BY_FIELD[node.field];
         if (!key) continue;
         result[key] = { operator: node.operator as NumberColumnFilter['operator'], value: node.textValue ?? '' };
+      }
+    };
+    visit(advFilterNodes);
+    return result;
+  }, [advFilterNodes]);
+
+  const booleanColumnFilters = useMemo(() => {
+    const result: Partial<Record<SortKey, { values: Set<string>; operator: FilterOperator }>> = {};
+    const visit = (nodes: AdvFilterNode[]) => {
+      for (const node of nodes) {
+        if (node.kind === 'group') {
+          visit(node.children);
+          continue;
+        }
+        const key = BOOLEAN_COLUMN_KEY_BY_FIELD[node.field];
+        if (!key) continue;
+        result[key] = {
+          values: new Set(node.values),
+          operator: node.operator === 'notEquals' ? 'notEquals' : 'equals',
+        };
       }
     };
     visit(advFilterNodes);
@@ -1117,6 +1208,9 @@ export function DashboardHomePage() {
             ownerFilterShortcuts={currentUserDisplayName ? [{ label: 'Assigned to me', values: new Set([currentUserDisplayName]) }] : undefined}
             numberColumnFilters={numberColumnFilters}
             onNumberColumnFilterChange={setNumberColumnFilterAndReset}
+            booleanColumnFilters={booleanColumnFilters}
+            onBooleanColumnFilterChange={setBooleanColumnFilterAndReset}
+            onBooleanColumnFilterOperatorChange={setBooleanColumnFilterOperatorAndReset}
             sortKey={sortKey}
             sortDir={sortDir}
             onSort={setSort}

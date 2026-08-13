@@ -128,7 +128,7 @@ export function getChoiceOptions(field: string, dynamicChoiceOptions?: Partial<R
   if (field === 'enrolStatus') return Object.values(Vsi_participantprogramyearsvsi_enrolmentstatus) as string[];
   if (field === 'owner') return dynamicChoiceOptions?.owner ?? [];
   if (field === 'year') return dynamicChoiceOptions?.year ?? [];
-  if (field === 'hasPartners' || field === 'inCombinedFarm' || field === 'isNewParticipant' || field === 'fullyProvinciallyFunded' || field === 'bringForward' || field === 'broughtForward' || field === 'manualReview') return ['Yes', 'No'];
+  if (field === 'flagged' || field === 'hasPartners' || field === 'inCombinedFarm' || field === 'isNewParticipant' || field === 'fullyProvinciallyFunded' || field === 'bringForward' || field === 'broughtForward' || field === 'manualReview') return ['Yes', 'No'];
   if (field === 'regionalOffice') return Object.values(Vsi_participantprogramyearsvsi_enrollmentregionaloffice) as string[];
   if (field === 'farmingSector') return Object.values(Vsi_participantprogramyearsvsi_farmingsector) as string[];
   return [];

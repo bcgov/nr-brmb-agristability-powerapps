@@ -25,7 +25,7 @@ export type FilterOperator = 'equals' | 'notEquals';
 
 export type AdvFilterField =
   | 'taskStatus' | 'enrolStatus' | 'pin' | 'producer' | 'owner' | 'year'
-  | 'fee' | 'totalFeesOwed' | 'totalFeesOwedCalculated' | 'totalFeesPaid' | 'latePay'
+  | 'fee' | 'totalFeesOwed' | 'totalFeesOwedCalculated' | 'totalFeesPaid' | 'latePay' | 'flagged'
   | 'hasPartners' | 'inCombinedFarm' | 'isNewParticipant' | 'fullyProvinciallyFunded'
   | 'bringForward' | 'broughtForward' | 'manualReview'
   | 'regionalOffice' | 'farmingSector'

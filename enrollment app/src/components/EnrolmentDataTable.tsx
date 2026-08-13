@@ -42,6 +42,9 @@ type Props = {
   ownerFilterShortcuts?: Array<{ label: string; values: Set<string> }>;
   numberColumnFilters: Partial<Record<SortKey, { operator: 'equals' | 'notEquals' | 'hasValue' | 'hasNoValue' | 'greaterThan' | 'greaterThanOrEqual' | 'lessThan' | 'lessThanOrEqual'; value: string }>>;
   onNumberColumnFilterChange: (key: SortKey, next: { operator: 'equals' | 'notEquals' | 'hasValue' | 'hasNoValue' | 'greaterThan' | 'greaterThanOrEqual' | 'lessThan' | 'lessThanOrEqual'; value: string } | null) => void;
+  booleanColumnFilters: Partial<Record<SortKey, { values: Set<string>; operator: FilterOperator }>>;
+  onBooleanColumnFilterChange: (key: SortKey, next: Set<string>) => void;
+  onBooleanColumnFilterOperatorChange: (key: SortKey, op: FilterOperator) => void;
   sortKey: SortKey | null;
   sortDir: SortDir;
   onSort: (key: SortKey, dir: SortDir) => void;
@@ -85,6 +88,9 @@ export function EnrolmentDataTable({
   ownerFilterShortcuts,
   numberColumnFilters,
   onNumberColumnFilterChange,
+  booleanColumnFilters,
+  onBooleanColumnFilterChange,
+  onBooleanColumnFilterOperatorChange,
   sortKey,
   sortDir,
   onSort,
@@ -105,6 +111,16 @@ export function EnrolmentDataTable({
     'nonPenaltyDeadlineDaysLeft',
     'finalDeadlineDaysDiff',
     'lateFinalDeadlineDaysDiff',
+  ]);
+  const booleanFilterableKeys = new Set<SortKey>([
+    'flagged',
+    'hasPartners',
+    'inCombinedFarm',
+    'isNewParticipant',
+    'lateParticipant',
+    'bringForward',
+    'broughtForward',
+    'manualReview',
   ]);
 
   return (
@@ -154,6 +170,14 @@ export function EnrolmentDataTable({
                 extra.filterShortcuts = ownerFilterShortcuts;
               }
 
+              if (booleanFilterableKeys.has(k)) {
+                extra.filterOptions = ['Yes', 'No'];
+                extra.selectedFilters = booleanColumnFilters[k]?.values ?? new Set<string>();
+                extra.filterOperator = booleanColumnFilters[k]?.operator ?? 'equals';
+                extra.onFilterChange = (next) => onBooleanColumnFilterChange(k, next);
+                extra.onFilterOperatorChange = (op) => onBooleanColumnFilterOperatorChange(k, op);
+              }
+
               const dragProps = {
                 draggable: true,
                 onDragStart: () => onColDragStart(colIdx),
@@ -164,10 +188,6 @@ export function EnrolmentDataTable({
 
               if (k === 'sharepoint') {
                 return <th key={k} {...dragProps} style={{ cursor: 'grab' }}>{def.label}</th>;
-              }
-
-              if (k === 'flagged') {
-                return <th key={k} {...dragProps} style={{ cursor: 'grab', width: 28 }}></th>;
               }
 
               return (
