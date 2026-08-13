@@ -3554,10 +3554,24 @@ export const dataSourcesInfo = {
     "dataSourceType": "Dataverse",
     "apis": {}
   },
+  "audits": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "auditid",
+    "dataSourceType": "Dataverse",
+    "apis": {}
+  },
   "vsi_automaticemailaudits": {
     "tableId": "",
     "version": "",
     "primaryKey": "vsi_automaticemailauditid",
+    "dataSourceType": "Dataverse",
+    "apis": {}
+  },
+  "businessunits": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "businessunitid",
     "dataSourceType": "Dataverse",
     "apis": {}
   },

@@ -3,6 +3,7 @@ import { useRole } from '../context/RoleContext';
 import type { AppRole } from '../context/RoleContext';
 
 const ASSIGN_ROLES: AppRole[] = ['SystemAdmin', 'Supervisor', 'ENAdmin'];
+const BULK_EDIT_ROLES: AppRole[] = ['SystemAdmin'];
 const REFER_ROLES: AppRole[] = ['SystemAdmin', 'Supervisor', 'ENAdmin', 'Verifier'];
 
 type Props = {
@@ -18,6 +19,7 @@ type Props = {
 export function EnrolmentActionsBar({ hasSelection, selectedCount, onOpenBulkNotices, onOpenBulkEdit, onOpenAssign, onOpenReferToSupervisor, onOpenApproveCalculatedFees }: Props) {
   const { activeRole } = useRole();
   const canAssign = ASSIGN_ROLES.includes(activeRole);
+  const canBulkEdit = BULK_EDIT_ROLES.includes(activeRole);
   const canRefer = REFER_ROLES.includes(activeRole);
 
   return (
@@ -30,7 +32,7 @@ export function EnrolmentActionsBar({ hasSelection, selectedCount, onOpenBulkNot
           <FileText size={15} /> Bulk EN Notices
         </button>
       )}
-      {canAssign && (
+      {canBulkEdit && (
         <button className="dash-btn-secondary" onClick={onOpenBulkEdit} disabled={!hasSelection}>
           <Pencil size={15} /> Bulk Edit
         </button>

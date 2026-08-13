@@ -10,7 +10,7 @@
   "localAppUrl": "http://localhost:3000",
   "logoPath": "Default",
   "connectionReferences": {
-    "d4c54972-33a2-41ab-bb4a-25d862ca039c": {
+    "7d21f45f-93b3-4958-9625-de07bdb7de8f": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_farms-20api-5fe39d1efd21a19d13-5f571039b465579741",
       "displayName": "FARMS API",
       "dataSources": [
@@ -22,7 +22,7 @@
       "sharedConnectionId": "/providers/Microsoft.PowerApps/apis/shared_farms-20api-5fe39d1efd21a19d13-5f571039b465579741/connections/7f0dbaddf90e498e82c553b27272a705",
       "dataSets": {}
     },
-    "721871e7-d70a-453a-9c2c-467f691d1784": {
+    "545c8032-43cc-4068-8291-9c10ca599396": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
       "displayName": "Microsoft Dataverse",
       "dataSources": [
@@ -32,7 +32,7 @@
       "sharedConnectionId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps/connections/b05319f6f3244385ac9d9959391a2970",
       "dataSets": {}
     },
-    "69241a8d-89c4-4871-a0f7-7fb1234a8189": {
+    "61157f5c-5d68-4c57-9d09-1e565d9bb803": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
       "displayName": "Logic flows",
       "dataSources": [
@@ -44,15 +44,15 @@
         "workflowName": "e3f5031f-0d21-4b4e-90ad-bf43d6d496cd"
       }
     },
-    "38b1e7ef-2751-4515-94ab-7d203e603752": {
+    "9967c90c-49b4-4e78-adc8-0285fb60932e": {
       "id": "/providers/microsoft.powerapps/apis/shared_sharepointonline",
       "displayName": "SharePoint"
     },
-    "a344d6dd-a6df-4c6b-a786-7bbda8d62180": {
+    "5c81bc7e-ee88-4b43-aff7-21a9184a10a5": {
       "id": "/providers/microsoft.powerapps/apis/shared_wordonlinebusiness",
       "displayName": "Word Online (Business)"
     },
-    "0343d34d-32a5-402d-9d38-be46d9082b10": {
+    "3de42b6d-9006-419a-96a8-9dc3b6966511": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
       "displayName": "Logic flows",
       "dataSources": [
@@ -63,12 +63,12 @@
         "workflowDisplayName": "Generate 45 Day Letter",
         "workflowName": "8bdef04a-3078-a8e8-bed0-89163ef5e0c4",
         "dependencies": {
-          "shared_sharepointonline_1": "38b1e7ef-2751-4515-94ab-7d203e603752",
-          "shared_wordonlinebusiness_1": "a344d6dd-a6df-4c6b-a786-7bbda8d62180"
+          "shared_sharepointonline_1": "9967c90c-49b4-4e78-adc8-0285fb60932e",
+          "shared_wordonlinebusiness_1": "5c81bc7e-ee88-4b43-aff7-21a9184a10a5"
         }
       }
     },
-    "8645339c-ccbb-48ff-bf81-9a34d483ad44": {
+    "5768c771-1ebc-4d5b-8061-605e4a751537": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
       "displayName": "Logic flows",
       "dataSources": [
@@ -77,10 +77,14 @@
       "workflowDetails": {
         "workflowEntityId": "228e6e3f-da27-ee11-9965-0022483cb0d4",
         "workflowDisplayName": "Generate Bulk Enrolment Notices",
-        "workflowName": "1659a9c0-1436-b7b2-d918-2b5b3fc5e819"
+        "workflowName": "1659a9c0-1436-b7b2-d918-2b5b3fc5e819",
+        "dependencies": {
+          "shared_wordonlinebusiness": "5c81bc7e-ee88-4b43-aff7-21a9184a10a5",
+          "shared_sharepointonline": "9967c90c-49b4-4e78-adc8-0285fb60932e"
+        }
       }
     },
-    "124b60f2-cef4-4f86-b444-a7c9ce6a4dc8": {
+    "ea3986a2-82df-4ef1-9738-3bf468c70f44": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
       "displayName": "Logic flows",
       "dataSources": [
@@ -103,9 +107,17 @@
           "entitySetName": "accounts",
           "logicalName": "account"
         },
+        "audits": {
+          "entitySetName": "audits",
+          "logicalName": "audit"
+        },
         "automaticemailaudits": {
           "entitySetName": "vsi_automaticemailaudits",
           "logicalName": "vsi_automaticemailaudit"
+        },
+        "businessunits": {
+          "entitySetName": "businessunits",
+          "logicalName": "businessunit"
         },
         "coreconfiguration": {
           "entitySetName": "vsi_armsconfigurations",

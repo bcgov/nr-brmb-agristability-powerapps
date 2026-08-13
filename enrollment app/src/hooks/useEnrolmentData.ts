@@ -384,6 +384,7 @@ export function useSortedAndFilteredRows(
       case 'farmingSector': return Vsi_participantprogramyearsvsi_farmingsector[row.vsi_farmingsector as keyof typeof Vsi_participantprogramyearsvsi_farmingsector] ?? '';
       case 'modifiedOn': return row.modifiedon ?? '';
       case 'enrolmentNoticeSentDate': return row.vsi_enrolmentnoticesentdate ?? '';
+      case 'lateEnrolmentNoticeSentDate': return row.vsi_lateenrolmentnoticesentdate ?? '';
       case 'enrolmentOptedOutDate': return row.vsi_programyearoptoutdate ?? '';
       case 'fileReceivedDate': return row.vsi_filereceiveddate ?? '';
       case 'feesPaidDate': return row.vsi_enrolmentfeespaiddate ?? '';

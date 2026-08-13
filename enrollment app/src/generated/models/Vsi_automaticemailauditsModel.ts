@@ -16,7 +16,7 @@ export const Vsi_automaticemailauditsvsi_emailtype = {
   865520000: '_45DayLetter',
   865520001: 'Non_PenaltyReminder',
   865520002: 'FinalDeadlineReminder',
-  865520003: 'LateEnrolmentReminder',
+  865520007: 'LateEnrolmentReminder',
   865520004: 'NPPEmail',
   865520005: 'StatementAEmail',
   865520006: 'StatementAMissingSuppEmail'

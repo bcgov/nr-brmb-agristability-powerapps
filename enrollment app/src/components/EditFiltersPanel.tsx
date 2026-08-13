@@ -158,7 +158,7 @@ function FilterRowEditor({
             <option value="equals">Equals</option>
             <option value="notEquals">Does not equal</option>
           </>
-        ) : ['enrolmentNoticeSentDate', 'enrolmentOptedOutDate', 'fileReceivedDate', 'feesPaidDate'].includes(row.field) ? (
+        ) : ['enrolmentNoticeSentDate', 'lateEnrolmentNoticeSentDate', 'enrolmentOptedOutDate', 'fileReceivedDate', 'feesPaidDate'].includes(row.field) ? (
           <>
             <option value="hasValue">Has a value</option>
             <option value="hasNoValue">Has no value</option>

@@ -21,9 +21,9 @@ export const Vsi_participantprogramyearsvsi_enrollmentregionaloffice = {
 export type Vsi_participantprogramyearsvsi_enrollmentregionaloffice = keyof typeof Vsi_participantprogramyearsvsi_enrollmentregionaloffice;
 export const Vsi_participantprogramyearsvsi_enrolmentstatus = {
   865520004: 'Initialized',
-  865520005: 'UnverifiedENCalculated',
+  865520005: 'VerifiedENCalculated',
   865520007: 'EnrolmentNoticeSent',
-  865520006: 'VerifiedENCalculalted',
+  865520006: 'UnverifiedENCalculated',
   865520008: 'Enrolled_NotPaid',
   865520000: 'Enrolled',
   865520011: 'LateEnrolled',
