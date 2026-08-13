@@ -18,7 +18,6 @@ import { Vsi_armsconfigurationsService } from '../generated/services/Vsi_armscon
 import { Vsi_enrolmenthistoriesService } from '../generated/services/Vsi_enrolmenthistoriesService';
 import { AuditsService } from '../generated/services/AuditsService';
 import { BusinessunitsService } from '../generated/services/BusinessunitsService';
-import { MicrosoftDataverseService } from '../generated/services/MicrosoftDataverseService';
 import { type Vsi_enrolmenthistories } from '../generated/models/Vsi_enrolmenthistoriesModel';
 import { type Vsi_automaticemailaudits } from '../generated/models/Vsi_automaticemailauditsModel';
 import { CORE_APP_ID_FALLBACK, CORE_BASE_URL_FALLBACK } from '../constants/config';
@@ -46,6 +45,7 @@ import {
   type PartnerComparisonRow,
 } from '../services/enrolmentPartners';
 import { extractLookupReferences, extractSystemUserGuids, formatAuditValueForDisplay } from '../utils/auditValueFormatting';
+import enrolmentsSchema from '../../.power/schemas/dataverse/enrolments.Schema.json';
 
 type DateField =
   | 'vsi_enrolmentnoticesentdate'
@@ -221,70 +221,6 @@ type AuditHistoryEntry = {
   changedBy: string;
   event: string;
   changedFields: AuditChangedField[];
-};
-
-const resolveAttributeDisplayName = (attr: Record<string, unknown>, logicalName?: string): string | undefined => {
-  const displayName = attr['DisplayName'] as Record<string, unknown> | string | undefined;
-  if (typeof displayName === 'string' && displayName.trim()) return displayName.trim();
-
-  const userLocalizedLabel = (displayName as Record<string, unknown> | undefined)?.['UserLocalizedLabel'] as Record<string, unknown> | undefined;
-  const userLabel = typeof userLocalizedLabel?.['Label'] === 'string' ? userLocalizedLabel['Label']?.trim() : undefined;
-  if (userLabel) return userLabel;
-
-  const localizedLabels = (displayName as Record<string, unknown> | undefined)?.['LocalizedLabels'] as Array<Record<string, unknown>> | undefined;
-  const englishLabel = localizedLabels?.find(item => Number(item?.['LanguageCode']) === 1033)?.['Label'];
-  const firstLabel = localizedLabels?.[0]?.['Label'];
-  const localizedText = typeof englishLabel === 'string' ? englishLabel.trim() : typeof firstLabel === 'string' ? firstLabel.trim() : undefined;
-  if (localizedText) return localizedText;
-
-  const title = typeof attr['title'] === 'string' ? attr['title'].trim() : undefined;
-  if (title) return title;
-
-  const schemaName = typeof attr['x-ms-schema-name'] === 'string' ? attr['x-ms-schema-name'].trim() : undefined;
-  if (schemaName) return schemaName;
-
-  const dataverseAttribute = typeof attr['x-ms-dataverse-attribute'] === 'string' ? attr['x-ms-dataverse-attribute'].trim() : undefined;
-  if (dataverseAttribute) return dataverseAttribute;
-
-  return logicalName?.trim() || (typeof attr['LogicalName'] === 'string' ? attr['LogicalName']?.trim() : undefined);
-};
-
-const extractMetadataAttributes = (value: unknown): Array<{ logicalName: string; metadata: Record<string, unknown> }> => {
-  if (!value || typeof value !== 'object') return [];
-
-  const root = value as Record<string, unknown>;
-  const schema = root.schema as Record<string, unknown> | undefined;
-  const properties = schema?.properties as Record<string, unknown> | undefined;
-  if (properties && typeof properties === 'object') {
-    return Object.entries(properties)
-      .filter(([key, entry]) => !!key && !!entry && typeof entry === 'object')
-      .map(([key, entry]) => ({ logicalName: key, metadata: entry as Record<string, unknown> }));
-  }
-
-  const queue: unknown[] = [value];
-  const results: Array<{ logicalName: string; metadata: Record<string, unknown> }> = [];
-
-  while (queue.length > 0) {
-    const current = queue.pop();
-    if (Array.isArray(current)) {
-      queue.push(...current);
-      continue;
-    }
-    if (!current || typeof current !== 'object') continue;
-
-    const record = current as Record<string, unknown>;
-    const logicalName = typeof record.LogicalName === 'string' ? record.LogicalName.trim() : '';
-    const hasDisplayName = !!record.DisplayName || !!record.SchemaName || !!record.title || !!record['x-ms-dataverse-attribute'];
-    if (logicalName && hasDisplayName) {
-      results.push({ logicalName, metadata: record as Record<string, unknown> });
-    }
-
-    for (const child of Object.values(record)) {
-      if (child && typeof child === 'object') queue.push(child);
-    }
-  }
-
-  return results;
 };
 
 const normalizeAuditValue = (value: unknown): string => {
@@ -604,51 +540,28 @@ export function EnrolmentDetailsPage() {
     setAuditHistoryError(null);
     setAuditFilterField('');
 
-    const { dataverseOrgUrl } = getCoreConfig();
-    const organizationUrl = (dataverseOrgUrl ?? coreBaseUrl ?? CORE_BASE_URL_FALLBACK)
-      .replace(/\/main\.aspx.*$/i, '')
-      .replace(/\/?$/, '');
-    const orgUrl = organizationUrl || window.location.origin;
-
     try {
-      const [auditResult, metaResult] = await Promise.allSettled([
-        AuditsService.getAll({
-          select: ['auditid', 'createdon', 'action', 'operation', 'changedata', '_userid_value', 'objecttypecode'],
-          filter: `_objectid_value eq '${resolvedEnrolmentId}'`,
-          maxPageSize: 100,
-        }),
-        (async () => {
-          const result = await MicrosoftDataverseService.GetMetadataForGetEntityWithOrganization(organizationUrl, 'vsi_participantprogramyears');
-          const payload = result?.data as Record<string, unknown> | undefined;
-          return extractMetadataAttributes(payload);
-        })(),
-      ]);
+      const auditResult = await AuditsService.getAll({
+        select: ['auditid', 'createdon', 'action', 'operation', 'changedata', '_userid_value', 'objecttypecode'],
+        filter: `_objectid_value eq '${resolvedEnrolmentId}'`,
+        maxPageSize: 100,
+      }).then(r => ({ status: 'fulfilled' as const, value: r })).catch(e => ({ status: 'rejected' as const, reason: e }));
 
       const labelMap = new Map<string, string>();
-      if (metaResult.status === 'fulfilled') {
-        const attrs = metaResult.value ?? [];
-        for (const attr of attrs) {
-          const logicalName = attr.logicalName || '';
-          const label = resolveAttributeDisplayName(attr.metadata, logicalName);
-          if (logicalName && label) labelMap.set(logicalName, label);
-        }
-      } else {
-        try {
-          const fallback = await fetch(
-            `${orgUrl}/api/data/v9.2/EntityDefinitions(LogicalName='vsi_participantprogramyears')/Attributes?$select=LogicalName,DisplayName&$top=500`,
-            { headers: { 'OData-MaxVersion': '4.0', 'OData-Version': '4.0', Accept: 'application/json' }, credentials: 'include' },
-          );
-          const fallbackJson = await fallback.json() as { value?: Array<{ LogicalName: string; DisplayName?: { UserLocalizedLabel?: { Label?: string } } }> };
-          const attrs = fallbackJson.value ?? [];
-          for (const attr of attrs) {
-            const logicalName = typeof attr.LogicalName === 'string' ? attr.LogicalName.trim() : '';
-            const label = attr.DisplayName?.UserLocalizedLabel?.Label ?? attr.LogicalName;
-            if (logicalName && label) labelMap.set(logicalName, label);
-          }
-        } catch {
-          // Ignore fallback failures; the UI can continue with the raw field names.
+
+      // Build label map from the bundled schema — works in every environment.
+      const schemaProperties = (enrolmentsSchema as unknown as Record<string, unknown>);
+      const schemaParsed = (schemaProperties?.schema as Record<string, unknown> | undefined)
+        ?.items as Record<string, unknown> | undefined;
+      const schemaProps = schemaParsed?.properties as Record<string, Record<string, unknown>> | undefined
+        ?? (schemaProperties?.schema as Record<string, unknown> | undefined)?.properties as Record<string, Record<string, unknown>> | undefined;
+      if (schemaProps) {
+        for (const [key, entry] of Object.entries(schemaProps)) {
+          const title = typeof entry?.title === 'string' ? entry.title.trim() : '';
+          if (key && title && title !== key) labelMap.set(key, title);
         }
       }
+
       const sorted = Array.from(labelMap.entries())
         .map(([logicalName, displayName]) => ({ logicalName, displayName }))
         .sort((a, b) => a.displayName.localeCompare(b.displayName));
