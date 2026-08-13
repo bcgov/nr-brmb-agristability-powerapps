@@ -974,18 +974,23 @@ export function EnrolmentDetailsPage() {
     if (!resolvedEnrolmentId) return;
     setRefreshing(true);
     try {
-      let result = await Vsi_participantprogramyearsService.get(resolvedEnrolmentId, {
-        select: [...DETAIL_SELECT],
-      });
-      if (!result?.data) {
-        result = await Vsi_participantprogramyearsService.get(resolvedEnrolmentId);
+      const [recordResult, emailResult] = await Promise.allSettled([
+        Vsi_participantprogramyearsService.get(resolvedEnrolmentId, { select: [...DETAIL_SELECT] })
+          .then(r => r?.data ? r : Vsi_participantprogramyearsService.get(resolvedEnrolmentId)),
+        Vsi_automaticemailauditsService.getAll({
+          select: ['vsi_objectid', 'vsi_emailtype', 'vsi_sendstatus', 'vsi_senton', 'vsi_templateid', 'vsi_templatename'],
+          filter: `vsi_objectid eq '${resolvedEnrolmentId}'`,
+          maxPageSize: 200,
+        }),
+      ]);
+      if (recordResult.status === 'fulfilled' && recordResult.value.data) {
+        setRecord(recordResult.value.data);
+        setFormState(initialFormFromRecord(recordResult.value.data));
       }
-      const loaded = result.data;
-      if (loaded) {
-        setRecord(loaded);
-        setFormState(initialFormFromRecord(loaded));
-        addToast('Record refreshed.', 'success');
-      }
+      setEmailAuditRows(
+        emailResult.status === 'fulfilled' ? (emailResult.value.data ?? []) : null,
+      );
+      addToast('Record refreshed.', 'success');
     } catch {
       addToast('Unable to refresh record.', 'error');
     } finally {
