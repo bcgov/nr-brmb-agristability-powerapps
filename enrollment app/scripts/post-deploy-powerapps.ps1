@@ -610,7 +610,11 @@ if ($null -ne $config.flowReferences -and $config.flowReferences.Count -gt 0) {
       throw "Required flow '$workflowDisplayName' is not active in the '$Stage' environment (statecode: $($flow.statecode)). Deployment stopped before push."
     }
 
-    Invoke-CheckedCommand -FilePath 'npx.cmd' -Arguments @('power-apps', 'add-flow', '-f', [string]$flow.workflowId) -Description "Add flow '$workflowDisplayName'"
+    $addFlowOutput = Invoke-CapturedCommand -FilePath 'npx.cmd' -Arguments @('power-apps', 'add-flow', '-f', [string]$flow.workflowId) -Description "Add flow '$workflowDisplayName'"
+    $addFlowText = ($addFlowOutput | Out-String)
+    if ($addFlowText -match 'Failed to add flow' -or $addFlowText -match 'Unable to retrieve connection') {
+      throw "add-flow reported a failure for '$workflowDisplayName'. Ensure all dependent connections (e.g. SharePoint, Word Online) are added as data sources before running this script.`n$addFlowText"
+    }
   }
 
   $boundPowerConfig = Get-Content -LiteralPath $powerConfigPath -Raw | ConvertFrom-Json
