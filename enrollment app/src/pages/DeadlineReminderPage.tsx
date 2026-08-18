@@ -7,14 +7,20 @@ import { Vsi_participantprogramyearsService } from '../generated/services/Vsi_pa
 import { CORE_APP_ID_FALLBACK, CORE_BASE_URL_FALLBACK } from '../constants/config';
 import { getCoreConfig } from '../hooks/useEnrolmentData';
 import { Vsi_automaticemailauditsService } from '../generated/services/Vsi_automaticemailauditsService';
+import { Vsi_armsconfigurationsService } from '../generated/services/Vsi_armsconfigurationsService';
 import { formatCurrencyOr, formatEnrolmentStatusDisplay, getEnrolmentStatusLabel } from '../utils/helpers';
 import { formatDateOnlyForDisplay } from '../utils/date';
 import { ColumnHeaderMenu } from '../components/ColumnHeaderMenu';
 import type { SortDir, FilterOperator } from '../types/enrollment';
-import { getReminderRemainingDays, hasEnrolmentNoticeSentDate, isDueWithinFiveDays, resolveReminderKind, shouldIncludeReminderRow, type ReminderKind } from './deadlineReminderUtils';
+import { getReminderRemainingDays, hasEnrolmentNoticeSentDate, resolveReminderKind, shouldIncludeReminderRow, type ReminderKind } from './deadlineReminderUtils';
+import { SendEmailwithTemplateService } from '../generated/services/SendEmailwithTemplateService';
+import { EnvironmentvariablevaluesService } from '../generated/services/EnvironmentvariablevaluesService';
+import { Toast, nextToastId } from '../components/Toast';
+import type { ToastMessage } from '../components/Toast';
+import { useRole } from '../context/RoleContext';
 import '../styles/supervisor-approval.css';
 
-type DeadlineColumnKey = 'enrolmentName' | 'year' | 'participant' | 'pin' | 'enrolmentStatus' | 'totalFeesOwed' | 'noticeSentDate' | 'remainingDays' | 'reminderSent';
+type DeadlineColumnKey = 'enrolmentName' | 'year' | 'participant' | 'pin' | 'enrolmentStatus' | 'totalFeesOwed' | 'noticeSentDate' | 'deadlineDate' | 'remainingDays' | 'kind' | 'reminderSent';
 
 function getParticipantPinFromEnrolmentName(value: string | null | undefined): string {
   const text = value?.trim() ?? '';
@@ -90,9 +96,6 @@ const yesNoText = (value: boolean | null) => {
   return value ? 'Yes' : 'No';
 };
 
-const isUrgentForStyling = (remainingDays: number | null): boolean =>
-  remainingDays != null && remainingDays >= 0 && remainingDays <= 5;
-
 const getDisplayValue = (item: Vsi_participantprogramyears, annotationKey: string, fallback?: string) => {
   const raw = item as unknown as Record<string, unknown>;
   return (raw[annotationKey] as string | undefined) ?? fallback ?? '-';
@@ -161,6 +164,8 @@ const toReminderRow = (item: Vsi_participantprogramyears, auditMap: AuditMap | n
 };
 
 export function DeadlineReminderPage() {
+  const { activeRole } = useRole();
+  const canEditConfig = activeRole === 'SystemAdmin' || activeRole === 'ENAdmin';
   const [items, setItems] = useState<Vsi_participantprogramyears[]>([]);
   const [auditMap, setAuditMap] = useState<AuditMap | null>(null);
   const [loading, setLoading] = useState(true);
@@ -175,6 +180,114 @@ export function DeadlineReminderPage() {
   const [yearColFilter, setYearColFilter] = useState<Set<string>>(new Set());
   const [yearColFilterOp, setYearColFilterOp] = useState<FilterOperator>('equals');
   const [reminderSentColFilter, setReminderSentColFilter] = useState<Set<string>>(new Set());
+  const [urgentDaysThreshold, setUrgentDaysThreshold] = useState(5);
+  const [sendEmailDaysThreshold, setSendEmailDaysThreshold] = useState(30);
+  const [configRowId, setConfigRowId] = useState<string | null>(null);
+  const [configUnsaved, setConfigUnsaved] = useState(false);
+  const [configSaving, setConfigSaving] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const result = await Vsi_armsconfigurationsService.getAll({
+        maxPageSize: 50,
+        orderBy: ['modifiedon desc'],
+        select: ['vsi_armsconfigurationid', 'vsi_activeconfiguration', 'vsi_urgentreminderdays', 'vsi_allowreminderdays'],
+      });
+      const rows = result.data ?? [];
+      const active = rows.find(r => r.vsi_activeconfiguration) ?? rows[0];
+      if (!active) return;
+      setConfigRowId(active.vsi_armsconfigurationid ?? null);
+      const urgent = active.vsi_urgentreminderdays;
+      const allow = active.vsi_allowreminderdays;
+      if (urgent != null) setUrgentDaysThreshold(urgent);
+      if (allow != null) setSendEmailDaysThreshold(allow);
+      setConfigUnsaved(urgent == null || allow == null);
+    })();
+  }, []);
+
+  const handleSaveConfig = async () => {
+    if (!configRowId) return;
+    setConfigSaving(true);
+    try {
+      const result = await Vsi_armsconfigurationsService.update(configRowId, {
+        vsi_urgentreminderdays: urgentDaysThreshold,
+        vsi_allowreminderdays: sendEmailDaysThreshold,
+      });
+      if (!result.success) throw new Error((result.error as { message?: string } | undefined)?.message ?? 'Save failed');
+      setConfigUnsaved(false);
+      addToast('Configuration saved.');
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : String(err), 'error');
+    } finally {
+      setConfigSaving(false);
+    }
+  };
+  const [sendingEmailFor, setSendingEmailFor] = useState<Set<string>>(new Set());
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const addToast = (message: string, type: ToastMessage['type'] = 'success') =>
+    setToasts(prev => [...prev, { id: nextToastId(), message, type }]);
+  const dismissToast = (id: number) => setToasts(prev => prev.filter(t => t.id !== id));
+  const [nonPenaltyTemplateGuid, setNonPenaltyTemplateGuid] = useState<string>('');
+  const [finalDeadlineTemplateGuid, setFinalDeadlineTemplateGuid] = useState<string>('');
+  const [lateEnTemplateGuid, setLateEnTemplateGuid] = useState<string>('');
+  const [envVarsLoaded, setEnvVarsLoaded] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const result = await EnvironmentvariablevaluesService.getAll({
+          select: ['schemaname', 'value'],
+          maxPageSize: 100,
+        });
+        for (const row of result.data ?? []) {
+          const schema = row.schemaname as string | undefined;
+          const val = (row.value as string | undefined) ?? '';
+          if (schema === 'vsi_ENDeadlineReminderEmailTemplate') setNonPenaltyTemplateGuid(val);
+          if (schema === 'vsi_ENFeeFinalDeadlineReminderTemplate') setFinalDeadlineTemplateGuid(val);
+          if (schema === 'vsi_LateENFeeFinalDeadlineReminderTemplate') setLateEnTemplateGuid(val);
+        }
+        setEnvVarsLoaded(true);
+      } catch (err) {
+        console.error('[DeadlineReminder] Env var fetch error:', err);
+      }
+    })();
+  }, []);
+
+  const handleSendNow = async (row: DeadlineReminderRow) => {
+    setSendingEmailFor(prev => new Set(prev).add(row.itemId));
+    try {
+      const raw = row.item as unknown as Record<string, unknown>;
+      const templateGuid = row.kind === 'finalDeadline'
+        ? finalDeadlineTemplateGuid
+        : row.kind === 'lateFinalDeadline'
+          ? lateEnTemplateGuid
+          : nonPenaltyTemplateGuid;
+      const params = {
+        text:   'vsi_participantprogramyear',
+        text_1: templateGuid,
+        text_2: (raw['_vsi_participantid_value'] as string | undefined) ?? '',
+        text_3: row.itemId,
+        text_4: row.itemId,
+        text_5: (raw['_vsi_programyearid_value'] as string | undefined) ?? '',
+      };
+      const result = await SendEmailwithTemplateService.Run(params);
+      if (!result.success) {
+        throw new Error((result.error as { message?: string } | undefined)?.message ?? 'Failed to send email');
+      }
+      const flowResponse = (result.data as { response?: string } | undefined)?.response;
+      const successResponses = ['success', 'email sent'];
+      if (flowResponse && !successResponses.includes(flowResponse.toLowerCase())) {
+        throw new Error(`Flow responded with: ${flowResponse}`);
+      }
+      addToast('Reminder email sent successfully.');
+      setRefreshCounter(prev => prev + 1);
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : String(err), 'error');
+    } finally {
+      setSendingEmailFor(prev => { const next = new Set(prev); next.delete(row.itemId); return next; });
+    }
+  };
+
   const onSort = (key: DeadlineColumnKey, dir: SortDir) => { setSortKey(key); setSortDir(dir); setPage(1); };
   // eslint-disable-next-line @typescript-eslint/no-empty-function
   const noopWidthChange = () => {};
@@ -259,7 +372,8 @@ export function DeadlineReminderPage() {
     const mapped = items
       .map(item => toReminderRow(item, auditMap))
       .filter((row): row is DeadlineReminderRow => row !== null)
-      .filter(row => shouldIncludeReminderRow(row));
+      .filter(row => shouldIncludeReminderRow(row))
+      .filter(row => !(row.remainingDays === 0 && row.reminderSent === true));
 
     mapped.sort((a, b) => {
       let cmp = 0;
@@ -271,7 +385,9 @@ export function DeadlineReminderPage() {
         case 'enrolmentStatus': cmp = a.enrolmentStatusLabel.localeCompare(b.enrolmentStatusLabel); break;
         case 'totalFeesOwed': cmp = (a.totalFeesOwed ?? -Infinity) - (b.totalFeesOwed ?? -Infinity); break;
         case 'noticeSentDate': cmp = (a.noticeSentDate ?? '').localeCompare(b.noticeSentDate ?? ''); break;
+        case 'deadlineDate':   cmp = (a.deadlineDate ?? '').localeCompare(b.deadlineDate ?? ''); break;
         case 'remainingDays': cmp = (a.remainingDays ?? Infinity) - (b.remainingDays ?? Infinity); break;
+        case 'kind':          cmp = a.kind.localeCompare(b.kind); break;
         case 'reminderSent':  cmp = Number(a.reminderSent ?? false) - Number(b.reminderSent ?? false); break;
       }
       if (cmp !== 0) return sortDir === 'asc' ? cmp : -cmp;
@@ -314,7 +430,7 @@ export function DeadlineReminderPage() {
     Object.fromEntries(enrolStatusOptions.map(s => [s, formatEnrolmentStatusDisplay(s)])),
   [enrolStatusOptions]);
 
-  const urgentRows = filteredRows.filter(isDueWithinFiveDays);
+  const urgentRows = filteredRows.filter(r => r.remainingDays != null && r.remainingDays >= 0 && r.remainingDays <= urgentDaysThreshold);
   const displayRows = showUrgentOnly ? urgentRows : filteredRows;
   const totalPages = Math.max(1, Math.ceil(displayRows.length / PAGE_SIZE));
   const pageRows = displayRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -352,9 +468,9 @@ export function DeadlineReminderPage() {
           type="button"
           className={`deadline-reminder-summary-item urgent${showUrgentOnly ? ' active' : ''}`}
           onClick={() => { setShowUrgentOnly(true); setSortKey('remainingDays'); setSortDir('asc'); setPage(1); }}
-          title="Filter to records due within 5 days"
+          title={`Filter to records due within ${urgentDaysThreshold} days`}
         >
-          <span className="deadline-reminder-summary-label">Due within 5 days</span>
+          <span className="deadline-reminder-summary-label">Due within {urgentDaysThreshold} days</span>
           <strong>{urgentRows.length}</strong>
         </button>
       </div>
@@ -363,8 +479,56 @@ export function DeadlineReminderPage() {
         <div className="sa-card-header">
           <div className="sa-card-title-block">
             <h2 className="sa-card-title">Deadline Reminders</h2>
-            <p className="sa-card-subtitle">Rows turn red when the selected deadline is within 5 days, including 0 days.</p>
+            <p className="sa-card-subtitle">Rows turn red when the selected deadline is within {urgentDaysThreshold} days, including 0 days.</p>
           </div>
+          {canEditConfig ? (
+            <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-end', flexShrink: 0 }}>
+              {configUnsaved && (
+                <span style={{ fontSize: '0.8rem', color: '#b45309', alignSelf: 'center' }}>
+                  ⚠ Config values not set — defaults in use. Please save.
+                </span>
+              )}
+              <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.8rem', color: 'var(--color-text-secondary, #6b7280)' }}>
+                Urgent within (days)
+                <input
+                  type="number"
+                  min={0}
+                  value={urgentDaysThreshold}
+                  onChange={e => { setUrgentDaysThreshold(Math.max(0, Number(e.target.value))); setConfigUnsaved(true); }}
+                  style={{ width: '4.5rem', padding: '0.25rem 0.5rem', borderRadius: '4px', border: '1px solid #d1d5db', fontSize: '0.875rem' }}
+                />
+              </label>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.8rem', color: 'var(--color-text-secondary, #6b7280)' }}>
+                Allow send within (days)
+                <input
+                  type="number"
+                  min={0}
+                  value={sendEmailDaysThreshold}
+                  onChange={e => { setSendEmailDaysThreshold(Math.max(0, Number(e.target.value))); setConfigUnsaved(true); }}
+                  style={{ width: '4.5rem', padding: '0.25rem 0.5rem', borderRadius: '4px', border: '1px solid #d1d5db', fontSize: '0.875rem' }}
+                />
+              </label>
+              <button
+                type="button"
+                className="sa-filter-btn"
+                disabled={configSaving || !configRowId}
+                onClick={handleSaveConfig}
+              >
+                {configSaving ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', flexShrink: 0 }}>
+              <span style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.8rem', color: 'var(--color-text-secondary, #6b7280)' }}>
+                Urgent within (days)
+                <strong style={{ fontSize: '0.875rem', color: 'var(--color-text, #111827)' }}>{urgentDaysThreshold}</strong>
+              </span>
+              <span style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.8rem', color: 'var(--color-text-secondary, #6b7280)' }}>
+                Allow send within (days)
+                <strong style={{ fontSize: '0.875rem', color: 'var(--color-text, #111827)' }}>{sendEmailDaysThreshold}</strong>
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="sa-table-container">
@@ -391,7 +555,9 @@ export function DeadlineReminderPage() {
                     onFilterOperatorChange={setEnrolStatusColFilterOp} />
                   <ColumnHeaderMenu label="Total Fees Owed"  sortLabelMode="number" sortKey="totalFeesOwed"   currentSortKey={sortKey} currentSortDir={sortDir} onSort={onSort} columnWidth={undefined} onColumnWidthChange={noopWidthChange} />
                   <ColumnHeaderMenu label="EN Notice Sent Date" sortLabelMode="date" sortKey="noticeSentDate" currentSortKey={sortKey} currentSortDir={sortDir} onSort={onSort} columnWidth={undefined} onColumnWidthChange={noopWidthChange} />
+                  <ColumnHeaderMenu label="Deadline Date" sortLabelMode="date" sortKey="deadlineDate" currentSortKey={sortKey} currentSortDir={sortDir} onSort={onSort} columnWidth={undefined} onColumnWidthChange={noopWidthChange} />
                   <ColumnHeaderMenu label="Remaining Days Until Deadline" sortLabelMode="number" sortKey="remainingDays" currentSortKey={sortKey} currentSortDir={sortDir} onSort={onSort} columnWidth={undefined} onColumnWidthChange={noopWidthChange} />
+                  <ColumnHeaderMenu label="Type" sortKey="kind" currentSortKey={sortKey} currentSortDir={sortDir} onSort={onSort} columnWidth={undefined} onColumnWidthChange={noopWidthChange} />
                   <ColumnHeaderMenu label="Reminder Sent"   sortKey="reminderSent"     currentSortKey={sortKey} currentSortDir={sortDir} onSort={onSort} columnWidth={undefined} onColumnWidthChange={noopWidthChange}
                     filterOptions={['Yes', 'No']} selectedFilters={reminderSentColFilter}
                     onFilterChange={v => { setReminderSentColFilter(v); setPage(1); }} />
@@ -399,7 +565,7 @@ export function DeadlineReminderPage() {
               </thead>
               <tbody>
                 {pageRows.map(row => {
-                  const isUrgent = isUrgentForStyling(row.remainingDays);
+                  const isUrgent = row.remainingDays != null && row.remainingDays >= 0 && row.remainingDays <= urgentDaysThreshold;
                   const { coreAppId, coreBaseUrl } = getCoreConfig();
                   const participantHref = row.participantId
                     ? `${coreBaseUrl ?? CORE_BASE_URL_FALLBACK}?appid=${encodeURIComponent(coreAppId ?? CORE_APP_ID_FALLBACK)}&pagetype=entityrecord&etn=account&id=${encodeURIComponent(row.participantId)}`
@@ -420,12 +586,33 @@ export function DeadlineReminderPage() {
                       <td>{formatEnrolmentStatusDisplay(row.enrolmentStatusLabel)}</td>
                       <td>{formatCurrencyOr(row.totalFeesOwed, '-')}</td>
                       <td>{formatDate(row.noticeSentDate)}</td>
+                      <td>{formatDate(row.deadlineDate)}</td>
                       <td>
                         <span className={`deadline-days-pill${isUrgent ? ' urgent' : ''}`} title={row.deadlineDate ? `Deadline: ${formatDate(row.deadlineDate)}` : undefined}>
                           {formatDays(row.remainingDays)}
                         </span>
                       </td>
-                      <td>{yesNoText(row.reminderSent)}</td>
+                      <td style={{ textAlign: 'center' }}>
+                        <span className={`deadline-kind-pill deadline-kind-pill--${row.kind}`}>
+                          {row.kind === 'nonPenalty' ? 'NP' : row.kind === 'finalDeadline' ? 'Final' : 'Late'}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'center', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                        {(row.reminderSent === false || row.reminderSent === null) && row.remainingDays != null && row.remainingDays < sendEmailDaysThreshold
+                          ? (
+                            <>
+                              <button
+                                type="button"
+                                className="sa-filter-btn"
+                                disabled={sendingEmailFor.has(row.itemId) || !envVarsLoaded}
+                                onClick={() => handleSendNow(row)}
+                              >
+                                {sendingEmailFor.has(row.itemId) ? 'Sending...' : 'Send Now'}
+                              </button>
+                            </>
+                          )
+                          : yesNoText(row.reminderSent)}
+                      </td>
                     </tr>
                   );
                 })}
@@ -457,6 +644,7 @@ export function DeadlineReminderPage() {
           </div>
         )}
       </div>
+      <Toast toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }

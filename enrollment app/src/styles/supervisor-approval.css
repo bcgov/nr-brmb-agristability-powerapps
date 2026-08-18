@@ -711,6 +711,32 @@
   background: #ffecec !important;
 }
 
+.deadline-kind-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.deadline-kind-pill--nonPenalty {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.deadline-kind-pill--finalDeadline {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.deadline-kind-pill--lateFinalDeadline {
+  background: #fde2e2;
+  color: #b42318;
+}
+
 .deadline-days-pill {
   display: inline-flex;
   align-items: center;

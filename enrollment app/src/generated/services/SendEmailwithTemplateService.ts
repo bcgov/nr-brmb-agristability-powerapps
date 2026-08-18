@@ -4,23 +4,23 @@
  */
 
 import type { IOperationResult } from '@microsoft/power-apps/data';
-import type { ManualTriggerInput } from '../models/ReferToSupervisorModel';
-import type { ResponseActionOutput } from '../models/ReferToSupervisorModel';
+import type { ManualTriggerInput } from '../models/SendEmailwithTemplateModel';
+import type { ResponseActionOutput } from '../models/SendEmailwithTemplateModel';
 import { dataSourcesInfo } from '../../../.power/schemas/appschemas/dataSourcesInfo';
 import { getClient } from '@microsoft/power-apps/data';
 
-export class ReferToSupervisorService {
-  private static readonly dataSourceName = 'refertosupervisor';
+export class SendEmailwithTemplateService {
+  private static readonly dataSourceName = 'sendemailwithtemplate';
 
   private static readonly client = getClient(dataSourcesInfo);
 
   public static async Run(input: ManualTriggerInput): Promise<IOperationResult<ResponseActionOutput>> {
     const params: { input: ManualTriggerInput } = { input };
     const allParams = { ...params, "api-version": "2015-02-01-preview" };
-    const result = await ReferToSupervisorService.client.executeAsync<{ input: ManualTriggerInput }, ResponseActionOutput>(
+    const result = await SendEmailwithTemplateService.client.executeAsync<{ input: ManualTriggerInput }, ResponseActionOutput>(
       {
         connectorOperation: {
-          tableName: ReferToSupervisorService.dataSourceName,
+          tableName: SendEmailwithTemplateService.dataSourceName,
           operationName: 'Run',
           parameters: allParams
         },

@@ -3596,6 +3596,13 @@ export const dataSourcesInfo = {
     "dataSourceType": "Dataverse",
     "apis": {}
   },
+  "environmentvariablevalues": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "environmentvariablevalueid",
+    "dataSourceType": "Dataverse",
+    "apis": {}
+  },
   "fieldpermissions": {
     "tableId": "",
     "version": "",
@@ -5738,6 +5745,46 @@ export const dataSourcesInfo = {
     }
   },
   "refertosupervisor": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "",
+    "dataSourceType": "Connector",
+    "apis": {
+      "Run": {
+        "path": "/{connectionId}/triggers/manual/run",
+        "method": "POST",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "input",
+            "in": "body",
+            "required": true,
+            "type": "object"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          },
+          "default": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  },
+  "sendemailwithtemplate": {
     "tableId": "",
     "version": "",
     "primaryKey": "",
