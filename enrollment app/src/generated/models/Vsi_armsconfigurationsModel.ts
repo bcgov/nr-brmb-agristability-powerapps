@@ -29,6 +29,7 @@ export interface Vsi_armsconfigurationsBase {
   utcconversiontimezonecode?: number;
   vsi_activeconfiguration: boolean;
   "vsi_AddressManagementTeamId@odata.bind": string;
+  vsi_allowreminderdays?: number;
   vsi_armsconfigurationid: string;
   "vsi_ClaimsAdministratorTeamId@odata.bind"?: string;
   vsi_coreenvironmentid?: string;
@@ -50,6 +51,7 @@ export interface Vsi_armsconfigurationsBase {
   vsi_repositoryrootdirectory: string;
   vsi_tenantid?: string;
   vsi_triagepaymentthreshold?: number;
+  vsi_urgentreminderdays?: number;
 }
 
 export interface Vsi_armsconfigurations extends Vsi_armsconfigurationsBase {

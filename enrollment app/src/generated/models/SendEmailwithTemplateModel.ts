@@ -6,8 +6,18 @@
 export interface ManualTriggerInput {
   // Please enter your input
   text: string;
+  // Please enter your input
+  text_1: string;
+  // Please enter your input
+  text_2: string;
+  // Please enter your input
+  text_3: string;
+  // Please enter your input
+  text_4: string;
+  // Please enter your input
+  text_5: string;
 }
 
 export interface ResponseActionOutput {
-  message?: string;
+  response?: string;
 }

@@ -10,7 +10,7 @@
   "localAppUrl": "http://localhost:3000",
   "logoPath": "Default",
   "connectionReferences": {
-    "a561cfa9-22cc-460d-bd26-00b5df5eeef6": {
+    "d74efa56-4a7f-418c-82bd-a615f78a99d9": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_farms-20api-5fe39d1efd21a19d13-5f571039b465579741",
       "displayName": "FARMS API",
       "dataSources": [
@@ -22,7 +22,7 @@
       "sharedConnectionId": "/providers/Microsoft.PowerApps/apis/shared_farms-20api-5fe39d1efd21a19d13-5f571039b465579741/connections/7f0dbaddf90e498e82c553b27272a705",
       "dataSets": {}
     },
-    "3f840022-b5dc-4b41-ab99-b55330faf8a3": {
+    "4fe20986-a8d5-4747-b32b-38b0416babec": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
       "displayName": "Microsoft Dataverse",
       "dataSources": [
@@ -32,7 +32,7 @@
       "sharedConnectionId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps/connections/b05319f6f3244385ac9d9959391a2970",
       "dataSets": {}
     },
-    "93dfd043-4db5-492c-bbab-0e1436d7d60b": {
+    "e42f140b-59fe-408d-9dc3-644278894877": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
       "displayName": "Logic flows",
       "dataSources": [
@@ -44,15 +44,15 @@
         "workflowName": "e3f5031f-0d21-4b4e-90ad-bf43d6d496cd"
       }
     },
-    "b6af5075-1237-46c1-b8d5-500b7f4d5419": {
+    "0523ad48-d74d-4b6e-b419-5f81c5141efc": {
       "id": "/providers/microsoft.powerapps/apis/shared_sharepointonline",
       "displayName": "SharePoint"
     },
-    "bbf4dac2-b4be-490f-bf12-f148ec8993b5": {
+    "96507127-844c-4883-9e6f-d0eb37ecac45": {
       "id": "/providers/microsoft.powerapps/apis/shared_wordonlinebusiness",
       "displayName": "Word Online (Business)"
     },
-    "16027438-42e3-47a2-a777-43c96e63c178": {
+    "8e1a47c1-8bcf-4b83-b7c6-f151e501b880": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
       "displayName": "Logic flows",
       "dataSources": [
@@ -63,12 +63,12 @@
         "workflowDisplayName": "Generate 45 Day Letter",
         "workflowName": "8bdef04a-3078-a8e8-bed0-89163ef5e0c4",
         "dependencies": {
-          "shared_sharepointonline_1": "b6af5075-1237-46c1-b8d5-500b7f4d5419",
-          "shared_wordonlinebusiness_1": "bbf4dac2-b4be-490f-bf12-f148ec8993b5"
+          "shared_sharepointonline_1": "0523ad48-d74d-4b6e-b419-5f81c5141efc",
+          "shared_wordonlinebusiness_1": "96507127-844c-4883-9e6f-d0eb37ecac45"
         }
       }
     },
-    "190cda0b-c0f7-4e43-90b7-faa31786bfc7": {
+    "c6ed1a9b-56e2-4a16-9c7a-6c363d56351f": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
       "displayName": "Logic flows",
       "dataSources": [
@@ -79,12 +79,12 @@
         "workflowDisplayName": "Generate Bulk Enrolment Notices",
         "workflowName": "1659a9c0-1436-b7b2-d918-2b5b3fc5e819",
         "dependencies": {
-          "shared_wordonlinebusiness": "bbf4dac2-b4be-490f-bf12-f148ec8993b5",
-          "shared_sharepointonline": "b6af5075-1237-46c1-b8d5-500b7f4d5419"
+          "shared_wordonlinebusiness": "96507127-844c-4883-9e6f-d0eb37ecac45",
+          "shared_sharepointonline": "0523ad48-d74d-4b6e-b419-5f81c5141efc"
         }
       }
     },
-    "2e06f8dc-1cff-441b-ab98-195b8e7acd8b": {
+    "2b6f44c4-f802-46db-b0f0-314c94bb0ad5": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
       "displayName": "Logic flows",
       "dataSources": [
@@ -94,6 +94,18 @@
         "workflowEntityId": "eb6d48ce-df5e-f111-a826-7c1e5254cc04",
         "workflowDisplayName": "Process Enrolment Action",
         "workflowName": "8689572a-0028-59a4-6c76-579622dddbfb"
+      }
+    },
+    "c8bdf47d-74c7-4828-9450-d44fd0270741": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
+      "displayName": "Logic flows",
+      "dataSources": [
+        "sendemailwithtemplate"
+      ],
+      "workflowDetails": {
+        "workflowEntityId": "56b2ca3c-d110-f011-998a-002248b2572c",
+        "workflowDisplayName": "Send Email with Template",
+        "workflowName": "17974f48-047c-8a8a-bed2-c20ced527614"
       }
     }
   },
@@ -130,6 +142,10 @@
         "enrolments": {
           "entitySetName": "vsi_participantprogramyears",
           "logicalName": "vsi_participantprogramyear"
+        },
+        "environmentvariablevalues": {
+          "entitySetName": "environmentvariablevalues",
+          "logicalName": "environmentvariablevalue"
         },
         "fieldpermissions": {
           "entitySetName": "fieldpermissions",

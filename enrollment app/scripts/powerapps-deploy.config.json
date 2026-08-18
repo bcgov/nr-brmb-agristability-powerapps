@@ -21,7 +21,8 @@
                                   "teamprofiles":              { "entitySetName": "teamprofilescollection",         "logicalName": "teamprofiles" },
                                   "automaticemailaudits":      { "entitySetName": "vsi_automaticemailaudits",       "logicalName": "vsi_automaticemailaudit" },
                                   "audits":                    { "entitySetName": "audits",                        "logicalName": "audit" },
-                                  "businessunits":             { "entitySetName": "businessunits",                 "logicalName": "businessunit" }
+                                  "businessunits":             { "entitySetName": "businessunits",                 "logicalName": "businessunit" },
+                                  "environmentvariablevalues": { "entitySetName": "environmentvariablevalues",     "logicalName": "environmentvariablevalue" }
                               },
     "flowReferences":  [
                           {
@@ -51,6 +52,13 @@
                               "displayName":  "Logic flows",
                               "workflowDisplayName":  "Process Enrolment Action",
                               "dataSources":  ["processenrolmentaction"]
+                          },
+                          {
+                              "key":  "a6bd4d6a-8f05-4ba2-b3d1-f980ea4ec903",
+                              "id":  "/providers/Microsoft.PowerApps/apis/shared_logicflows",
+                              "displayName":  "Logic flows",
+                              "workflowDisplayName":  "Send Email with Template",
+                              "dataSources":  ["sendemailwithtemplate"]
                           }
                       ],
     "environments":  {
