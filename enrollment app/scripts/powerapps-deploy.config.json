@@ -1,6 +1,9 @@
 {
     "appName":  "Enrollment App",
     "tenantId":  "6fdb5200-3d0d-4a8a-b036-d3685e359adc",
+    "canvasAppNames":  {
+        "change-management":  "Change Management"
+    },
     "dataverseTableMappings":  {
                                   "enrolmenthistory":          { "entitySetName": "vsi_enrolmenthistories",          "logicalName": "vsi_enrolmenthistory" },
                                   "savedviews":                { "entitySetName": "userqueries",                    "logicalName": "userquery" },
