@@ -1,0 +1,166 @@
+.app-switcher-backdrop {
+  position: fixed;
+  top: 48px; /* sits below the environment banner */
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 900;
+  display: flex;
+  align-items: flex-start;
+  justify-content: stretch;
+}
+
+.app-switcher-panel {
+  background: #f3f4f5;
+  width: 100%;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 1.5rem 2rem 2.5rem;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
+  box-sizing: border-box;
+  animation: app-switcher-slide-down 0.15s ease;
+}
+
+@keyframes app-switcher-slide-down {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.app-switcher-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.app-switcher-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin: 0;
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.app-switcher-close {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #4b5563;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.3rem;
+  border-radius: 4px;
+  line-height: 1;
+}
+
+.app-switcher-close:hover {
+  background: #e0e2e6;
+}
+
+/* ── Grid ── */
+.app-switcher-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+/* ── Cards ── */
+.app-card {
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  width: 210px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.app-card:hover:not(.app-card--current) {
+  border-color: #0078d4;
+  box-shadow: 0 2px 8px rgba(0, 120, 212, 0.18);
+}
+
+.app-card--current {
+  border-color: #0078d4;
+  cursor: default;
+}
+
+/* dark icon banner */
+.app-card-icon-area {
+  background: #1a3557;
+  height: 110px;
+  flex: 0 0 110px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+}
+
+.app-card-svg-icon {
+  width: 54px;
+  height: 36px;
+  color: #ffffff;
+}
+
+.app-card-icon-img {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+}
+
+/* card body */
+.app-card-body {
+  padding: 0.65rem 0.75rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.app-card-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1a1a2e;
+  line-height: 1.35;
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* type badges */
+.app-card-badge {
+  display: inline-block;
+  align-self: flex-start;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 2px 6px;
+  border-radius: 2px;
+  text-transform: uppercase;
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.app-card-badge--model {
+  background: #1a3557;
+  color: #ffffff;
+}
+
+.app-card-badge--canvas {
+  background: #5c2d91;
+  color: #ffffff;
+}
+
+.app-card-badge--code {
+  background: #416257;
+  color: #ffffff;
+}
+
+.app-card-badge--external {
+  background: #374151;
+  color: #ffffff;
+}
