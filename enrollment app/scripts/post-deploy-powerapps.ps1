@@ -107,6 +107,72 @@ function Test-HasProperty {
   return $null -ne ($Object | Get-Member -Name $PropertyName -MemberType NoteProperty, Property, AliasProperty -ErrorAction SilentlyContinue)
 }
 
+function Get-ReminderTemplateGuidMap {
+  param(
+    [Parameter(Mandatory = $true)]
+    [psobject]$TargetConfig
+  )
+
+  $resolved = [ordered]@{
+    nonPenalty = ''
+    finalDeadline = ''
+    lateFinalDeadline = ''
+  }
+
+  if ((Test-HasProperty -Object $TargetConfig -PropertyName 'reminderTemplateGuids') -and $null -ne $TargetConfig.reminderTemplateGuids) {
+    foreach ($name in @('nonPenalty', 'finalDeadline', 'lateFinalDeadline')) {
+      $value = [string]$TargetConfig.reminderTemplateGuids.$name
+      if (-not [string]::IsNullOrWhiteSpace($value)) {
+        $resolved[$name] = $value.Trim()
+      }
+    }
+  }
+
+  try {
+    $listOutput = Invoke-CapturedCommand -FilePath 'npx.cmd' -Arguments @('power-apps', 'list-environment-variables', '--json', '--no-color', '--non-interactive') -Description 'List environment variables for reminder templates'
+    $raw = ($listOutput | Out-String)
+    $raw = $raw -replace '\x1b\[[0-9;?]*[A-Za-z]', ''
+
+    $jsonStart = $raw.IndexOf('[')
+    $jsonEnd = $raw.LastIndexOf(']')
+    if ($jsonStart -lt 0 -or $jsonEnd -lt $jsonStart) {
+      throw 'Could not parse environment variable list JSON output.'
+    }
+
+    $rows = @($raw.Substring($jsonStart, $jsonEnd - $jsonStart + 1) | ConvertFrom-Json)
+    $schemaToKey = @{
+      'vsi_ENDeadlineReminderEmailTemplate' = 'nonPenalty'
+      'vsi_ENFeeFinalDeadlineReminderTemplate' = 'finalDeadline'
+      'vsi_LateENFeeFinalDeadlineReminderTemplate' = 'lateFinalDeadline'
+    }
+
+    foreach ($row in $rows) {
+      $schemaName = [string]$row.schemaname
+      if (-not $schemaToKey.ContainsKey($schemaName)) {
+        continue
+      }
+
+      $valueRows = @($row.environmentvariabledefinition_environmentvariablevalue)
+      if ($valueRows.Count -eq 0) {
+        continue
+      }
+
+      $templateGuid = [string]$valueRows[0].value
+      if ([string]::IsNullOrWhiteSpace($templateGuid)) {
+        continue
+      }
+
+      $resolved[$schemaToKey[$schemaName]] = $templateGuid.Trim()
+    }
+  }
+  catch {
+    Write-Host "  Warning: Could not auto-load reminder template GUIDs from environment variables. Using configured fallback values." -ForegroundColor Yellow
+    Write-Host "           $([string]$_.Exception.Message)" -ForegroundColor DarkGray
+  }
+
+  return [PSCustomObject]$resolved
+}
+
 function Get-DataSourceNameVariants {
   param(
     [Parameter(Mandatory = $true)]
@@ -230,84 +296,107 @@ function Patch-UserqueriesSharingApis {
   Write-Host "  Patched: $FilePath" -ForegroundColor Green
 }
 
-
-function Patch-DataverseTableEntries {
+function Patch-MissingFlowDataSources {
   <#
   .SYNOPSIS
-    Re-injects Dataverse table entries that pac wipes after regeneration.
-    Currently restores: audits, businessunits.
+    Ensures required flow connector datasource entries exist in dataSourcesInfo.ts/js.
   #>
   param(
     [Parameter(Mandatory = $true)]
-    [string]$FilePath
+    [string]$FilePath,
+
+    [Parameter(Mandatory = $true)]
+    [string[]]$RequiredDataSourceNames
   )
 
   if (-not (Test-Path -LiteralPath $FilePath)) {
-    Write-Host "  Skipping patch - file not found: $FilePath" -ForegroundColor Yellow
+    Write-Host "  Skipping flow datasource patch - file not found: $FilePath" -ForegroundColor Yellow
     return
   }
 
   $content = [System.IO.File]::ReadAllText($FilePath)
-  $changed = $false
+  $missingNames = New-Object 'System.Collections.Generic.List[string]'
 
-  $auditEntry = @'
-  "audits": {
+  foreach ($name in $RequiredDataSourceNames) {
+    $trimmed = [string]$name
+    if ([string]::IsNullOrWhiteSpace($trimmed)) {
+      continue
+    }
+
+    $escaped = [regex]::Escape($trimmed)
+    if ($content -notmatch '"' + $escaped + '"\s*:\s*\{') {
+      $missingNames.Add($trimmed)
+    }
+  }
+
+  if ($missingNames.Count -eq 0) {
+    Write-Host "  Flow datasource entries already present: $FilePath" -ForegroundColor DarkGray
+    return
+  }
+
+  $entryBlocks = New-Object 'System.Collections.Generic.List[string]'
+  foreach ($name in $missingNames) {
+    $entryBlocks.Add(@"
+  "$name": {
     "tableId": "",
     "version": "",
-    "primaryKey": "auditid",
-    "dataSourceType": "Dataverse",
-    "apis": {}
-  },
-'@
-
-  $businessunitsEntry = @'
-  "businessunits": {
-    "tableId": "",
-    "version": "",
-    "primaryKey": "businessunitid",
-    "dataSourceType": "Dataverse",
-    "apis": {}
-  },
-'@
-
-  if ($content -notmatch '"audits"') {
-    # Insert after the "accounts" block
-    $accountsIdx = $content.IndexOf('"accounts"')
-    if ($accountsIdx -ge 0) {
-      $closingBrace = $content.IndexOf('}', $content.IndexOf('"apis"', $accountsIdx))
-      $insertAfter = $content.IndexOf(',', $closingBrace)
-      if ($insertAfter -ge 0) {
-        $content = $content.Substring(0, $insertAfter + 1) + "`n" + $auditEntry.TrimStart("`n") + $content.Substring($insertAfter + 1)
-        $changed = $true
-        Write-Host "  Injected 'audits' entry into $FilePath" -ForegroundColor Green
+    "primaryKey": "",
+    "dataSourceType": "Connector",
+    "apis": {
+      "Run": {
+        "path": "/{connectionId}/triggers/manual/run",
+        "method": "POST",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "input",
+            "in": "body",
+            "required": true,
+            "type": "object"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          },
+          "default": {
+            "type": "object"
+          }
+        }
       }
-    } else {
-      Write-Host "  Warning: 'accounts' anchor not found in $FilePath - audits entry not injected." -ForegroundColor Yellow
     }
-  } else {
-    Write-Host "  'audits' already present: $FilePath" -ForegroundColor DarkGray
+  },
+"@)
+  }
+  $injectedText = ($entryBlocks -join '')
+
+  $officeUsersMarker = '  "office365users": {'
+  if ($content.Contains($officeUsersMarker)) {
+    $content = $content.Replace($officeUsersMarker, $injectedText + $officeUsersMarker)
+  }
+  else {
+    $closingMarker = "`n};"
+    $closingIndex = $content.LastIndexOf($closingMarker)
+    if ($closingIndex -lt 0) {
+      throw "Could not locate insertion point in '$FilePath' while patching missing flow datasources."
+    }
+
+    $content = $content.Substring(0, $closingIndex) + "`n" + $injectedText + $content.Substring($closingIndex)
   }
 
-  if ($content -notmatch '"businessunits"') {
-    $accountsIdx = $content.IndexOf('"accounts"')
-    if ($accountsIdx -ge 0) {
-      $closingBrace = $content.IndexOf('}', $content.IndexOf('"apis"', $accountsIdx))
-      $insertAfter = $content.IndexOf(',', $closingBrace)
-      if ($insertAfter -ge 0) {
-        $content = $content.Substring(0, $insertAfter + 1) + "`n" + $businessunitsEntry.TrimStart("`n") + $content.Substring($insertAfter + 1)
-        $changed = $true
-        Write-Host "  Injected 'businessunits' entry into $FilePath" -ForegroundColor Green
-      }
-    } else {
-      Write-Host "  Warning: 'accounts' anchor not found in $FilePath - businessunits entry not injected." -ForegroundColor Yellow
-    }
-  } else {
-    Write-Host "  'businessunits' already present: $FilePath" -ForegroundColor DarkGray
-  }
-
-  if ($changed) {
-    [System.IO.File]::WriteAllText($FilePath, $content, [System.Text.Encoding]::UTF8)
-  }
+  [System.IO.File]::WriteAllText($FilePath, $content, [System.Text.Encoding]::UTF8)
+  Write-Host "  Injected missing flow datasource entries ($($missingNames -join ', ')) into $FilePath" -ForegroundColor Green
 }
 
 
@@ -402,19 +491,26 @@ if (-not $PreserveSchemas) {
 # Canvas app IDs are stored in powerapps-deploy.config.json under each environment's canvasAppIds.
 Write-Host "`n==> Generate deployEnvConfig.ts for '$Stage' environment" -ForegroundColor Cyan
 $tenantIdValue = ''
-if (Test-HasProperty -Object $config -PropertyName 'tenantId' -and -not [string]::IsNullOrWhiteSpace([string]$config.tenantId)) {
+if ((Test-HasProperty -Object $config -PropertyName 'tenantId') -and -not [string]::IsNullOrWhiteSpace([string]$config.tenantId)) {
   $tenantIdValue = [string]$config.tenantId
 }
 $canvasAppIdsJson = '{}'
-if (Test-HasProperty -Object $target -PropertyName 'canvasAppIds' -and $null -ne $target.canvasAppIds) {
+if ((Test-HasProperty -Object $target -PropertyName 'canvasAppIds') -and $null -ne $target.canvasAppIds) {
   $canvasAppIdsJson = $target.canvasAppIds | ConvertTo-Json -Compress
 }
 $appIconsJson = '{}'
-if (Test-HasProperty -Object $target -PropertyName 'appIcons' -and $null -ne $target.appIcons) {
+if ((Test-HasProperty -Object $target -PropertyName 'appIcons') -and $null -ne $target.appIcons) {
   $appIconsJson = $target.appIcons | ConvertTo-Json -Compress
 }
+$reminderTemplateGuidsJson = '{}'
+$resolvedReminderTemplateGuids = Get-ReminderTemplateGuidMap -TargetConfig $target
+$reminderTemplateGuidsJson = $resolvedReminderTemplateGuids | ConvertTo-Json -Compress
+Write-Host "  Reminder templates resolved (deploy config output):" -ForegroundColor DarkGray
+Write-Host "    nonPenalty:      $(if ([string]::IsNullOrWhiteSpace([string]$resolvedReminderTemplateGuids.nonPenalty)) { '(missing)' } else { '(configured)' })" -ForegroundColor DarkGray
+Write-Host "    finalDeadline:   $(if ([string]::IsNullOrWhiteSpace([string]$resolvedReminderTemplateGuids.finalDeadline)) { '(missing)' } else { '(configured)' })" -ForegroundColor DarkGray
+Write-Host "    lateFinalDeadline: $(if ([string]::IsNullOrWhiteSpace([string]$resolvedReminderTemplateGuids.lateFinalDeadline)) { '(missing)' } else { '(configured)' })" -ForegroundColor DarkGray
 $modelAppsJson = '[]'
-if (Test-HasProperty -Object $target -PropertyName 'modelApps' -and $null -ne $target.modelApps) {
+if ((Test-HasProperty -Object $target -PropertyName 'modelApps') -and $null -ne $target.modelApps) {
   $modelAppsJson = $target.modelApps | ConvertTo-Json -Compress
 }
 $deployEnvConfigPath = Join-Path $repoRoot 'src\constants\deployEnvConfig.ts'
@@ -427,6 +523,7 @@ export const DEPLOY_ENV = {
   modelApps: $modelAppsJson,
   canvasAppIds: $canvasAppIdsJson,
   appIcons: $appIconsJson,
+  reminderTemplateGuids: $reminderTemplateGuidsJson,
 } as const;
 "@
 Set-Content -LiteralPath $deployEnvConfigPath -Value $deployEnvConfigContent -Encoding UTF8
@@ -434,18 +531,28 @@ Write-Host "  Generated deployEnvConfig.ts (environmentId: $environmentId)" -For
 
 foreach ($dataSource in $target.dataSources) {
   $apiId = Get-RequiredProperty -Object $dataSource -Name 'apiId'
-  $connectionId = Get-RequiredProperty -Object $dataSource -Name 'connectionId'
 
-  if ($connectionId -match '^replace-with-') {
-    if ($PreserveSchemas) {
-      Write-Host "Skipping data source '$apiId' because connectionId is still a placeholder in preserve mode." -ForegroundColor Yellow
-      continue
-    }
-
-    Assert-NotPlaceholder -Value $connectionId -Name "$Stage.$apiId.connectionId"
+  # connectionId is optional — datasources using '-a dataverse' don't require one
+  $connectionId = $null
+  if ((Test-HasProperty -Object $dataSource -PropertyName 'connectionId') -and -not [string]::IsNullOrWhiteSpace([string]$dataSource.connectionId)) {
+    $connectionId = [string]$dataSource.connectionId
   }
 
-  $args = @('code', 'add-data-source', '-a', $apiId, '-c', $connectionId)
+  if (-not [string]::IsNullOrWhiteSpace($connectionId)) {
+    if ($connectionId -match '^replace-with-') {
+      if ($PreserveSchemas) {
+        Write-Host "Skipping data source '$apiId' because connectionId is still a placeholder in preserve mode." -ForegroundColor Yellow
+        continue
+      }
+
+      Assert-NotPlaceholder -Value $connectionId -Name "$Stage.$apiId.connectionId"
+    }
+  }
+
+  $args = @('code', 'add-data-source', '-a', $apiId)
+  if (-not [string]::IsNullOrWhiteSpace($connectionId)) {
+    $args += @('-c', $connectionId)
+  }
 
   if ((Test-HasProperty -Object $dataSource -PropertyName 'table') -and -not [string]::IsNullOrWhiteSpace([string]$dataSource.table)) {
     $args += @('-t', [string]$dataSource.table)
@@ -463,11 +570,6 @@ Write-Host "`n==> Patch userqueries sharing APIs in dataSourcesInfo" -Foreground
 $dataSourcesInfoDir = Join-Path $repoRoot '.power\schemas\appschemas'
 Patch-UserqueriesSharingApis -FilePath (Join-Path $dataSourcesInfoDir 'dataSourcesInfo.ts')
 Patch-UserqueriesSharingApis -FilePath (Join-Path $dataSourcesInfoDir 'dataSourcesInfo.js')
-
-# Patch dataSourcesInfo files to restore Dataverse table entries wiped by pac regeneration
-Write-Host "`n==> Patch Dataverse table entries (audits, businessunits) in dataSourcesInfo" -ForegroundColor Cyan
-Patch-DataverseTableEntries -FilePath (Join-Path $dataSourcesInfoDir 'dataSourcesInfo.ts')
-Patch-DataverseTableEntries -FilePath (Join-Path $dataSourcesInfoDir 'dataSourcesInfo.js')
 
 # Inject Dataverse table mappings into databaseReferences after PAC creates default.cds
 if ($null -ne $config.dataverseTableMappings -and (Test-Path -LiteralPath $powerConfigPath)) {
@@ -502,7 +604,7 @@ if ($null -ne $config.dataverseTableMappings -and (Test-Path -LiteralPath $power
 
   if ((-not (Test-HasProperty -Object $cds -PropertyName 'instanceUrl')) -or [string]::IsNullOrWhiteSpace([string]$cds.instanceUrl)) {
     if (-not [string]::IsNullOrWhiteSpace($dataverseInstanceUrl)) {
-      $cds.instanceUrl = $dataverseInstanceUrl
+      $cds | Add-Member -NotePropertyName 'instanceUrl' -NotePropertyValue $dataverseInstanceUrl -Force
     }
   }
 
@@ -668,6 +770,43 @@ if ($null -ne $config.flowReferences -and $config.flowReferences.Count -gt 0) {
     }
   }
 
+  $requiredFlowDataSourceNames = New-Object 'System.Collections.Generic.List[string]'
+  foreach ($flowRef in $config.flowReferences) {
+    if (-not (Test-HasProperty -Object $flowRef -PropertyName 'dataSources') -or $null -eq $flowRef.dataSources) {
+      continue
+    }
+
+    foreach ($dataSourceName in @($flowRef.dataSources)) {
+      $nameText = [string]$dataSourceName
+      if ([string]::IsNullOrWhiteSpace($nameText)) {
+        continue
+      }
+
+      if ($requiredFlowDataSourceNames -notcontains $nameText) {
+        $requiredFlowDataSourceNames.Add($nameText)
+      }
+    }
+  }
+
+  $dataSourcesInfoTsPath = Join-Path $repoRoot '.power\schemas\appschemas\dataSourcesInfo.ts'
+  $dataSourcesInfoJsPath = Join-Path $repoRoot '.power\schemas\appschemas\dataSourcesInfo.js'
+  Patch-MissingFlowDataSources -FilePath $dataSourcesInfoTsPath -RequiredDataSourceNames @($requiredFlowDataSourceNames)
+  Patch-MissingFlowDataSources -FilePath $dataSourcesInfoJsPath -RequiredDataSourceNames @($requiredFlowDataSourceNames)
+
+  foreach ($dataSourcesInfoPath in @($dataSourcesInfoTsPath, $dataSourcesInfoJsPath)) {
+    if (-not (Test-Path -LiteralPath $dataSourcesInfoPath)) {
+      throw "Required file '$dataSourcesInfoPath' was not found after flow binding. Deployment stopped before build and push."
+    }
+
+    $dataSourcesInfoText = Get-Content -LiteralPath $dataSourcesInfoPath -Raw
+    foreach ($requiredDataSourceNameText in @($requiredFlowDataSourceNames)) {
+      $escapedDataSourceName = [regex]::Escape([string]$requiredDataSourceNameText)
+      if ($dataSourcesInfoText -notmatch '"' + $escapedDataSourceName + '"\s*:\s*\{') {
+        throw "Required flow datasource '$requiredDataSourceNameText' was not found in $dataSourcesInfoPath. Re-run flow binding and verify the flow is invokable in this environment. Deployment stopped before build and push."
+      }
+    }
+  }
+
   Write-Host "Verified all $($config.flowReferences.Count) required flow connection references in power.config.json." -ForegroundColor Green
 }
 
@@ -678,7 +817,7 @@ Write-Host "`n==> Canvas apps in '$Stage' environment (pac canvas list)" -Foregr
 & 'pac' @('canvas', 'list') 2>&1 | ForEach-Object { Write-Host "  $_" }
 Write-Host "" -ForegroundColor DarkGray
 Write-Host "  Configured canvasAppIds for '$Stage':" -ForegroundColor DarkGray
-if (Test-HasProperty -Object $target -PropertyName 'canvasAppIds' -and $null -ne $target.canvasAppIds) {
+if ((Test-HasProperty -Object $target -PropertyName 'canvasAppIds') -and $null -ne $target.canvasAppIds) {
   $target.canvasAppIds.PSObject.Properties | ForEach-Object {
     $status = if ([string]$_.Value -match '^replace-with-') { '(placeholder - update before deploying)' } else { '(configured)' }
     Write-Host "    $($_.Name): $($_.Value) $status" -ForegroundColor DarkGray
@@ -692,8 +831,6 @@ if (-not $SkipBuild.IsPresent) {
   Write-Host "`n==> Re-patch userqueries sharing APIs (pre-build safety check)" -ForegroundColor Cyan
   Patch-UserqueriesSharingApis -FilePath (Join-Path $dataSourcesInfoDir 'dataSourcesInfo.ts')
   Patch-UserqueriesSharingApis -FilePath (Join-Path $dataSourcesInfoDir 'dataSourcesInfo.js')
-  Patch-DataverseTableEntries -FilePath (Join-Path $dataSourcesInfoDir 'dataSourcesInfo.ts')
-  Patch-DataverseTableEntries -FilePath (Join-Path $dataSourcesInfoDir 'dataSourcesInfo.js')
 
   Invoke-CheckedCommand -FilePath 'npm.cmd' -Arguments @('run', 'build') -Description 'Build app'
 }

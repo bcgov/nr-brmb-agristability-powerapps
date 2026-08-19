@@ -16,10 +16,12 @@ export const Vsi_automaticemailauditsvsi_emailtype = {
   865520000: '_45DayLetter',
   865520001: 'Non_PenaltyReminder',
   865520002: 'FinalDeadlineReminder',
-  865520007: 'LateEnrolmentReminder',
+  865520003: 'LateEnrolmentReminder',
   865520004: 'NPPEmail',
   865520005: 'StatementAEmail',
-  865520006: 'StatementAMissingSuppEmail'
+  865520006: 'StatementAMissingSuppEmail',
+  865520007: 'LateENFinalDeadlineReminder',
+  865520008: 'LateNPPEmail'
 } as const;
 export type Vsi_automaticemailauditsvsi_emailtype = keyof typeof Vsi_automaticemailauditsvsi_emailtype;
 export const Vsi_automaticemailauditsvsi_sendstatus = {
@@ -49,6 +51,8 @@ export interface Vsi_automaticemailauditsBase {
   vsi_objectid?: string;
   vsi_objecttype: string;
   vsi_pin?: string;
+  vsi_programyear?: string;
+  vsi_programyearname?: string;
   vsi_recipientto: string;
   vsi_sendstatus: Vsi_automaticemailauditsvsi_sendstatus;
   vsi_senton: string;

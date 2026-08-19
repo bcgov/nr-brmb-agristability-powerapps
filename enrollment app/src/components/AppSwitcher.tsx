@@ -3,6 +3,7 @@ import { Globe, Layers, LayoutDashboard, X } from 'lucide-react';
 import { Vsi_armsconfigurationsService } from '../generated/services/Vsi_armsconfigurationsService';
 import { getCoreConfig } from '../hooks/useEnrolmentData';
 import { DEPLOY_ENV } from '../constants/deployEnvConfig';
+import { ICON_ASSET_URLS } from '../assets/iconAssets';
 import '../styles/app-switcher.css';
 
 // ── Static app config ────────────────────────────────────────────────────────
@@ -84,6 +85,11 @@ async function resolveOrgUrl(): Promise<string | null> {
 }
 
 // ── Icons ────────────────────────────────────────────────────────────────────
+// Icons are looked up via ICON_ASSET_URLS so Vite processes them into dist/assets/
+// (ensuring npx power-apps push includes them in the deployed bundle).
+function resolveIconUrl(url: string): string {
+  return ICON_ASSET_URLS[url] ?? `${import.meta.env.BASE_URL}${url.replace(/^\//, '')}`;
+}
 function EnrolmentSvgIcon() {
   return (
     <svg viewBox="0 0 150 100" aria-hidden="true" focusable="false" className="app-card-svg-icon">
@@ -103,7 +109,7 @@ function EnrolmentSvgIcon() {
 function AppIconCoreCrm() {
   const cfg = MODEL_APPS.find(a => a.key === 'core-crm');
   if (cfg?.iconUrl) {
-    return <img src={cfg.iconUrl} alt="" className="app-card-icon-img" />;
+    return <img src={resolveIconUrl(cfg.iconUrl)} alt="" className="app-card-icon-img" />;
   }
   return (
     <svg viewBox="0 0 100 100" aria-hidden="true" focusable="false" className="app-card-svg-icon">
@@ -121,7 +127,7 @@ function AppIconCoreCrm() {
 function AppIconFinance() {
   const cfg = MODEL_APPS.find(a => a.key === 'finance');
   if (cfg?.iconUrl) {
-    return <img src={cfg.iconUrl} alt="" className="app-card-icon-img" />;
+    return <img src={resolveIconUrl(cfg.iconUrl)} alt="" className="app-card-icon-img" />;
   }
   return (
     <svg viewBox="0 0 100 100" aria-hidden="true" focusable="false" className="app-card-svg-icon">
@@ -136,7 +142,7 @@ function AppIcon({ type, appKey }: { type: AppType; appKey: string }) {
   if (appKey === 'finance') return <AppIconFinance />;
   const appIcons = DEPLOY_ENV.appIcons as Record<string, string>;
   const iconUrl = appIcons[appKey];
-  if (iconUrl) return <img src={iconUrl} alt="" className="app-card-icon-img" />;
+  if (iconUrl) return <img src={resolveIconUrl(iconUrl)} alt="" className="app-card-icon-img" />;
   if (type === 'code') return <EnrolmentSvgIcon />;
   if (type === 'canvas') return <Layers size={36} />;
   if (type === 'external') return <Globe size={36} />;

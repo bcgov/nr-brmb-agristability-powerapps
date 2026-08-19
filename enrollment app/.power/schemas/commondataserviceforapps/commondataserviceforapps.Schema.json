@@ -4,7 +4,7 @@
   "type": "Microsoft.PowerApps/apis",
   "properties": {
     "displayName": "Microsoft Dataverse",
-    "iconUri": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1820/1.0.1820.4809/commondataserviceforapps/icon.png",
+    "iconUri": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1824/1.0.1824.4843/commondataserviceforapps/icon.png",
     "iconBrandColor": "",
     "apiEnvironment": "Shared",
     "isCustomApi": false,
@@ -9588,14 +9588,14 @@
       "brandColor": "",
       "useNewApimVersion": "true",
       "version": {
-        "previous": "releases/v1.0.1819\\1.0.1819.4795",
-        "current": "releases/v1.0.1820\\1.0.1820.4809"
+        "previous": "releases/v1.0.1820\\1.0.1820.4809",
+        "current": "releases/v1.0.1824\\1.0.1824.4843"
       },
       "OperationIcons": {
-        "mcp_ContactCenterMCPServer": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1820/1.0.1820.4809/commondataserviceforapps/icon_mcp_ContactCenterMCPServer.png",
-        "mcp_ERPMCPServer": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1820/1.0.1820.4809/commondataserviceforapps/icon_mcp_ERPMCPServer.png",
-        "mcp_SalesMCPServer": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1820/1.0.1820.4809/commondataserviceforapps/icon_mcp_SalesMCPServer.png",
-        "mcp_ServiceMCPServer": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1820/1.0.1820.4809/commondataserviceforapps/icon_mcp_ServiceMCPServer.png"
+        "mcp_ContactCenterMCPServer": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1824/1.0.1824.4843/commondataserviceforapps/icon_mcp_ContactCenterMCPServer.png",
+        "mcp_ERPMCPServer": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1824/1.0.1824.4843/commondataserviceforapps/icon_mcp_ERPMCPServer.png",
+        "mcp_SalesMCPServer": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1824/1.0.1824.4843/commondataserviceforapps/icon_mcp_SalesMCPServer.png",
+        "mcp_ServiceMCPServer": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1824/1.0.1824.4843/commondataserviceforapps/icon_mcp_ServiceMCPServer.png"
       }
     },
     "capabilities": [
@@ -9605,7 +9605,7 @@
     "interfaces": {},
     "description": "Provides access to Microsoft Dataverse actions and triggers for Power Platform environments.",
     "createdTime": "2019-03-15T22:52:03.5485869Z",
-    "changedTime": "2026-07-22T19:21:48.7794139Z",
+    "changedTime": "2026-08-19T18:41:13.7824148Z",
     "releaseTag": "Production",
     "tier": "Premium",
     "publisher": "Microsoft",
