@@ -4229,8 +4229,8 @@
     "capabilities": [],
     "description": "FARMS API DEV - this is the custom connector to the FARMS API Dev Environment",
     "apiDefinitions": {
-      "originalSwaggerUrl": "https://canl001ccaext.blob.core.windows.net/api-swagger-files/farms-20api-5fe39d1efd21a19d13-5f571039b465579741.json_original?skoid=1480fa8b-0bc3-4897-9aea-803edfb99451&sktid=33e01921-4d64-4f8c-a055-5bdaffd5e33d&skt=2026-08-18T13%3A21%3A26Z&ske=2026-08-19T13%3A21%3A26Z&sks=b&skv=2025-01-05&sv=2025-01-05&spr=https&se=2026-08-18T20%3A12%3A43Z&sr=b&sp=r&sig=4nvX3xFpG0gYg072l%2BAVcQiPpk61iJjD3F2jkApNo5k%3D",
-      "modifiedSwaggerUrl": "https://canl001ccaext.blob.core.windows.net/api-swagger-files/farms-20api-5fe39d1efd21a19d13-5f571039b465579741.json?skoid=1480fa8b-0bc3-4897-9aea-803edfb99451&sktid=33e01921-4d64-4f8c-a055-5bdaffd5e33d&skt=2026-08-18T13%3A21%3A26Z&ske=2026-08-19T13%3A21%3A26Z&sks=b&skv=2025-01-05&sv=2025-01-05&spr=https&se=2026-08-18T20%3A12%3A43Z&sr=b&sp=r&sig=hO9dtBe22AuZZBeHX0MOcYHZjFHbAF8b8WGLJxFQpNI%3D"
+      "originalSwaggerUrl": "https://canl001ccaext.blob.core.windows.net/api-swagger-files/farms-20api-5fe39d1efd21a19d13-5f571039b465579741.json_original?skoid=1480fa8b-0bc3-4897-9aea-803edfb99451&sktid=33e01921-4d64-4f8c-a055-5bdaffd5e33d&skt=2026-08-18T19%3A56%3A31Z&ske=2026-08-19T19%3A56%3A31Z&sks=b&skv=2025-01-05&sv=2025-01-05&spr=https&se=2026-08-18T21%3A17%3A02Z&sr=b&sp=r&sig=AO9sceZvWLFfEyoBnaIXSMCbgEBIVuqqnxaJfFBTRMM%3D",
+      "modifiedSwaggerUrl": "https://canl001ccaext.blob.core.windows.net/api-swagger-files/farms-20api-5fe39d1efd21a19d13-5f571039b465579741.json?skoid=1480fa8b-0bc3-4897-9aea-803edfb99451&sktid=33e01921-4d64-4f8c-a055-5bdaffd5e33d&skt=2026-08-18T19%3A56%3A31Z&ske=2026-08-19T19%3A56%3A31Z&sks=b&skv=2025-01-05&sv=2025-01-05&spr=https&se=2026-08-18T21%3A17%3A02Z&sr=b&sp=r&sig=Ll1iIFcN8ymHNXNEBqlNUUJOF7uUkS9DM3TMSexBH%2B4%3D"
     },
     "policyTemplateInstances": [],
     "backendService": {

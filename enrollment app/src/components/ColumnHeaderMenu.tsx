@@ -14,6 +14,8 @@ type NumberFilterOperator =
   | 'lessThan'
   | 'lessThanOrEqual';
 
+export type TextFilterOperator = 'contains' | 'doesNotContain' | 'equals' | 'notEquals' | 'startsWith';
+
 export type ColumnHeaderDragProps = {
   draggable: boolean;
   onDragStart: () => void;
@@ -34,6 +36,10 @@ export type ColumnHeaderFilterProps = {
   numberFilterOperator?: NumberFilterOperator;
   onNumberFilterApply?: (next: { operator: NumberFilterOperator; value: string }) => void;
   onNumberFilterClear?: () => void;
+  textFilterValue?: string;
+  textFilterOperator?: TextFilterOperator;
+  onTextFilterApply?: (next: { operator: TextFilterOperator; value: string }) => void;
+  onTextFilterClear?: () => void;
 };
 
 export type ColumnHeaderMenuProps<K extends string = string> = {
@@ -67,6 +73,10 @@ export function ColumnHeaderMenu<K extends string = string>({
   numberFilterOperator,
   onNumberFilterApply,
   onNumberFilterClear,
+  textFilterValue,
+  textFilterOperator,
+  onTextFilterApply,
+  onTextFilterClear,
   columnWidth,
   onColumnWidthChange,
   dragProps,
@@ -80,6 +90,8 @@ export function ColumnHeaderMenu<K extends string = string>({
   const [draftOperator, setDraftOperator] = useState<FilterOperator>(() => filterOperator ?? 'equals');
   const [draftNumberOperator, setDraftNumberOperator] = useState<NumberFilterOperator>(() => numberFilterOperator ?? 'equals');
   const [draftNumberValue, setDraftNumberValue] = useState(() => numberFilterValue ?? '');
+  const [draftTextOperator, setDraftTextOperator] = useState<TextFilterOperator>(() => textFilterOperator ?? 'contains');
+  const [draftTextValue, setDraftTextValue] = useState(() => textFilterValue ?? '');
   const menuRef = useRef<HTMLDivElement>(null);
   const anchorRef = useRef<HTMLSpanElement>(null);
   const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
@@ -110,6 +122,7 @@ export function ColumnHeaderMenu<K extends string = string>({
 
   const close = () => { setOpen(false); setView('main'); setOperatorOpen(false); };
   const supportsNumberFilter = Boolean(onNumberFilterApply);
+  const supportsTextFilter = Boolean(onTextFilterApply);
   const requiresNumberValue =
     draftNumberOperator !== 'hasValue' &&
     draftNumberOperator !== 'hasNoValue';
@@ -118,9 +131,10 @@ export function ColumnHeaderMenu<K extends string = string>({
     numberFilterOperator === 'hasNoValue' ||
     Boolean((numberFilterValue ?? '').trim())
   );
+  const hasTextFilter = supportsTextFilter && Boolean((textFilterValue ?? '').trim());
 
   const isSorted = currentSortKey === sortKey;
-  const hasFilter = (selectedFilters && selectedFilters.size > 0) || hasNumberFilter;
+  const hasFilter = (selectedFilters && selectedFilters.size > 0) || hasNumberFilter || hasTextFilter;
   const ascendingLabel =
     sortLabelMode === 'number'
       ? 'Smaller to larger'
@@ -139,6 +153,8 @@ export function ColumnHeaderMenu<K extends string = string>({
     setDraftOperator(filterOperator ?? 'equals');
     setDraftNumberOperator(numberFilterOperator ?? 'equals');
     setDraftNumberValue(numberFilterValue ?? '');
+    setDraftTextOperator(textFilterOperator ?? 'contains');
+    setDraftTextValue(textFilterValue ?? '');
     setView('filter');
   };
 
@@ -164,6 +180,24 @@ export function ColumnHeaderMenu<K extends string = string>({
     onNumberFilterApply?.({ operator: draftNumberOperator, value });
     close();
   };
+
+  const applyTextFilter = () => {
+    const value = draftTextValue.trim();
+    if (!value) return;
+    onTextFilterApply?.({ operator: draftTextOperator, value });
+    close();
+  };
+
+  const textOperatorLabel = (() => {
+    switch (draftTextOperator) {
+      case 'contains': return 'Contains';
+      case 'doesNotContain': return 'Does not contain';
+      case 'equals': return 'Equals';
+      case 'notEquals': return 'Does not equal';
+      case 'startsWith': return 'Starts with';
+      default: return 'Contains';
+    }
+  })();
 
   const numberOperatorLabel = (() => {
     switch (draftNumberOperator) {
@@ -212,7 +246,7 @@ export function ColumnHeaderMenu<K extends string = string>({
                 <button className="chm-item" onClick={() => { onSort(sortKey, 'desc'); close(); }}>
                   <span className="chm-icon">↓</span> {descendingLabel}
                 </button>
-                {(filterOptions || supportsNumberFilter) && (
+                {(filterOptions || supportsNumberFilter || supportsTextFilter) && (
                   <>
                     <div className="chm-divider" />
                     <button className="chm-item" onClick={openFilterView}>
@@ -230,6 +264,11 @@ export function ColumnHeaderMenu<K extends string = string>({
                     )}
                     {supportsNumberFilter && hasNumberFilter && (
                       <button className="chm-item chm-item-clear" onClick={() => { onNumberFilterClear?.(); close(); }}>
+                        <span className="chm-icon"><FilterX size={14} /></span> Clear filter
+                      </button>
+                    )}
+                    {supportsTextFilter && hasTextFilter && (
+                      <button className="chm-item chm-item-clear" onClick={() => { onTextFilterClear?.(); close(); }}>
                         <span className="chm-icon"><FilterX size={14} /></span> Clear filter
                       </button>
                     )}
@@ -273,6 +312,43 @@ export function ColumnHeaderMenu<K extends string = string>({
                 <div className="chm-filter-actions">
                   <button className="chm-apply" onClick={applyFilter}>Apply</button>
                   <button className="chm-clear" onClick={() => { onFilterChange(new Set()); close(); }}>Clear filter</button>
+                </div>
+              </div>
+            )}
+
+            {view === 'filter' && supportsTextFilter && (
+              <div className="chm-filter-view">
+                <div className="chm-filter-header">
+                  <h4>Filter by</h4>
+                  <button className="chm-close" onClick={close}>✕</button>
+                </div>
+                <div className="chm-operator-wrapper">
+                  <button className="chm-operator-btn" onClick={() => setOperatorOpen(o => !o)}>
+                    {textOperatorLabel}
+                    <span className="chm-operator-chevron">&#x25BE;</span>
+                  </button>
+                  {operatorOpen && (
+                    <div className="chm-operator-dropdown">
+                      <button className={`chm-operator-opt${draftTextOperator === 'contains' ? ' active' : ''}`} onClick={() => { setDraftTextOperator('contains'); setOperatorOpen(false); }}>Contains</button>
+                      <button className={`chm-operator-opt${draftTextOperator === 'doesNotContain' ? ' active' : ''}`} onClick={() => { setDraftTextOperator('doesNotContain'); setOperatorOpen(false); }}>Does not contain</button>
+                      <button className={`chm-operator-opt${draftTextOperator === 'equals' ? ' active' : ''}`} onClick={() => { setDraftTextOperator('equals'); setOperatorOpen(false); }}>Equals</button>
+                      <button className={`chm-operator-opt${draftTextOperator === 'notEquals' ? ' active' : ''}`} onClick={() => { setDraftTextOperator('notEquals'); setOperatorOpen(false); }}>Does not equal</button>
+                      <button className={`chm-operator-opt${draftTextOperator === 'startsWith' ? ' active' : ''}`} onClick={() => { setDraftTextOperator('startsWith'); setOperatorOpen(false); }}>Starts with</button>
+                    </div>
+                  )}
+                </div>
+                <input
+                  className="chm-width-input"
+                  type="text"
+                  value={draftTextValue}
+                  placeholder="Value"
+                  autoFocus
+                  onChange={e => setDraftTextValue(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') applyTextFilter(); }}
+                />
+                <div className="chm-filter-actions">
+                  <button className="chm-apply" disabled={draftTextValue.trim() === ''} onClick={applyTextFilter}>Apply</button>
+                  <button className="chm-clear" onClick={() => { onTextFilterClear?.(); close(); }}>Clear filter</button>
                 </div>
               </div>
             )}

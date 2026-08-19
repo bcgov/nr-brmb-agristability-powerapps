@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { HashRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { ClipboardCheck, ExternalLink, Home, LayoutDashboard, Menu } from 'lucide-react';
 
+import { AppSwitcher } from './components/AppSwitcher';
 import { DashboardHomePage } from './pages/DashboardHomePage';
 import { SupervisorApprovalPage, clearSaCache } from './pages/SupervisorApprovalPage';
 import { DeadlineReminderPage } from './pages/DeadlineReminderPage';
@@ -124,7 +125,7 @@ function getBannerTitle(environmentName: string): string {
   return environmentKey === 'prod' ? 'ENROLMENT' : `ENROLMENT ${environmentName.toUpperCase()}`;
 }
 
-function EnvironmentBanner() {
+function EnvironmentBanner({ onOpenSwitcher }: { onOpenSwitcher: () => void }) {
   const [environmentName, setEnvironmentName] = useState<string | null>(() => (environmentNameLoaded ? environmentNameCache : null));
   const [currentUserName, setCurrentUserName] = useState<string | null>(null);
 
@@ -162,8 +163,15 @@ function EnvironmentBanner() {
 
   return (
     <header className="environment-banner" data-environment={environmentKey} aria-label={`Environment: ${environmentName}`}>
-      <EnrolmentLogoMark />
-      <span className="environment-banner-name">{bannerTitle}</span>
+      <button
+        type="button"
+        className="environment-banner-trigger"
+        onClick={onOpenSwitcher}
+        aria-label="Open app switcher"
+      >
+        <EnrolmentLogoMark />
+        <span className="environment-banner-name">{bannerTitle}</span>
+      </button>
       {currentUserName && userInitials && (
         <span className="environment-banner-user" title={currentUserName} aria-label={`Signed in as ${currentUserName}`}>
           {userInitials}
@@ -287,10 +295,11 @@ function SideNav({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
 
 function AppShell() {
   const [navCollapsed, setNavCollapsed] = useState(false);
+  const [showAppSwitcher, setShowAppSwitcher] = useState(false);
 
   return (
     <div className="app-frame">
-      <EnvironmentBanner />
+      <EnvironmentBanner onOpenSwitcher={() => setShowAppSwitcher(true)} />
       <div className="app-shell">
         <SideNav collapsed={navCollapsed} onToggle={() => setNavCollapsed(prev => !prev)} />
         <main className="app-shell-content">
@@ -310,6 +319,7 @@ function AppShell() {
           </Routes>
         </main>
       </div>
+      {showAppSwitcher && <AppSwitcher onClose={() => setShowAppSwitcher(false)} />}
     </div>
   );
 }

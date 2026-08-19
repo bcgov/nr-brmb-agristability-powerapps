@@ -18,6 +18,7 @@ import { EnvironmentvariablevaluesService } from '../generated/services/Environm
 import { Toast, nextToastId } from '../components/Toast';
 import type { ToastMessage } from '../components/Toast';
 import { useRole } from '../context/RoleContext';
+import type { TextFilterOperator } from '../components/ColumnHeaderMenu';
 import '../styles/supervisor-approval.css';
 
 type DeadlineColumnKey = 'enrolmentName' | 'year' | 'participant' | 'pin' | 'enrolmentStatus' | 'totalFeesOwed' | 'noticeSentDate' | 'deadlineDate' | 'remainingDays' | 'kind' | 'reminderSent';
@@ -50,6 +51,11 @@ const EN_STATUS_ENROLLED_NOT_PAID = 865520008;
 const AUTOMATIC_EMAIL_TYPE = { NonPenaltyReminder: 865520001, FinalDeadlineReminder: 865520002, LateEnrolmentReminder: 865520007 } as const;
 const AUTOMATIC_EMAIL_SENDSTATUS_SENT = 865520001;
 const PAGE_SIZE = 20;
+const REMINDER_TEMPLATE_ENV_VAR_BY_KIND: Record<ReminderKind, string> = {
+  nonPenalty: 'vsi_ENDeadlineReminderEmailTemplate',
+  finalDeadline: 'vsi_ENFeeFinalDeadlineReminderTemplate',
+  lateFinalDeadline: 'vsi_LateENFeeFinalDeadlineReminderTemplate',
+};
 
 type PaginationPage = number | '...';
 
@@ -100,6 +106,8 @@ const getDisplayValue = (item: Vsi_participantprogramyears, annotationKey: strin
   const raw = item as unknown as Record<string, unknown>;
   return (raw[annotationKey] as string | undefined) ?? fallback ?? '-';
 };
+
+const normalizeTemplateGuid = (value: string | null | undefined) => value?.trim() ?? '';
 
 type AuditMap = Map<string, { nonPenalty: boolean; finalDeadline: boolean; lateFinalDeadline: boolean }>;
 
@@ -180,6 +188,9 @@ export function DeadlineReminderPage() {
   const [yearColFilter, setYearColFilter] = useState<Set<string>>(new Set());
   const [yearColFilterOp, setYearColFilterOp] = useState<FilterOperator>('equals');
   const [reminderSentColFilter, setReminderSentColFilter] = useState<Set<string>>(new Set());
+  const [kindColFilter, setKindColFilter] = useState<Set<string>>(new Set());
+  const [enrolmentNameTextFilter, setEnrolmentNameTextFilter] = useState('');
+  const [enrolmentNameTextOp, setEnrolmentNameTextOp] = useState<TextFilterOperator>('contains');
   const [urgentDaysThreshold, setUrgentDaysThreshold] = useState(5);
   const [sendEmailDaysThreshold, setSendEmailDaysThreshold] = useState(30);
   const [configRowId, setConfigRowId] = useState<string | null>(null);
@@ -232,6 +243,15 @@ export function DeadlineReminderPage() {
   const [lateEnTemplateGuid, setLateEnTemplateGuid] = useState<string>('');
   const [envVarsLoaded, setEnvVarsLoaded] = useState(false);
 
+  const getTemplateGuidForKind = (kind: ReminderKind): string => {
+    if (kind === 'finalDeadline') return normalizeTemplateGuid(finalDeadlineTemplateGuid);
+    if (kind === 'lateFinalDeadline') return normalizeTemplateGuid(lateEnTemplateGuid);
+    return normalizeTemplateGuid(nonPenaltyTemplateGuid);
+  };
+
+  const getMissingTemplateMessage = (kind: ReminderKind): string =>
+    `Reminder email template is not configured for this reminder type in the current environment. Set ${REMINDER_TEMPLATE_ENV_VAR_BY_KIND[kind]} and try again.`;
+
   useEffect(() => {
     (async () => {
       try {
@@ -254,14 +274,15 @@ export function DeadlineReminderPage() {
   }, []);
 
   const handleSendNow = async (row: DeadlineReminderRow) => {
+    const templateGuid = getTemplateGuidForKind(row.kind);
+    if (!templateGuid) {
+      addToast(getMissingTemplateMessage(row.kind), 'error');
+      return;
+    }
+
     setSendingEmailFor(prev => new Set(prev).add(row.itemId));
     try {
       const raw = row.item as unknown as Record<string, unknown>;
-      const templateGuid = row.kind === 'finalDeadline'
-        ? finalDeadlineTemplateGuid
-        : row.kind === 'lateFinalDeadline'
-          ? lateEnTemplateGuid
-          : nonPenaltyTemplateGuid;
       const params = {
         text:   'vsi_participantprogramyear',
         text_1: templateGuid,
@@ -406,6 +427,20 @@ export function DeadlineReminderPage() {
 
   const filteredRows = useMemo(() => {
     let result = rows;
+    if (enrolmentNameTextFilter.trim()) {
+      const val = enrolmentNameTextFilter.trim().toLowerCase();
+      result = result.filter(r => {
+        const name = (r.item.vsi_name ?? '').toLowerCase();
+        switch (enrolmentNameTextOp) {
+          case 'contains': return name.includes(val);
+          case 'doesNotContain': return !name.includes(val);
+          case 'equals': return name === val;
+          case 'notEquals': return name !== val;
+          case 'startsWith': return name.startsWith(val);
+          default: return true;
+        }
+      });
+    }
     if (enrolStatusColFilter.size > 0) {
       result = result.filter(r =>
         enrolStatusColFilterOp === 'equals'
@@ -423,12 +458,18 @@ export function DeadlineReminderPage() {
     if (reminderSentColFilter.size > 0) {
       result = result.filter(r => reminderSentColFilter.has(yesNoText(r.reminderSent)));
     }
+    if (kindColFilter.size > 0) {
+      result = result.filter(r => kindColFilter.has(r.kind));
+    }
     return result;
-  }, [rows, enrolStatusColFilter, enrolStatusColFilterOp, yearColFilter, yearColFilterOp, reminderSentColFilter]);
+  }, [rows, enrolmentNameTextFilter, enrolmentNameTextOp, enrolStatusColFilter, enrolStatusColFilterOp, yearColFilter, yearColFilterOp, reminderSentColFilter, kindColFilter]);
 
   const enrolStatusFilterOptionLabels = useMemo(() =>
     Object.fromEntries(enrolStatusOptions.map(s => [s, formatEnrolmentStatusDisplay(s)])),
   [enrolStatusOptions]);
+
+  const KIND_OPTIONS = ['nonPenalty', 'finalDeadline', 'lateFinalDeadline'];
+  const KIND_LABELS: Record<string, string> = { nonPenalty: 'NP', finalDeadline: 'Final', lateFinalDeadline: 'Late' };
 
   const urgentRows = filteredRows.filter(r => r.remainingDays != null && r.remainingDays >= 0 && r.remainingDays <= urgentDaysThreshold);
   const displayRows = showUrgentOnly ? urgentRows : filteredRows;
@@ -541,7 +582,10 @@ export function DeadlineReminderPage() {
             <table className="sa-table deadline-reminder-table">
               <thead>
                 <tr>
-                  <ColumnHeaderMenu label="Enrolment Name"   sortKey="enrolmentName"   currentSortKey={sortKey} currentSortDir={sortDir} onSort={onSort} columnWidth={undefined} onColumnWidthChange={noopWidthChange} />
+                  <ColumnHeaderMenu label="Enrolment Name"   sortKey="enrolmentName"   currentSortKey={sortKey} currentSortDir={sortDir} onSort={onSort} columnWidth={undefined} onColumnWidthChange={noopWidthChange}
+                    textFilterValue={enrolmentNameTextFilter} textFilterOperator={enrolmentNameTextOp}
+                    onTextFilterApply={({ operator, value }) => { setEnrolmentNameTextOp(operator); setEnrolmentNameTextFilter(value); setPage(1); }}
+                    onTextFilterClear={() => { setEnrolmentNameTextFilter(''); setPage(1); }} />
                   <ColumnHeaderMenu label="Year"             sortKey="year"             currentSortKey={sortKey} currentSortDir={sortDir} onSort={onSort} columnWidth={undefined} onColumnWidthChange={noopWidthChange}
                     filterOptions={yearOptions} selectedFilters={yearColFilter} filterOperator={yearColFilterOp}
                     onFilterChange={v => { setYearColFilter(v); setPage(1); }}
@@ -557,7 +601,9 @@ export function DeadlineReminderPage() {
                   <ColumnHeaderMenu label="EN Notice Sent Date" sortLabelMode="date" sortKey="noticeSentDate" currentSortKey={sortKey} currentSortDir={sortDir} onSort={onSort} columnWidth={undefined} onColumnWidthChange={noopWidthChange} />
                   <ColumnHeaderMenu label="Deadline Date" sortLabelMode="date" sortKey="deadlineDate" currentSortKey={sortKey} currentSortDir={sortDir} onSort={onSort} columnWidth={undefined} onColumnWidthChange={noopWidthChange} />
                   <ColumnHeaderMenu label="Remaining Days Until Deadline" sortLabelMode="number" sortKey="remainingDays" currentSortKey={sortKey} currentSortDir={sortDir} onSort={onSort} columnWidth={undefined} onColumnWidthChange={noopWidthChange} />
-                  <ColumnHeaderMenu label="Type" sortKey="kind" currentSortKey={sortKey} currentSortDir={sortDir} onSort={onSort} columnWidth={undefined} onColumnWidthChange={noopWidthChange} />
+                  <ColumnHeaderMenu label="Type" sortKey="kind" currentSortKey={sortKey} currentSortDir={sortDir} onSort={onSort} columnWidth={undefined} onColumnWidthChange={noopWidthChange}
+                    filterOptions={KIND_OPTIONS} filterOptionLabels={KIND_LABELS} selectedFilters={kindColFilter}
+                    onFilterChange={v => { setKindColFilter(v); setPage(1); }} />
                   <ColumnHeaderMenu label="Reminder Sent"   sortKey="reminderSent"     currentSortKey={sortKey} currentSortDir={sortDir} onSort={onSort} columnWidth={undefined} onColumnWidthChange={noopWidthChange}
                     filterOptions={['Yes', 'No']} selectedFilters={reminderSentColFilter}
                     onFilterChange={v => { setReminderSentColFilter(v); setPage(1); }} />
@@ -566,6 +612,12 @@ export function DeadlineReminderPage() {
               <tbody>
                 {pageRows.map(row => {
                   const isUrgent = row.remainingDays != null && row.remainingDays >= 0 && row.remainingDays <= urgentDaysThreshold;
+                  const templateGuid = getTemplateGuidForKind(row.kind);
+                  const sendDisabledReason = !envVarsLoaded
+                    ? 'Loading reminder email template configuration.'
+                    : !templateGuid
+                      ? getMissingTemplateMessage(row.kind)
+                      : undefined;
                   const { coreAppId, coreBaseUrl } = getCoreConfig();
                   const participantHref = row.participantId
                     ? `${coreBaseUrl ?? CORE_BASE_URL_FALLBACK}?appid=${encodeURIComponent(coreAppId ?? CORE_APP_ID_FALLBACK)}&pagetype=entityrecord&etn=account&id=${encodeURIComponent(row.participantId)}`
@@ -604,8 +656,9 @@ export function DeadlineReminderPage() {
                               <button
                                 type="button"
                                 className="sa-filter-btn"
-                                disabled={sendingEmailFor.has(row.itemId) || !envVarsLoaded}
+                                disabled={sendingEmailFor.has(row.itemId) || !envVarsLoaded || !templateGuid}
                                 onClick={() => handleSendNow(row)}
+                                title={sendDisabledReason}
                               >
                                 {sendingEmailFor.has(row.itemId) ? 'Sending...' : 'Send Now'}
                               </button>
