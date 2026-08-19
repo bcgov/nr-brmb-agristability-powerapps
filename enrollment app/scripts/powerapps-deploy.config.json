@@ -22,8 +22,7 @@
                                   "teamprofiles":              { "entitySetName": "teamprofilescollection",         "logicalName": "teamprofiles" },
                                   "automaticemailaudits":      { "entitySetName": "vsi_automaticemailaudits",       "logicalName": "vsi_automaticemailaudit" },
                                   "audits":                    { "entitySetName": "audits",                        "logicalName": "audit" },
-                                  "businessunits":             { "entitySetName": "businessunits",                 "logicalName": "businessunit" },
-                                  "environmentvariablevalues": { "entitySetName": "environmentvariablevalues",     "logicalName": "environmentvariablevalue" }
+                                  "businessunits":             { "entitySetName": "businessunits",                 "logicalName": "businessunit" }
                               },
     "flowReferences":  [
                           {
@@ -79,6 +78,11 @@
                                          "change-management": "/icons/app-code-management-sm-dev.jpg",
                                          "farms":             "/icons/app-farms-dev.jpg"
                                      },
+                                     "reminderTemplateGuids": {
+                                         "nonPenalty": "8fdbc5e2-6a66-f111-ab0d-7ced8de0b3b0",
+                                         "finalDeadline": "63d870a8-6c66-f111-ab0d-7ced8de0b3b0",
+                                         "lateFinalDeadline": "8250c2b6-d095-f111-b8db-7ced8da50fa5"
+                                     },
                                      "dataSources":  [
                                                          {
                                                              "apiId":  "shared_farms-20api-5fe39d1efd21a19d13-5f571039b465579741",
@@ -87,21 +91,6 @@
                                                          {
                                                              "apiId":  "shared_commondataserviceforapps",
                                                              "connectionId":  "b05319f6f3244385ac9d9959391a2970"
-                                                         },
-                                                         {
-                                                             "apiId":  "shared_commondataserviceforapps",
-                                                             "connectionId":  "b05319f6f3244385ac9d9959391a2970",
-                                                             "table":  "vsi_automaticemailaudits"
-                                                         },
-                                                         {
-                                                             "apiId":  "shared_commondataserviceforapps",
-                                                             "connectionId":  "b05319f6f3244385ac9d9959391a2970",
-                                                             "table":  "audits"
-                                                         },
-                                                         {
-                                                             "apiId":  "shared_commondataserviceforapps",
-                                                             "connectionId":  "b05319f6f3244385ac9d9959391a2970",
-                                                             "table":  "businessunits"
                                                          }
                                                      ]
                                  },
@@ -121,6 +110,11 @@
                                           "change-management": "/icons/app-code-management-sm-test.jpg",
                                           "farms":             "/icons/app-farms-test.jpg"
                                       },
+                                      "reminderTemplateGuids": {
+                                          "nonPenalty": "",
+                                          "finalDeadline": "",
+                                          "lateFinalDeadline": ""
+                                      },
                                       "dataSources":  [
                                                           {
                                                               "apiId":  "shared_vsi-5ffarms-20api-5f4155bcad29d5d05a",
@@ -129,21 +123,6 @@
                                                           {
                                                               "apiId":  "shared_commondataserviceforapps",
                                                               "connectionId":  "ff699992001647a89917e4ec3fd164a4"
-                                                          },
-                                                          {
-                                                              "apiId":  "shared_commondataserviceforapps",
-                                                              "connectionId":  "ff699992001647a89917e4ec3fd164a4",
-                                                              "table":  "vsi_automaticemailaudits"
-                                                          },
-                                                          {
-                                                              "apiId":  "shared_commondataserviceforapps",
-                                                              "connectionId":  "ff699992001647a89917e4ec3fd164a4",
-                                                              "table":  "audits"
-                                                          },
-                                                          {
-                                                              "apiId":  "shared_commondataserviceforapps",
-                                                              "connectionId":  "ff699992001647a89917e4ec3fd164a4",
-                                                              "table":  "businessunits"
                                                           }
                                                       ]
                                   },
@@ -162,6 +141,11 @@
                                           "change-management": "/icons/app-code-management-sm-prod.jpg",
                                           "farms":             "/icons/app-farms-prod.jpg"
                                       },
+                                      "reminderTemplateGuids": {
+                                          "nonPenalty": "replace-with-prod-nonpenalty-template-guid",
+                                          "finalDeadline": "replace-with-prod-finaldeadline-template-guid",
+                                          "lateFinalDeadline": "replace-with-prod-latefinaldeadline-template-guid"
+                                      },
                                       "dataSources":  [
                                                           {
                                                               "apiId":  "shared_farms-20api-5fe39d1efd21a19d13-5f571039b465579741",
@@ -170,21 +154,6 @@
                                                           {
                                                               "apiId":  "shared_commondataserviceforapps",
                                                               "connectionId":  "replace-with-prod-dataverse-connection-id"
-                                                          },
-                                                          {
-                                                              "apiId":  "shared_commondataserviceforapps",
-                                                              "connectionId":  "replace-with-prod-dataverse-connection-id",
-                                                              "table":  "vsi_automaticemailaudits"
-                                                          },
-                                                          {
-                                                              "apiId":  "shared_commondataserviceforapps",
-                                                              "connectionId":  "replace-with-prod-dataverse-connection-id",
-                                                              "table":  "audits"
-                                                          },
-                                                          {
-                                                              "apiId":  "shared_commondataserviceforapps",
-                                                              "connectionId":  "replace-with-prod-dataverse-connection-id",
-                                                              "table":  "businessunits"
                                                           }
                                                       ]
                                   }

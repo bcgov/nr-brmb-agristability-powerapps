@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { RefreshCw } from 'lucide-react';
 
@@ -14,11 +14,12 @@ import { ColumnHeaderMenu } from '../components/ColumnHeaderMenu';
 import type { SortDir, FilterOperator } from '../types/enrollment';
 import { getReminderRemainingDays, hasEnrolmentNoticeSentDate, resolveReminderKind, shouldIncludeReminderRow, type ReminderKind } from './deadlineReminderUtils';
 import { SendEmailwithTemplateService } from '../generated/services/SendEmailwithTemplateService';
-import { EnvironmentvariablevaluesService } from '../generated/services/EnvironmentvariablevaluesService';
+import { AccountsService } from '../generated/services/AccountsService';
 import { Toast, nextToastId } from '../components/Toast';
 import type { ToastMessage } from '../components/Toast';
 import { useRole } from '../context/RoleContext';
 import type { TextFilterOperator } from '../components/ColumnHeaderMenu';
+import { DEPLOY_ENV } from '../constants/deployEnvConfig';
 import '../styles/supervisor-approval.css';
 
 type DeadlineColumnKey = 'enrolmentName' | 'year' | 'participant' | 'pin' | 'enrolmentStatus' | 'totalFeesOwed' | 'noticeSentDate' | 'deadlineDate' | 'remainingDays' | 'kind' | 'reminderSent';
@@ -55,6 +56,16 @@ const REMINDER_TEMPLATE_ENV_VAR_BY_KIND: Record<ReminderKind, string> = {
   nonPenalty: 'vsi_ENDeadlineReminderEmailTemplate',
   finalDeadline: 'vsi_ENFeeFinalDeadlineReminderTemplate',
   lateFinalDeadline: 'vsi_LateENFeeFinalDeadlineReminderTemplate',
+};
+
+const DEPLOY_TEMPLATE_GUIDS = (DEPLOY_ENV as {
+  reminderTemplateGuids?: Partial<Record<ReminderKind, string>>;
+}).reminderTemplateGuids ?? {};
+
+const REMINDER_TYPE_LABELS: Record<ReminderKind, string> = {
+  nonPenalty: 'Non-Penalty',
+  finalDeadline: 'Final Deadline',
+  lateFinalDeadline: 'Late Final Deadline',
 };
 
 type PaginationPage = number | '...';
@@ -110,6 +121,7 @@ const getDisplayValue = (item: Vsi_participantprogramyears, annotationKey: strin
 const normalizeTemplateGuid = (value: string | null | undefined) => value?.trim() ?? '';
 
 type AuditMap = Map<string, { nonPenalty: boolean; finalDeadline: boolean; lateFinalDeadline: boolean }>;
+type SendConfirmationState = { row: DeadlineReminderRow; participantEmail: string; emailLoading: boolean };
 
 const toReminderRow = (item: Vsi_participantprogramyears, auditMap: AuditMap | null): DeadlineReminderRow | null => {
   const itemId = normalizeGuid(item.vsi_participantprogramyearid);
@@ -238,40 +250,59 @@ export function DeadlineReminderPage() {
   const addToast = (message: string, type: ToastMessage['type'] = 'success') =>
     setToasts(prev => [...prev, { id: nextToastId(), message, type }]);
   const dismissToast = (id: number) => setToasts(prev => prev.filter(t => t.id !== id));
-  const [nonPenaltyTemplateGuid, setNonPenaltyTemplateGuid] = useState<string>('');
-  const [finalDeadlineTemplateGuid, setFinalDeadlineTemplateGuid] = useState<string>('');
-  const [lateEnTemplateGuid, setLateEnTemplateGuid] = useState<string>('');
-  const [envVarsLoaded, setEnvVarsLoaded] = useState(false);
+  const [sendConfirmation, setSendConfirmation] = useState<SendConfirmationState | null>(null);
+  const [loadingConfirmationFor, setLoadingConfirmationFor] = useState<string | null>(null);
+  const participantEmailCacheRef = useRef<Map<string, string>>(new Map());
 
   const getTemplateGuidForKind = (kind: ReminderKind): string => {
-    if (kind === 'finalDeadline') return normalizeTemplateGuid(finalDeadlineTemplateGuid);
-    if (kind === 'lateFinalDeadline') return normalizeTemplateGuid(lateEnTemplateGuid);
-    return normalizeTemplateGuid(nonPenaltyTemplateGuid);
+    return normalizeTemplateGuid(DEPLOY_TEMPLATE_GUIDS[kind]);
   };
 
   const getMissingTemplateMessage = (kind: ReminderKind): string =>
-    `Reminder email template is not configured for this reminder type in the current environment. Set ${REMINDER_TEMPLATE_ENV_VAR_BY_KIND[kind]} and try again.`;
+    `Reminder email template is not configured for this reminder type. Set ${REMINDER_TEMPLATE_ENV_VAR_BY_KIND[kind]} in Dataverse and redeploy to refresh deployEnvConfig.`;
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const result = await EnvironmentvariablevaluesService.getAll({
-          select: ['schemaname', 'value'],
-          maxPageSize: 100,
-        });
-        for (const row of result.data ?? []) {
-          const schema = row.schemaname as string | undefined;
-          const val = (row.value as string | undefined) ?? '';
-          if (schema === 'vsi_ENDeadlineReminderEmailTemplate') setNonPenaltyTemplateGuid(val);
-          if (schema === 'vsi_ENFeeFinalDeadlineReminderTemplate') setFinalDeadlineTemplateGuid(val);
-          if (schema === 'vsi_LateENFeeFinalDeadlineReminderTemplate') setLateEnTemplateGuid(val);
-        }
-        setEnvVarsLoaded(true);
-      } catch (err) {
-        console.error('[DeadlineReminder] Env var fetch error:', err);
-      }
-    })();
-  }, []);
+  const getParticipantEmailAddress = async (participantId: string | undefined): Promise<string> => {
+    const normalizedId = normalizeGuid(participantId);
+    if (!normalizedId) return '';
+
+    const cached = participantEmailCacheRef.current.get(normalizedId);
+    if (cached !== undefined) return cached;
+
+    try {
+      const result = await AccountsService.get(normalizedId, { select: ['emailaddress1'] });
+      const email = result.data?.emailaddress1?.trim() ?? '';
+      participantEmailCacheRef.current.set(normalizedId, email);
+      return email;
+    } catch {
+      participantEmailCacheRef.current.set(normalizedId, '');
+      return '';
+    }
+  };
+
+  const openSendConfirmation = async (row: DeadlineReminderRow) => {
+    const templateGuid = getTemplateGuidForKind(row.kind);
+    if (!templateGuid) {
+      addToast(getMissingTemplateMessage(row.kind), 'error');
+      return;
+    }
+
+    setSendConfirmation({ row, participantEmail: '', emailLoading: true });
+    setLoadingConfirmationFor(row.itemId);
+    try {
+      const participantEmail = await getParticipantEmailAddress(row.participantId);
+      setSendConfirmation(current => {
+        if (!current || current.row.itemId !== row.itemId) return current;
+        return { ...current, participantEmail, emailLoading: false };
+      });
+    } catch {
+      setSendConfirmation(current => {
+        if (!current || current.row.itemId !== row.itemId) return current;
+        return { ...current, participantEmail: '', emailLoading: false };
+      });
+    } finally {
+      setLoadingConfirmationFor(null);
+    }
+  };
 
   const handleSendNow = async (row: DeadlineReminderRow) => {
     const templateGuid = getTemplateGuidForKind(row.kind);
@@ -613,11 +644,9 @@ export function DeadlineReminderPage() {
                 {pageRows.map(row => {
                   const isUrgent = row.remainingDays != null && row.remainingDays >= 0 && row.remainingDays <= urgentDaysThreshold;
                   const templateGuid = getTemplateGuidForKind(row.kind);
-                  const sendDisabledReason = !envVarsLoaded
-                    ? 'Loading reminder email template configuration.'
-                    : !templateGuid
-                      ? getMissingTemplateMessage(row.kind)
-                      : undefined;
+                  const sendDisabledReason = !templateGuid
+                    ? getMissingTemplateMessage(row.kind)
+                    : undefined;
                   const { coreAppId, coreBaseUrl } = getCoreConfig();
                   const participantHref = row.participantId
                     ? `${coreBaseUrl ?? CORE_BASE_URL_FALLBACK}?appid=${encodeURIComponent(coreAppId ?? CORE_APP_ID_FALLBACK)}&pagetype=entityrecord&etn=account&id=${encodeURIComponent(row.participantId)}`
@@ -656,11 +685,15 @@ export function DeadlineReminderPage() {
                               <button
                                 type="button"
                                 className="sa-filter-btn"
-                                disabled={sendingEmailFor.has(row.itemId) || !envVarsLoaded || !templateGuid}
-                                onClick={() => handleSendNow(row)}
+                                disabled={sendingEmailFor.has(row.itemId) || loadingConfirmationFor === row.itemId}
+                                onClick={() => { void openSendConfirmation(row); }}
                                 title={sendDisabledReason}
                               >
-                                {sendingEmailFor.has(row.itemId) ? 'Sending...' : 'Send Now'}
+                                {sendingEmailFor.has(row.itemId)
+                                  ? 'Sending...'
+                                  : loadingConfirmationFor === row.itemId
+                                    ? 'Loading...'
+                                    : 'Send Now'}
                               </button>
                             </>
                           )
@@ -697,6 +730,39 @@ export function DeadlineReminderPage() {
           </div>
         )}
       </div>
+      {sendConfirmation && (
+        <div className="modal-overlay" onClick={() => setSendConfirmation(null)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <h3>Confirm Send Reminder</h3>
+              </div>
+              <button type="button" className="modal-close" onClick={() => setSendConfirmation(null)}>&times;</button>
+            </div>
+            <div className="modal-body">
+              <p>
+                Are you sure you want to send a "{REMINDER_TYPE_LABELS[sendConfirmation.row.kind]}" reminder email for "{sendConfirmation.row.item.vsi_name ?? '-'}"?
+                {' '}Email address is "{sendConfirmation.emailLoading ? 'Loading...' : (sendConfirmation.participantEmail || '-')}".
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button
+                className="btn-ok"
+                type="button"
+                onClick={() => {
+                  void handleSendNow(sendConfirmation.row);
+                  setSendConfirmation(null);
+                }}
+              >
+                Send Now
+              </button>
+              <button className="btn-cancel" type="button" onClick={() => setSendConfirmation(null)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <Toast toasts={toasts} onDismiss={dismissToast} />
     </div>
   );

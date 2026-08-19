@@ -10,7 +10,7 @@
   "localAppUrl": "http://localhost:3000",
   "logoPath": "Default",
   "connectionReferences": {
-    "1afbff63-24de-4622-a315-e7a5ec0f9697": {
+    "cb9d5e8b-ed49-43cc-b190-ca814a60e5f0": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_farms-20api-5fe39d1efd21a19d13-5f571039b465579741",
       "displayName": "FARMS API",
       "dataSources": [
@@ -22,7 +22,7 @@
       "sharedConnectionId": "/providers/Microsoft.PowerApps/apis/shared_farms-20api-5fe39d1efd21a19d13-5f571039b465579741/connections/7f0dbaddf90e498e82c553b27272a705",
       "dataSets": {}
     },
-    "ae5e7143-4db7-4692-9e0b-80174b2ff47b": {
+    "88f4dfbb-42f8-47f6-a79a-9b485c6a4bd5": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
       "displayName": "Microsoft Dataverse",
       "dataSources": [
@@ -32,7 +32,7 @@
       "sharedConnectionId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps/connections/b05319f6f3244385ac9d9959391a2970",
       "dataSets": {}
     },
-    "edb337c6-8664-4700-84df-b11fe46ba078": {
+    "4b171851-a376-4235-907b-8b012d83e484": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
       "displayName": "Logic flows",
       "dataSources": [
@@ -44,15 +44,15 @@
         "workflowName": "e3f5031f-0d21-4b4e-90ad-bf43d6d496cd"
       }
     },
-    "c862c02a-d394-48de-b54a-44bb0d3649a5": {
+    "a4d370ba-626c-47a1-afca-686857728173": {
       "id": "/providers/microsoft.powerapps/apis/shared_sharepointonline",
       "displayName": "SharePoint"
     },
-    "efb4a593-3ad6-4e7c-a103-223688261623": {
+    "172aea9e-57b4-4260-85c8-63097b3f8f5c": {
       "id": "/providers/microsoft.powerapps/apis/shared_wordonlinebusiness",
       "displayName": "Word Online (Business)"
     },
-    "edb28d84-1d3a-4d6c-b457-bc7695898d9e": {
+    "8879d13a-a82f-4b9e-8cd8-d9d8c4efa9a6": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
       "displayName": "Logic flows",
       "dataSources": [
@@ -63,12 +63,12 @@
         "workflowDisplayName": "Generate 45 Day Letter",
         "workflowName": "8bdef04a-3078-a8e8-bed0-89163ef5e0c4",
         "dependencies": {
-          "shared_sharepointonline_1": "c862c02a-d394-48de-b54a-44bb0d3649a5",
-          "shared_wordonlinebusiness_1": "efb4a593-3ad6-4e7c-a103-223688261623"
+          "shared_sharepointonline_1": "a4d370ba-626c-47a1-afca-686857728173",
+          "shared_wordonlinebusiness_1": "172aea9e-57b4-4260-85c8-63097b3f8f5c"
         }
       }
     },
-    "8ef8c8d9-b7da-4ffb-a490-c32e71a9a78f": {
+    "6a152206-fa63-4f3f-8050-8bd3b81dd08a": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
       "displayName": "Logic flows",
       "dataSources": [
@@ -79,12 +79,12 @@
         "workflowDisplayName": "Generate Bulk Enrolment Notices",
         "workflowName": "1659a9c0-1436-b7b2-d918-2b5b3fc5e819",
         "dependencies": {
-          "shared_wordonlinebusiness": "efb4a593-3ad6-4e7c-a103-223688261623",
-          "shared_sharepointonline": "c862c02a-d394-48de-b54a-44bb0d3649a5"
+          "shared_wordonlinebusiness": "172aea9e-57b4-4260-85c8-63097b3f8f5c",
+          "shared_sharepointonline": "a4d370ba-626c-47a1-afca-686857728173"
         }
       }
     },
-    "c4d4d96b-48c5-4289-a2bf-0dfdcaa8d2fe": {
+    "6719edaf-446a-4067-bc7a-e6b1216a4bf9": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
       "displayName": "Logic flows",
       "dataSources": [
@@ -96,7 +96,7 @@
         "workflowName": "8689572a-0028-59a4-6c76-579622dddbfb"
       }
     },
-    "5ed7084a-7b9a-446c-939d-764d5e5099e6": {
+    "97b36e12-cae2-4d06-8bae-b46e1aef7306": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
       "displayName": "Logic flows",
       "dataSources": [
@@ -142,10 +142,6 @@
         "enrolments": {
           "entitySetName": "vsi_participantprogramyears",
           "logicalName": "vsi_participantprogramyear"
-        },
-        "environmentvariablevalues": {
-          "entitySetName": "environmentvariablevalues",
-          "logicalName": "environmentvariablevalue"
         },
         "fieldpermissions": {
           "entitySetName": "fieldpermissions",
