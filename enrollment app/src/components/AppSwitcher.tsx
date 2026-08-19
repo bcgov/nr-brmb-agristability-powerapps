@@ -22,7 +22,7 @@ function resolveCanvasUrl(key: string): string | null {
   const ids = DEPLOY_ENV.canvasAppIds as Record<string, string>;
   const appId = ids[key];
   if (!appId || appId.startsWith('replace-with-')) return null;
-  return `https://apps.powerapps.com/play/e/${DEPLOY_ENV.environmentId}/a/${appId}?tenantId=${DEPLOY_ENV.tenantId}`;
+  return `https://apps.powerapps.com/play/e/${DEPLOY_ENV.environmentId}/a/${appId}?tenantId=${DEPLOY_ENV.tenantId}&hidenavbar=true`;
 }
 
 type AppType = 'model' | 'canvas' | 'code' | 'external';
@@ -52,18 +52,24 @@ function isActiveConfig(value: unknown): boolean {
 }
 
 async function resolveFarmsUrl(): Promise<string | null> {
+  // Fetch all fields (no select) and try all known prefix/case variants,
+  // matching the same logic used by EnrolmentCalculationPage.getFarmsLegacyBaseUrl().
   const result = await Vsi_armsconfigurationsService.getAll({
     maxPageSize: 50,
-    select: ['vsi_activeconfiguration', 'cr4dd_farmsurlnew'],
     orderBy: ['modifiedon desc'],
   });
   const rows = result.data ?? [];
-  const active = rows.find(r =>
-    isActiveConfig((r as unknown as Record<string, unknown>).vsi_activeconfiguration) &&
-    r.cr4dd_farmsurlnew?.trim()
-  );
-  const row = active ?? rows.find(r => r.cr4dd_farmsurlnew?.trim());
-  return row?.cr4dd_farmsurlnew?.trim() ?? null;
+  for (const row of rows) {
+    const r = row as unknown as Record<string, unknown>;
+    const url = (
+      (typeof r['cr2a9_FARMSURLNEW'] === 'string' && r['cr2a9_FARMSURLNEW'].trim()) ||
+      (typeof r['cr2a9_farmsurlnew'] === 'string' && r['cr2a9_farmsurlnew'].trim()) ||
+      (typeof r['cr4dd_FARMSURLNEW'] === 'string' && r['cr4dd_FARMSURLNEW'].trim()) ||
+      (typeof r['cr4dd_farmsurlnew'] === 'string' && r['cr4dd_farmsurlnew'].trim())
+    ) || null;
+    if (url) return url;
+  }
+  return null;
 }
 
 async function resolveOrgUrl(): Promise<string | null> {

@@ -130,7 +130,12 @@ function Get-ReminderTemplateGuidMap {
 
   try {
     $listOutput = Invoke-CapturedCommand -FilePath 'npx.cmd' -Arguments @('power-apps', 'list-environment-variables', '--json', '--no-color', '--non-interactive') -Description 'List environment variables for reminder templates'
-    $raw = ($listOutput | Out-String)
+    if ($listOutput -is [System.Array]) {
+      $raw = [string]::Join("`n", @($listOutput | ForEach-Object { [string]$_ }))
+    }
+    else {
+      $raw = [string]$listOutput
+    }
     $raw = $raw -replace '\x1b\[[0-9;?]*[A-Za-z]', ''
 
     $jsonStart = $raw.IndexOf('[')
@@ -139,7 +144,8 @@ function Get-ReminderTemplateGuidMap {
       throw 'Could not parse environment variable list JSON output.'
     }
 
-    $rows = @($raw.Substring($jsonStart, $jsonEnd - $jsonStart + 1) | ConvertFrom-Json)
+    $parsedRows = $raw.Substring($jsonStart, $jsonEnd - $jsonStart + 1) | ConvertFrom-Json
+    $rows = @(foreach ($row in $parsedRows) { $row })
     $schemaToKey = @{
       'vsi_ENDeadlineReminderEmailTemplate' = 'nonPenalty'
       'vsi_ENFeeFinalDeadlineReminderTemplate' = 'finalDeadline'
@@ -296,48 +302,40 @@ function Patch-UserqueriesSharingApis {
   Write-Host "  Patched: $FilePath" -ForegroundColor Green
 }
 
-function Patch-MissingFlowDataSources {
-  <#
-  .SYNOPSIS
-    Ensures required flow connector datasource entries exist in dataSourcesInfo.ts/js.
-  #>
+function Ensure-FlowDataSourceEntries {
   param(
     [Parameter(Mandatory = $true)]
     [string]$FilePath,
 
     [Parameter(Mandatory = $true)]
-    [string[]]$RequiredDataSourceNames
+    [string[]]$DataSourceNames
   )
 
   if (-not (Test-Path -LiteralPath $FilePath)) {
-    Write-Host "  Skipping flow datasource patch - file not found: $FilePath" -ForegroundColor Yellow
-    return
+    throw "Required file '$FilePath' was not found while validating flow datasource entries."
   }
 
   $content = [System.IO.File]::ReadAllText($FilePath)
-  $missingNames = New-Object 'System.Collections.Generic.List[string]'
+  $missing = New-Object 'System.Collections.Generic.List[string]'
 
-  foreach ($name in $RequiredDataSourceNames) {
-    $trimmed = [string]$name
-    if ([string]::IsNullOrWhiteSpace($trimmed)) {
+  foreach ($name in $DataSourceNames) {
+    if ([string]::IsNullOrWhiteSpace([string]$name)) {
       continue
     }
 
-    $escaped = [regex]::Escape($trimmed)
+    $escaped = [regex]::Escape([string]$name)
     if ($content -notmatch '"' + $escaped + '"\s*:\s*\{') {
-      $missingNames.Add($trimmed)
+      $missing.Add([string]$name)
     }
   }
 
-  if ($missingNames.Count -eq 0) {
+  if ($missing.Count -eq 0) {
     Write-Host "  Flow datasource entries already present: $FilePath" -ForegroundColor DarkGray
     return
   }
 
-  $entryBlocks = New-Object 'System.Collections.Generic.List[string]'
-  foreach ($name in $missingNames) {
-    $entryBlocks.Add(@"
-  "$name": {
+  $entryTemplate = @'
+  "{0}": {
     "tableId": "",
     "version": "",
     "primaryKey": "",
@@ -377,26 +375,29 @@ function Patch-MissingFlowDataSources {
       }
     }
   },
-"@)
+'@
+
+  $entryText = ''
+  foreach ($name in $missing) {
+    $entryText += [string]::Format($entryTemplate, $name)
   }
-  $injectedText = ($entryBlocks -join '')
 
   $officeUsersMarker = '  "office365users": {'
   if ($content.Contains($officeUsersMarker)) {
-    $content = $content.Replace($officeUsersMarker, $injectedText + $officeUsersMarker)
+    $content = $content.Replace($officeUsersMarker, $entryText + $officeUsersMarker)
   }
   else {
     $closingMarker = "`n};"
     $closingIndex = $content.LastIndexOf($closingMarker)
     if ($closingIndex -lt 0) {
-      throw "Could not locate insertion point in '$FilePath' while patching missing flow datasources."
+      throw "Could not locate insertion point in '$FilePath' while injecting missing flow datasource entries."
     }
 
-    $content = $content.Substring(0, $closingIndex) + "`n" + $injectedText + $content.Substring($closingIndex)
+    $content = $content.Substring(0, $closingIndex) + "`n" + $entryText + $content.Substring($closingIndex)
   }
 
   [System.IO.File]::WriteAllText($FilePath, $content, [System.Text.Encoding]::UTF8)
-  Write-Host "  Injected missing flow datasource entries ($($missingNames -join ', ')) into $FilePath" -ForegroundColor Green
+  Write-Host "  Injected missing flow datasource entries ($($missing -join ', ')) into $FilePath" -ForegroundColor Green
 }
 
 
@@ -498,6 +499,48 @@ $canvasAppIdsJson = '{}'
 if ((Test-HasProperty -Object $target -PropertyName 'canvasAppIds') -and $null -ne $target.canvasAppIds) {
   $canvasAppIdsJson = $target.canvasAppIds | ConvertTo-Json -Compress
 }
+
+# Try to auto-discover canvas app IDs via Get-AdminPowerApp (Microsoft.PowerApps.Administration.PowerShell).
+# Falls back to the configured values above if the module is unavailable or an app is not found.
+if ((Test-HasProperty -Object $config -PropertyName 'canvasAppNames') -and $null -ne $config.canvasAppNames) {
+  $getAdminCmd = Get-Command Get-AdminPowerApp -ErrorAction SilentlyContinue
+  if ($null -ne $getAdminCmd) {
+    Write-Host "  Discovering canvas app IDs via Get-AdminPowerApp..." -ForegroundColor DarkGray
+    try {
+      $resolvedIds = @{}
+      # Start from any already-configured non-placeholder values
+      if ((Test-HasProperty -Object $target -PropertyName 'canvasAppIds') -and $null -ne $target.canvasAppIds) {
+        foreach ($p in $target.canvasAppIds.PSObject.Properties) {
+          $resolvedIds[$p.Name] = [string]$p.Value
+        }
+      }
+      foreach ($p in $config.canvasAppNames.PSObject.Properties) {
+        $key         = $p.Name
+        $displayName = [string]$p.Value
+        $appName = (Get-AdminPowerApp | Where-Object { $_.DisplayName -like "*$displayName*" -and $_.EnvironmentName -eq $environmentId } | Select-Object -First 1).AppName
+        if (-not [string]::IsNullOrWhiteSpace($appName)) {
+          $resolvedIds[$key] = [string]$appName
+          Write-Host "  Found '$displayName': $appName" -ForegroundColor Green
+        } else {
+          Write-Host "  '$displayName' not found in '$Stage' - using configured fallback" -ForegroundColor Yellow
+        }
+      }
+      $canvasAppIdsJson = if ($resolvedIds.Count -gt 0) { $resolvedIds | ConvertTo-Json -Compress } else { '{}' }
+    } catch {
+      Write-Host "  Get-AdminPowerApp failed: $_ - using configured canvas app IDs" -ForegroundColor Yellow
+    }
+  } else {
+    Write-Host "  Get-AdminPowerApp not available (install Microsoft.PowerApps.Administration.PowerShell for auto-discovery)" -ForegroundColor DarkGray
+  }
+}
+
+# Warn about any remaining placeholder canvas app IDs
+$warnIds = if ($canvasAppIdsJson -ne '{}') { $canvasAppIdsJson | ConvertFrom-Json } else { $null }
+if ($null -ne $warnIds) {
+  $warnIds.PSObject.Properties | Where-Object { [string]$_.Value -match '^replace-with-' } | ForEach-Object {
+    Write-Host "  Warning: canvas app '$($_.Name)' has a placeholder ID - app switcher link will be inactive" -ForegroundColor Yellow
+  }
+}
 $appIconsJson = '{}'
 if ((Test-HasProperty -Object $target -PropertyName 'appIcons') -and $null -ne $target.appIcons) {
   $appIconsJson = $target.appIcons | ConvertTo-Json -Compress
@@ -509,6 +552,18 @@ Write-Host "  Reminder templates resolved (deploy config output):" -ForegroundCo
 Write-Host "    nonPenalty:      $(if ([string]::IsNullOrWhiteSpace([string]$resolvedReminderTemplateGuids.nonPenalty)) { '(missing)' } else { '(configured)' })" -ForegroundColor DarkGray
 Write-Host "    finalDeadline:   $(if ([string]::IsNullOrWhiteSpace([string]$resolvedReminderTemplateGuids.finalDeadline)) { '(missing)' } else { '(configured)' })" -ForegroundColor DarkGray
 Write-Host "    lateFinalDeadline: $(if ([string]::IsNullOrWhiteSpace([string]$resolvedReminderTemplateGuids.lateFinalDeadline)) { '(missing)' } else { '(configured)' })" -ForegroundColor DarkGray
+
+$missingReminderTemplateKinds = New-Object 'System.Collections.Generic.List[string]'
+foreach ($kind in @('nonPenalty', 'finalDeadline', 'lateFinalDeadline')) {
+  $resolvedValue = [string]$resolvedReminderTemplateGuids.$kind
+  if ([string]::IsNullOrWhiteSpace($resolvedValue) -or $resolvedValue -match '^replace-with-') {
+    $missingReminderTemplateKinds.Add($kind)
+  }
+}
+
+if ($missingReminderTemplateKinds.Count -gt 0) {
+  throw "Reminder template GUIDs were not resolved for stage '$Stage' (missing: $($missingReminderTemplateKinds -join ', ')). Ensure Dataverse environment variable values exist for vsi_ENDeadlineReminderEmailTemplate, vsi_ENFeeFinalDeadlineReminderTemplate, and vsi_LateENFeeFinalDeadlineReminderTemplate, or set environments.$Stage.reminderTemplateGuids in scripts/powerapps-deploy.config.json. Deployment stopped before build and push."
+}
 $modelAppsJson = '[]'
 if ((Test-HasProperty -Object $target -PropertyName 'modelApps') -and $null -ne $target.modelApps) {
   $modelAppsJson = $target.modelApps | ConvertTo-Json -Compress
@@ -790,40 +845,21 @@ if ($null -ne $config.flowReferences -and $config.flowReferences.Count -gt 0) {
 
   $dataSourcesInfoTsPath = Join-Path $repoRoot '.power\schemas\appschemas\dataSourcesInfo.ts'
   $dataSourcesInfoJsPath = Join-Path $repoRoot '.power\schemas\appschemas\dataSourcesInfo.js'
-  Patch-MissingFlowDataSources -FilePath $dataSourcesInfoTsPath -RequiredDataSourceNames @($requiredFlowDataSourceNames)
-  Patch-MissingFlowDataSources -FilePath $dataSourcesInfoJsPath -RequiredDataSourceNames @($requiredFlowDataSourceNames)
 
-  foreach ($dataSourcesInfoPath in @($dataSourcesInfoTsPath, $dataSourcesInfoJsPath)) {
-    if (-not (Test-Path -LiteralPath $dataSourcesInfoPath)) {
-      throw "Required file '$dataSourcesInfoPath' was not found after flow binding. Deployment stopped before build and push."
-    }
+  Ensure-FlowDataSourceEntries -FilePath $dataSourcesInfoTsPath -DataSourceNames @($requiredFlowDataSourceNames)
+  Ensure-FlowDataSourceEntries -FilePath $dataSourcesInfoJsPath -DataSourceNames @($requiredFlowDataSourceNames)
 
-    $dataSourcesInfoText = Get-Content -LiteralPath $dataSourcesInfoPath -Raw
-    foreach ($requiredDataSourceNameText in @($requiredFlowDataSourceNames)) {
-      $escapedDataSourceName = [regex]::Escape([string]$requiredDataSourceNameText)
-      if ($dataSourcesInfoText -notmatch '"' + $escapedDataSourceName + '"\s*:\s*\{') {
-        throw "Required flow datasource '$requiredDataSourceNameText' was not found in $dataSourcesInfoPath. Re-run flow binding and verify the flow is invokable in this environment. Deployment stopped before build and push."
+  foreach ($path in @($dataSourcesInfoTsPath, $dataSourcesInfoJsPath)) {
+    $text = Get-Content -LiteralPath $path -Raw
+    foreach ($name in @($requiredFlowDataSourceNames)) {
+      $escaped = [regex]::Escape([string]$name)
+      if ($text -notmatch '"' + $escaped + '"\s*:\s*\{') {
+        throw "Required flow datasource '$name' was not found in $path after patching. Deployment stopped before build and push."
       }
     }
   }
 
   Write-Host "Verified all $($config.flowReferences.Count) required flow connection references in power.config.json." -ForegroundColor Green
-}
-
-# List canvas apps in the current environment to assist with canvasAppIds config.
-# pac canvas list shows app names (not IDs). To find a canvas app ID:
-#   Power Apps portal > Apps > select app > Details > copy the app ID from the Web link URL.
-Write-Host "`n==> Canvas apps in '$Stage' environment (pac canvas list)" -ForegroundColor Cyan
-& 'pac' @('canvas', 'list') 2>&1 | ForEach-Object { Write-Host "  $_" }
-Write-Host "" -ForegroundColor DarkGray
-Write-Host "  Configured canvasAppIds for '$Stage':" -ForegroundColor DarkGray
-if ((Test-HasProperty -Object $target -PropertyName 'canvasAppIds') -and $null -ne $target.canvasAppIds) {
-  $target.canvasAppIds.PSObject.Properties | ForEach-Object {
-    $status = if ([string]$_.Value -match '^replace-with-') { '(placeholder - update before deploying)' } else { '(configured)' }
-    Write-Host "    $($_.Name): $($_.Value) $status" -ForegroundColor DarkGray
-  }
-} else {
-  Write-Host "    (none configured - add canvasAppIds to environments.$Stage in powerapps-deploy.config.json)" -ForegroundColor Yellow
 }
 
 if (-not $SkipBuild.IsPresent) {
