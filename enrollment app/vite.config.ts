@@ -10,7 +10,7 @@ export default defineConfig({
     // regardless of size — npx power-apps push does not upload external asset
     // files (jpg/png) from dist/assets/, so they must live inside the JS bundle.
     assetsInlineLimit: (filePath: string) => {
-      if (/\/public\/icons\/app-/.test(filePath)) return true;
+      if (/\/src\/icons\/app-/.test(filePath)) return true;
       return undefined; // use Vite default (4 KB) for everything else
     },
   },
