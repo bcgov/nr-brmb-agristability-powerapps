@@ -292,6 +292,7 @@
   align-items: center;
   justify-content: center;
   text-decoration: none;
+  position: relative;
 }
 .cell-sp {
   text-align: center;
@@ -303,6 +304,31 @@
 }
 .sp-icon-link:hover .sp-icon {
   opacity: 0.85;
+}
+.sp-icon-link::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 0.45rem);
+  transform: translateX(-50%);
+  z-index: 20;
+  width: max-content;
+  max-width: 10rem;
+  padding: 0.25rem 0.45rem;
+  border-radius: 4px;
+  background: #111827;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.2;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+}
+.sp-icon-link:hover::after,
+.sp-icon-link:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
 }
 
 /* Date */

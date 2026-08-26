@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useRef, type ChangeEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Calculator } from 'lucide-react';
+import { Calculator, RefreshCw } from 'lucide-react';
 import sharepointIconUrl from '/icons/sharepoint.svg?url';
 import {
   Vsi_participantprogramyearsvsi_enrolmentstatus,
@@ -18,6 +18,7 @@ import { Vsi_armsconfigurationsService } from '../generated/services/Vsi_armscon
 import { Vsi_enrolmenthistoriesService } from '../generated/services/Vsi_enrolmenthistoriesService';
 import { AuditsService } from '../generated/services/AuditsService';
 import { BusinessunitsService } from '../generated/services/BusinessunitsService';
+import { MicrosoftDataverseService } from '../generated/services/MicrosoftDataverseService';
 import { type Vsi_enrolmenthistories } from '../generated/models/Vsi_enrolmenthistoriesModel';
 import { type Vsi_automaticemailaudits } from '../generated/models/Vsi_automaticemailauditsModel';
 import { CORE_APP_ID_FALLBACK, CORE_BASE_URL_FALLBACK } from '../constants/config';
@@ -945,6 +946,54 @@ export function EnrolmentDetailsPage() {
   }, [coreAppId]);
 
   const [refreshing, setRefreshing] = useState(false);
+  const [gearMenuOpen, setGearMenuOpen] = useState(false);
+  const [flowSubmenuOpen, setFlowSubmenuOpen] = useState(false);
+  const gearMenuRef = useRef<HTMLDivElement>(null);
+  const HARDCODED_WORKFLOWS: { id: string; name: string }[] = [
+    { id: '28f4b906-a48c-e911-810a-000c29c25ecc', name: 'Enr - Bring Forward Enrolment Generic' },
+    { id: 'a8a95b82-5f26-ee11-9965-0022483c51a6', name: 'Enr - Enrolment Status Change' },
+    { id: '4a20ffab-5526-ee11-9965-0022483cb4cc', name: 'Enr - Fees Paid - Check enrolment eligibility' },
+    { id: '177a3f3e-0d6a-ee11-9ae7-0022483cb0d4', name: 'Enr - Enrolment Status Change - Child Late Fee' },
+    { id: '9962954d-f25b-ef11-bfe3-002248b3669f', name: 'Enr - Enrolment Regional Office Assignment' },
+  ];
+  const [onDemandWorkflows] = useState<{ id: string; name: string }[]>(HARDCODED_WORKFLOWS);
+  const [runningWorkflow, setRunningWorkflow] = useState<string | null>(null);
+
+  const openGearMenu = () => { setGearMenuOpen(true); setFlowSubmenuOpen(false); };
+  const closeGearMenu = () => { setGearMenuOpen(false); setFlowSubmenuOpen(false); };
+
+  const runWorkflow = async (workflowId: string, workflowName: string) => {
+    if (!resolvedEnrolmentId || runningWorkflow) return;
+    setRunningWorkflow(workflowId);
+    setGearMenuOpen(false);
+    const cleanEnrolmentId = resolvedEnrolmentId.replace(/[{}]/g, '');
+    const cleanWorkflowId = workflowId.replace(/[{}]/g, '');
+    try {
+      const orgUrl = getCoreConfig().dataverseOrgUrl;
+      if (!orgUrl) throw new Error('dataverseOrgUrl not available');
+      await MicrosoftDataverseService.PerformBoundActionWithOrganization(
+        orgUrl, 'workflows', 'Microsoft.Dynamics.CRM.ExecuteWorkflow', cleanWorkflowId,
+        { EntityId: cleanEnrolmentId }
+      );
+      addToast(`Workflow "${workflowName}" started.`, 'success');
+    } catch (e) {
+      console.error('[RunWorkflow] error:', e);
+      addToast(`Failed to run workflow "${workflowName}".`, 'error');
+    } finally {
+      setRunningWorkflow(null);
+    }
+  };
+
+  useEffect(() => {
+    if (!gearMenuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (gearMenuRef.current && !gearMenuRef.current.contains(e.target as Node)) {
+        setGearMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [gearMenuOpen]);
 
   const refreshRecord = async () => {
     if (!resolvedEnrolmentId) return;
@@ -1522,6 +1571,73 @@ export function EnrolmentDetailsPage() {
               </div>
             </div>
           </div>
+          <div className="details-gear-menu" ref={gearMenuRef}>
+            <button
+              type="button"
+              className="details-gear-btn"
+              title="Options"
+              aria-label="Options"
+              onClick={() => gearMenuOpen ? closeGearMenu() : openGearMenu()}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ display: 'block', flexShrink: 0 }}>
+                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            </button>
+            {gearMenuOpen && (
+              <div className="details-gear-dropdown">
+                <button
+                  type="button"
+                  className="details-gear-item details-gear-item--flow"
+                  onClick={() => { closeGearMenu(); void loadAuditHistory(); }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
+                    <path d="M12 8v4l3 3" stroke="#605e5c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M3.05 11a9 9 0 1 0 .5-3" stroke="#605e5c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M3 4v4h4" stroke="#605e5c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  <span>Audit History</span>
+                </button>
+                <div className="details-gear-divider" />
+                <div
+                  className="details-gear-item details-gear-item--submenu"
+                  style={{ display: 'table', width: '100%', boxSizing: 'border-box' }}
+                  onClick={() => setFlowSubmenuOpen(o => !o)}
+                >
+                  <span style={{ display: 'table-cell' }}>
+                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true" style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '0.5rem' }}>
+                      <path d="M5 4l6 6-6 6" stroke="#605e5c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M10 4l6 6-6 6" stroke="#605e5c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    Flow
+                  </span>
+                  <span style={{ display: 'table-cell', textAlign: 'right', color: '#6b7280', width: '1%' }}>{flowSubmenuOpen ? '\u276e' : '\u276f'}</span>
+                </div>
+                {flowSubmenuOpen && (
+                  <div className="details-gear-submenu">
+                    {onDemandWorkflows.length === 0
+                    ? <div className="details-gear-loading">No workflows configured</div>
+                    : onDemandWorkflows.map(wf => (
+                          <button
+                            key={wf.id}
+                            type="button"
+                            className="details-gear-item details-gear-item--flow"
+                            disabled={!!runningWorkflow}
+                            onClick={e => { e.stopPropagation(); void runWorkflow(wf.id, wf.name); }}
+                          >
+                            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
+                              <path d="M5 4l6 6-6 6" stroke="#605e5c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              <path d="M10 4l6 6-6 6" stroke="#605e5c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                            <span>{runningWorkflow === wf.id ? 'Running…' : wf.name}</span>
+                          </button>
+                        ))
+                    }
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1533,8 +1649,17 @@ export function EnrolmentDetailsPage() {
                 ? <a className="details-participant-name" href={participantHref} target="_blank" rel="noopener noreferrer">{participantName}</a>
                 : <span className="details-participant-name">{participantName}</span>
               }
-              <span className="details-label">Participant</span>
               {participantPin && <span className="details-label">PIN: {participantPin}</span>}
+              <button
+                type="button"
+                className="sa-filter-btn"
+                style={{ alignSelf: 'flex-start' }}
+                onClick={() => { void refreshRecord(); }}
+                disabled={refreshing}
+                title="Refresh this enrolment record"
+              >
+                <RefreshCw size={14} />{refreshing ? 'Refreshing…' : 'Refresh'}
+              </button>
             </div>
 
             <div className="details-fortyfiveday-cell">
@@ -1580,50 +1705,35 @@ export function EnrolmentDetailsPage() {
             </div>
 
             <div className="details-link-field">
-              <button
-                type="button"
-                className="calc-outline-btn"
-                onClick={() => { void refreshRecord(); }}
-                disabled={refreshing}
-                title="Refresh this enrolment record"
-              >
-                {refreshing ? 'Refreshing…' : 'Refresh'}
-              </button>
-              <button
-                type="button"
-                className="calc-outline-btn"
-                onClick={() => { void loadAuditHistory(); }}
-                title="View audit history for this enrolment record"
-              >
-                Audit History
-              </button>
               {record.vsi_sharepointdocumentfolder ? (
                 <a
                   className="calc-outline-btn calc-sharepoint-btn"
                   href={record.vsi_sharepointdocumentfolder}
                   target="_blank"
                   rel="noopener noreferrer"
+                  aria-label="Go to SharePoint"
+                  title="Go to SharePoint"
                 >
                   <img src={sharepointIconUrl} className="calc-sharepoint-icon" alt="" aria-hidden="true" />
-                  Go to SharePoint
                 </a>
               ) : (
                 <button
                   className="calc-outline-btn calc-sharepoint-btn"
                   type="button"
                   disabled
+                  aria-label="Go to SharePoint"
                   title="No SharePoint folder link found for this enrolment"
                 >
                   <img src={sharepointIconUrl} className="calc-sharepoint-icon" alt="" aria-hidden="true" />
-                  Go to SharePoint
                 </button>
               )}
               <button
                 type="button"
                 className="calc-outline-btn"
+                title="Go to calculation"
                 onClick={() => navigateWithGuard(`/calculation/${routeSource}/${resolvedEnrolmentId}`)}
               >
-                <Calculator size={15} /> Go to Calculation
+                <Calculator size={15} />
               </button>
             </div>
           </div>
