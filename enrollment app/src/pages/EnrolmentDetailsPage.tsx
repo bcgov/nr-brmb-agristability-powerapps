@@ -17,6 +17,7 @@ import { Vsi_participantprogramyearsService } from '../generated/services/Vsi_pa
 import { Vsi_armsconfigurationsService } from '../generated/services/Vsi_armsconfigurationsService';
 import { Vsi_enrolmenthistoriesService } from '../generated/services/Vsi_enrolmenthistoriesService';
 import { AuditsService } from '../generated/services/AuditsService';
+import { AsyncoperationsService } from '../generated/services/AsyncoperationsService';
 import { BusinessunitsService } from '../generated/services/BusinessunitsService';
 import { MicrosoftDataverseService } from '../generated/services/MicrosoftDataverseService';
 import { type Vsi_enrolmenthistories } from '../generated/models/Vsi_enrolmenthistoriesModel';
@@ -516,10 +517,42 @@ export function EnrolmentDetailsPage() {
   const [auditHistoryRows, setAuditHistoryRows] = useState<AuditHistoryEntry[]>([]);
   const [auditHistoryLoading, setAuditHistoryLoading] = useState(false);
   const [auditHistoryError, setAuditHistoryError] = useState<string | null>(null);
+
+  const [showBgProcesses, setShowBgProcesses] = useState(false);
+  const [bgProcessRows, setBgProcessRows] = useState<{ id: string; name: string; statuscode: number; startedon: string | null; completedon: string | null }[]>([]);
+  const [bgProcessLoading, setBgProcessLoading] = useState(false);
+  const [bgProcessError, setBgProcessError] = useState<string | null>(null);
   const [auditFilterField, setAuditFilterField] = useState('');
   const [auditFieldLabels, setAuditFieldLabels] = useState<Map<string, string>>(new Map());
   const [auditFilterOptions, setAuditFilterOptions] = useState<Array<{ logicalName: string; displayName: string }>>([]);
   const [hoveredAuditEventKey, setHoveredAuditEventKey] = useState<string | null>(null);
+
+  const loadBgProcesses = async () => {
+    if (!resolvedEnrolmentId) return;
+    setShowBgProcesses(true);
+    setBgProcessLoading(true);
+    setBgProcessError(null);
+    try {
+      const result = await AsyncoperationsService.getAll({
+        select: ['asyncoperationid', 'name', 'statuscode', 'startedon', 'completedon', 'createdon'],
+        filter: `_regardingobjectid_value eq '${resolvedEnrolmentId}'`,
+        orderBy: ['createdon desc'],
+        maxPageSize: 100,
+      });
+      setBgProcessRows((result?.data ?? []).map(r => ({
+        id: r.asyncoperationid,
+        name: r.name ?? '',
+        statuscode: Number(r.statuscode ?? 0),
+        startedon: r.startedon ?? null,
+        completedon: r.completedon ?? null,
+      })));
+    } catch (e) {
+      console.error('[BgProcesses] error:', e);
+      setBgProcessError('Unable to load background processes.');
+    } finally {
+      setBgProcessLoading(false);
+    }
+  };
 
   const loadAuditHistory = async () => {
     if (!resolvedEnrolmentId) return;
@@ -958,6 +991,7 @@ export function EnrolmentDetailsPage() {
   ];
   const [onDemandWorkflows] = useState<{ id: string; name: string }[]>(HARDCODED_WORKFLOWS);
   const [runningWorkflow, setRunningWorkflow] = useState<string | null>(null);
+  const [pendingWorkflow, setPendingWorkflow] = useState<{ id: string; name: string } | null>(null);
 
   const openGearMenu = () => { setGearMenuOpen(true); setFlowSubmenuOpen(false); };
   const closeGearMenu = () => { setGearMenuOpen(false); setFlowSubmenuOpen(false); };
@@ -971,10 +1005,14 @@ export function EnrolmentDetailsPage() {
     try {
       const orgUrl = getCoreConfig().dataverseOrgUrl;
       if (!orgUrl) throw new Error('dataverseOrgUrl not available');
-      await MicrosoftDataverseService.PerformBoundActionWithOrganization(
+      const result = await MicrosoftDataverseService.PerformBoundActionWithOrganization(
         orgUrl, 'workflows', 'Microsoft.Dynamics.CRM.ExecuteWorkflow', cleanWorkflowId,
         { EntityId: cleanEnrolmentId }
       );
+      if (result && (result as unknown as Record<string, unknown>).success === false) {
+        const errMsg = ((result as unknown as Record<string, unknown>).error as Record<string, unknown>)?.message ?? 'Unknown error';
+        throw new Error(String(errMsg));
+      }
       addToast(`Workflow "${workflowName}" started.`, 'success');
     } catch (e) {
       console.error('[RunWorkflow] error:', e);
@@ -1598,6 +1636,19 @@ export function EnrolmentDetailsPage() {
                   </svg>
                   <span>Audit History</span>
                 </button>
+                <button
+                  type="button"
+                  className="details-gear-item details-gear-item--flow"
+                  onClick={() => { closeGearMenu(); void loadBgProcesses(); }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
+                    <rect x="3" y="4" width="18" height="18" rx="2" stroke="#605e5c" strokeWidth="2"/>
+                    <path d="M3 10h18" stroke="#605e5c" strokeWidth="2"/>
+                    <path d="M8 2v4M16 2v4" stroke="#605e5c" strokeWidth="2" strokeLinecap="round"/>
+                    <path d="M8 14h4M8 18h8" stroke="#605e5c" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                  <span>Background Processes</span>
+                </button>
                 <div className="details-gear-divider" />
                 <div
                   className="details-gear-item details-gear-item--submenu"
@@ -1623,7 +1674,7 @@ export function EnrolmentDetailsPage() {
                             type="button"
                             className="details-gear-item details-gear-item--flow"
                             disabled={!!runningWorkflow}
-                            onClick={e => { e.stopPropagation(); void runWorkflow(wf.id, wf.name); }}
+                            onClick={e => { e.stopPropagation(); setPendingWorkflow(wf); setGearMenuOpen(false); setFlowSubmenuOpen(false); }}
                           >
                             <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
                               <path d="M5 4l6 6-6 6" stroke="#605e5c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -2063,6 +2114,95 @@ export function EnrolmentDetailsPage() {
         </button>
       </div>
 
+      {showBgProcesses && (
+        <div className="modal-overlay" onClick={() => setShowBgProcesses(false)}>
+          <div className="audit-history-modal modal-box" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Background Processes</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  className="sa-filter-btn"
+                  disabled={bgProcessLoading}
+                  onClick={() => { setBgProcessRows([]); void loadBgProcesses(); }}
+                  title="Refresh"
+                >
+                  <RefreshCw size={14} />{bgProcessLoading ? ' Refreshing...' : ' Refresh'}
+                </button>
+                <button type="button" className="audit-history-close-btn" onClick={() => setShowBgProcesses(false)}>Close</button>
+              </div>
+            </div>
+            <div className="audit-history-body">
+              {bgProcessLoading && <p className="audit-history-loading">Loading background processes...</p>}
+              {bgProcessError && <p className="audit-history-error">{bgProcessError}</p>}
+              {!bgProcessLoading && !bgProcessError && (
+                <table className="audit-history-table">
+                  <thead>
+                    <tr>
+                      <th className="audit-history-th" style={{ width: '45%' }}>System Job Name</th>
+                      <th className="audit-history-th" style={{ width: '20%' }}>Status Reason</th>
+                      <th className="audit-history-th" style={{ width: '17%' }}>Started On</th>
+                      <th className="audit-history-th" style={{ width: '17%' }}>Completed On</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bgProcessRows.length === 0 && (
+                      <tr><td className="audit-history-td" colSpan={4}>No background processes found.</td></tr>
+                    )}
+                    {bgProcessRows.map(row => {
+                      const statusLabels: Record<number, string> = { 0: 'Waiting for Resources', 10: 'Waiting', 20: 'In Progress', 21: 'Pausing', 22: 'Canceling', 30: 'Succeeded', 31: 'Failed', 32: 'Canceled' };
+                      const fmtDt = (v: string | null) => v ? new Date(v).toLocaleString('en-CA', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—';
+                      return (
+                        <tr key={row.id} className="audit-history-tr">
+                          <td className="audit-history-td">
+                            {(() => {
+                              const orgUrl = getCoreConfig().dataverseOrgUrl?.replace(/\/$/, '') ?? '';
+                              const href = `${orgUrl}/tools/workflowinstance/edit.aspx?id=${encodeURIComponent('{' + row.id.toUpperCase() + '}')}`;
+                              return <a href={href} target="_blank" rel="noopener noreferrer" className="cell-pin-link">{row.name}</a>;
+                            })()}
+                          </td>
+                          <td className="audit-history-td">{statusLabels[row.statuscode] ?? row.statuscode}</td>
+                          <td className="audit-history-td audit-history-td-date" style={{ whiteSpace: 'nowrap' }}>{fmtDt(row.startedon)}</td>
+                          <td className="audit-history-td audit-history-td-date" style={{ whiteSpace: 'nowrap' }}>{fmtDt(row.completedon)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pendingWorkflow && (
+        <div className="modal-overlay" onClick={() => setPendingWorkflow(null)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Confirm Application of Workflow</h3>
+              <button className="modal-close" onClick={() => setPendingWorkflow(null)}>&times;</button>
+            </div>
+            <div className="modal-body">
+              <div className="no-selection-message">
+                <strong>This workflow will be applied to 1 Enrolment.</strong>
+                <br /><br />
+                You can monitor workflow jobs by opening the <strong>Gear Menu → Background Processes</strong>. Are you sure that you want to continue?
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button
+                className="btn-ok"
+                disabled={!!runningWorkflow}
+                onClick={() => { const wf = pendingWorkflow; setPendingWorkflow(null); void runWorkflow(wf.id, wf.name); }}
+              >
+                OK
+              </button>
+              <button className="btn-cancel" onClick={() => setPendingWorkflow(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {lateNoticeModal && (
         <div className="modal-overlay" onClick={() => setLateNoticeModal(null)}>
           <div className="modal-box" onClick={e => e.stopPropagation()}>
@@ -2101,7 +2241,18 @@ export function EnrolmentDetailsPage() {
           <div className="audit-history-modal modal-box" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Audit History</h3>
-              <button type="button" className="audit-history-close-btn" onClick={() => setShowAuditHistory(false)}>Close</button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  className="sa-filter-btn"
+                  disabled={auditHistoryLoading}
+                  onClick={() => { void loadAuditHistory(); }}
+                  title="Refresh"
+                >
+                  <RefreshCw size={14} />{auditHistoryLoading ? ' Refreshing...' : ' Refresh'}
+                </button>
+                <button type="button" className="audit-history-close-btn" onClick={() => setShowAuditHistory(false)}>Close</button>
+              </div>
             </div>
             <div className="audit-history-filter-row">
               <label className="audit-history-filter-label" htmlFor="audit-field-filter">Filter on:</label>

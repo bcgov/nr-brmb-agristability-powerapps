@@ -3537,7 +3537,13 @@ export const dataSourcesInfo = {
     "dataSourceType": "Dataverse",
     "apis": {}
   },
-  "audits": {
+  "asyncoperations": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "asyncoperationid",
+    "dataSourceType": "Dataverse",
+    "apis": {}
+  },  "audits": {
     "tableId": "",
     "version": "",
     "primaryKey": "auditid",

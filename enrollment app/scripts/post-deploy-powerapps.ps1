@@ -400,6 +400,49 @@ function Ensure-FlowDataSourceEntries {
   Write-Host "  Injected missing flow datasource entries ($($missing -join ', ')) into $FilePath" -ForegroundColor Green
 }
 
+function Ensure-DataverseDataSourceEntry {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$FilePath,
+    [Parameter(Mandatory = $true)]
+    [string]$Name,
+    [Parameter(Mandatory = $true)]
+    [string]$PrimaryKey
+  )
+
+  if (-not (Test-Path -LiteralPath $FilePath)) { return }
+
+  $content = [System.IO.File]::ReadAllText($FilePath)
+  $escaped = [regex]::Escape($Name)
+  if ($content -match '"' + $escaped + '"\s*:\s*\{') {
+    Write-Host "  Dataverse datasource '$Name' already present in $FilePath" -ForegroundColor DarkGray
+    return
+  }
+
+  $entry = @"
+  "$Name": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "$PrimaryKey",
+    "dataSourceType": "Dataverse",
+    "apis": {}
+  },
+"@
+
+  $marker = '  "audits": {'
+  if ($content.Contains($marker)) {
+    $content = $content.Replace($marker, $entry + $marker)
+  } else {
+    $closingIndex = $content.LastIndexOf("`n};")
+    if ($closingIndex -ge 0) {
+      $content = $content.Substring(0, $closingIndex) + "`n" + $entry + $content.Substring($closingIndex)
+    }
+  }
+
+  [System.IO.File]::WriteAllText($FilePath, $content, [System.Text.Encoding]::UTF8)
+  Write-Host "  Injected Dataverse datasource entry '$Name' into $FilePath" -ForegroundColor Green
+}
+
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $powerConfigPath = Join-Path $repoRoot 'power.config.json'
@@ -848,6 +891,11 @@ if ($null -ne $config.flowReferences -and $config.flowReferences.Count -gt 0) {
 
   Ensure-FlowDataSourceEntries -FilePath $dataSourcesInfoTsPath -DataSourceNames @($requiredFlowDataSourceNames)
   Ensure-FlowDataSourceEntries -FilePath $dataSourcesInfoJsPath -DataSourceNames @($requiredFlowDataSourceNames)
+
+  # Ensure Dataverse datasource entries that may be wiped by pac regeneration
+  foreach ($path in @($dataSourcesInfoTsPath, $dataSourcesInfoJsPath)) {
+    Ensure-DataverseDataSourceEntry -FilePath $path -Name 'asyncoperations' -PrimaryKey 'asyncoperationid'
+  }
 
   foreach ($path in @($dataSourcesInfoTsPath, $dataSourcesInfoJsPath)) {
     $text = Get-Content -LiteralPath $path -Raw
