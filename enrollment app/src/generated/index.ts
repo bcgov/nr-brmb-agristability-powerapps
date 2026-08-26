@@ -5,6 +5,7 @@
 
 // Models
 export * as AccountsModel from './models/AccountsModel';
+export * as AsyncoperationsModel from './models/AsyncoperationsModel';
 export * as AuditsModel from './models/AuditsModel';
 export * as BulkUpdateEnrolmentRecordsModel from './models/BulkUpdateEnrolmentRecordsModel';
 export * as BusinessunitsModel from './models/BusinessunitsModel';
@@ -39,6 +40,7 @@ export * as Vsi_programyearsModel from './models/Vsi_programyearsModel';
 
 // Services
 export * from './services/AccountsService';
+export * from './services/AsyncoperationsService';
 export * from './services/AuditsService';
 export * from './services/BulkUpdateEnrolmentRecordsService';
 export * from './services/BusinessunitsService';

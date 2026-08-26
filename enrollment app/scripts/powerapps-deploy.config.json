@@ -25,6 +25,7 @@
                                   "teamprofiles":              { "entitySetName": "teamprofilescollection",         "logicalName": "teamprofiles" },
                                   "automaticemailaudits":      { "entitySetName": "vsi_automaticemailaudits",       "logicalName": "vsi_automaticemailaudit" },
                                   "audits":                    { "entitySetName": "audits",                        "logicalName": "audit" },
+                                  "asyncoperations":           { "entitySetName": "asyncoperations",              "logicalName": "asyncoperation" },
                                   "businessunits":             { "entitySetName": "businessunits",                 "logicalName": "businessunit" }
                               },
     "flowReferences":  [
