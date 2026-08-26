@@ -261,7 +261,7 @@ export function EnrolmentDataTable({
                           ? (
                             <Link
                               to={`/calculation/dashboard/${row.vsi_participantprogramyearid}`}
-                              aria-label="Go to calculation"
+                              aria-label=""
                               data-tooltip="Go to calculation"
                               className="sa-calc-link"
                             >

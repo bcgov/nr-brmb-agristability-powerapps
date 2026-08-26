@@ -105,7 +105,7 @@ export function renderCell(
                 <Link
                   to={`/calculation/${source}/${row.vsi_participantprogramyearid}`}
                   aria-label="Go to calculation"
-                  data-tooltip="Go to calculation"
+                  title="Go to calculation"
                   className="sa-calc-link cell-fee-calc"
                 >
                   <Calculator size={20} />
@@ -166,7 +166,7 @@ export function renderCell(
         <td key={key} className="cell-sp">
           {row.vsi_sharepointdocumentfolder
             ? (
-              <a href={row.vsi_sharepointdocumentfolder} target="_blank" rel="noopener noreferrer" className="sp-icon-link" title="Open in SharePoint">
+              <a href={row.vsi_sharepointdocumentfolder} target="_blank" rel="noopener noreferrer" className="sp-icon-link" aria-label="Open in SharePoint" title="Open in SharePoint">
                 <img src={sharepointIconUrl} className="sp-icon" alt="SharePoint" aria-hidden="true" />
               </a>
             )
