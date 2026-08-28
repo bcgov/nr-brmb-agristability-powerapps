@@ -10,7 +10,7 @@
   "localAppUrl": "http://localhost:3000",
   "logoPath": "Default",
   "connectionReferences": {
-    "5788cfb9-26dc-473c-b14a-9ee254d1fb81": {
+    "4f071d16-5b76-4096-8c25-feefd6eef498": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_farms-20api-5fe39d1efd21a19d13-5f571039b465579741",
       "displayName": "FARMS API",
       "dataSources": [
@@ -22,7 +22,7 @@
       "sharedConnectionId": "/providers/Microsoft.PowerApps/apis/shared_farms-20api-5fe39d1efd21a19d13-5f571039b465579741/connections/7f0dbaddf90e498e82c553b27272a705",
       "dataSets": {}
     },
-    "ee1cebc2-3429-4ee8-8116-3b43630dfb85": {
+    "284ac964-02b2-4e89-b385-cf234ebdb1ef": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
       "displayName": "Microsoft Dataverse",
       "dataSources": [
@@ -32,7 +32,7 @@
       "sharedConnectionId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps/connections/b05319f6f3244385ac9d9959391a2970",
       "dataSets": {}
     },
-    "1bae09e4-35e2-43ae-acce-efd59418fad2": {
+    "6a18ab56-2c48-486f-ad22-f1942e5e9835": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
       "displayName": "Logic flows",
       "dataSources": [
@@ -44,15 +44,15 @@
         "workflowName": "e3f5031f-0d21-4b4e-90ad-bf43d6d496cd"
       }
     },
-    "5cdd7245-69f8-4afd-a8e9-4549dfe7b34b": {
+    "cce8ce58-725d-4901-9562-a8c48f778593": {
       "id": "/providers/microsoft.powerapps/apis/shared_sharepointonline",
       "displayName": "SharePoint"
     },
-    "81037d86-06ed-40d4-a84a-bea6b71ce3b6": {
+    "3ae9891e-d4d5-4f7e-834e-1be506f56e25": {
       "id": "/providers/microsoft.powerapps/apis/shared_wordonlinebusiness",
       "displayName": "Word Online (Business)"
     },
-    "82b04126-4eb7-424b-91f8-63fc93d63f1b": {
+    "37dec16d-4810-4e1a-8af1-ef64a4d5602b": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
       "displayName": "Logic flows",
       "dataSources": [
@@ -63,12 +63,12 @@
         "workflowDisplayName": "Generate 45 Day Letter",
         "workflowName": "8bdef04a-3078-a8e8-bed0-89163ef5e0c4",
         "dependencies": {
-          "shared_sharepointonline_1": "5cdd7245-69f8-4afd-a8e9-4549dfe7b34b",
-          "shared_wordonlinebusiness_1": "81037d86-06ed-40d4-a84a-bea6b71ce3b6"
+          "shared_sharepointonline_1": "cce8ce58-725d-4901-9562-a8c48f778593",
+          "shared_wordonlinebusiness_1": "3ae9891e-d4d5-4f7e-834e-1be506f56e25"
         }
       }
     },
-    "413aef8e-2ed8-4f0a-9243-48f388933ce3": {
+    "1bd260c6-8054-435b-b272-1f3ec5ccddc1": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
       "displayName": "Logic flows",
       "dataSources": [
@@ -79,12 +79,12 @@
         "workflowDisplayName": "Generate Bulk Enrolment Notices",
         "workflowName": "1659a9c0-1436-b7b2-d918-2b5b3fc5e819",
         "dependencies": {
-          "shared_wordonlinebusiness": "81037d86-06ed-40d4-a84a-bea6b71ce3b6",
-          "shared_sharepointonline": "5cdd7245-69f8-4afd-a8e9-4549dfe7b34b"
+          "shared_wordonlinebusiness": "3ae9891e-d4d5-4f7e-834e-1be506f56e25",
+          "shared_sharepointonline": "cce8ce58-725d-4901-9562-a8c48f778593"
         }
       }
     },
-    "327f737e-6be7-4005-a58a-0944b942b4db": {
+    "8ef911d0-6f08-41a9-bc7b-4afa2b2bcb21": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
       "displayName": "Logic flows",
       "dataSources": [
@@ -96,7 +96,7 @@
         "workflowName": "8689572a-0028-59a4-6c76-579622dddbfb"
       }
     },
-    "ccf3a0ec-8725-4eea-83c2-f205971fe48d": {
+    "c8924be3-3a23-404c-b119-66f74f82c525": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
       "displayName": "Logic flows",
       "dataSources": [

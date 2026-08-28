@@ -1431,19 +1431,20 @@ export function EnrolmentCalculationPage() {
             href={sharePointFolderUrl}
             target="_blank"
             rel="noopener noreferrer"
+            aria-label="Go to SharePoint"
+            title="Go to SharePoint"
           >
             <img src={sharepointIconUrl} className="calc-sharepoint-icon" alt="" aria-hidden="true" />
-            Go to SharePoint
           </a>
         ) : (
           <button
             className="calc-outline-btn calc-sharepoint-btn"
             type="button"
             disabled
+            aria-label="Go to SharePoint"
             title={loading ? 'Loading SharePoint folder link' : 'No SharePoint folder link found for this enrolment'}
           >
             <img src={sharepointIconUrl} className="calc-sharepoint-icon" alt="" aria-hidden="true" />
-            Go to SharePoint
           </button>
         )}
       </div>
