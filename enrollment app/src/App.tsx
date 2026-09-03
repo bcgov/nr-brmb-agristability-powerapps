@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
-import { HashRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom';
-import { ClipboardCheck, ExternalLink, Home, LayoutDashboard, Menu } from 'lucide-react';
+import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { ClipboardCheck, ExternalLink, Home, LayoutDashboard } from 'lucide-react';
 
 import { AppSwitcher } from './components/AppSwitcher';
+import { AppLayout } from './components/shell/AppLayout';
+import { createLinkNavItem, createRouteNavItem, createSideNavConfig } from './components/shell/navConfig';
 import { DashboardHomePage } from './pages/DashboardHomePage';
 import { SupervisorApprovalPage, clearSaCache } from './pages/SupervisorApprovalPage';
 import { DeadlineReminderPage } from './pages/DeadlineReminderPage';
@@ -102,16 +104,6 @@ function EnrolmentLogoMark() {
   );
 }
 
-function getUserInitials(name: string): string {
-  const parts = name
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-  if (parts.length === 0) return '';
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return `${parts[0][0] ?? ''}${parts[parts.length - 1][0] ?? ''}`.toUpperCase();
-}
-
 function getEnvironmentKey(environmentName: string): 'dev' | 'test' | 'prod' | 'default' {
   const normalized = environmentName.trim().toLowerCase();
   if (normalized.includes('tprod') || normalized.includes('test')) return 'test';
@@ -123,62 +115,6 @@ function getEnvironmentKey(environmentName: string): 'dev' | 'test' | 'prod' | '
 function getBannerTitle(environmentName: string): string {
   const environmentKey = getEnvironmentKey(environmentName);
   return environmentKey === 'prod' ? 'ENROLMENT' : `ENROLMENT ${environmentName.toUpperCase()}`;
-}
-
-function EnvironmentBanner({ onOpenSwitcher }: { onOpenSwitcher: () => void }) {
-  const [environmentName, setEnvironmentName] = useState<string | null>(() => (environmentNameLoaded ? environmentNameCache : null));
-  const [currentUserName, setCurrentUserName] = useState<string | null>(null);
-
-  useEffect(() => {
-    let ignore = false;
-
-    getEnvironmentName()
-      .then(name => {
-        if (!ignore) setEnvironmentName(name);
-      })
-      .catch(() => {
-        environmentNameLoaded = true;
-        environmentNameCache = null;
-        if (!ignore) setEnvironmentName(null);
-      });
-
-    resolveCurrentSystemUser()
-      .then(user => {
-        if (!ignore) setCurrentUserName(user.displayName);
-      })
-      .catch(() => {
-        if (!ignore) setCurrentUserName(null);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
-
-  if (!environmentName) return null;
-
-  const environmentKey = getEnvironmentKey(environmentName);
-  const bannerTitle = getBannerTitle(environmentName);
-  const userInitials = currentUserName ? getUserInitials(currentUserName) : '';
-
-  return (
-    <header className="environment-banner" data-environment={environmentKey} aria-label={`Environment: ${environmentName}`}>
-      <button
-        type="button"
-        className="environment-banner-trigger"
-        onClick={onOpenSwitcher}
-        aria-label="Open app switcher"
-      >
-        <EnrolmentLogoMark />
-        <span className="environment-banner-name">{bannerTitle}</span>
-      </button>
-      {currentUserName && userInitials && (
-        <span className="environment-banner-user" title={currentUserName} aria-label={`Signed in as ${currentUserName}`}>
-          {userInitials}
-        </span>
-      )}
-    </header>
-  );
 }
 
 function RoleSwitcher({ collapsed }: { collapsed: boolean }) {
@@ -220,11 +156,40 @@ function RoleSwitcher({ collapsed }: { collapsed: boolean }) {
   );
 }
 
-function SideNav({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
+function AppShell() {
   const { activeRole } = useRole();
+  const [navCollapsed, setNavCollapsed] = useState(false);
+  const [showAppSwitcher, setShowAppSwitcher] = useState(false);
+  const [environmentName, setEnvironmentName] = useState<string | null>(() => (environmentNameLoaded ? environmentNameCache : null));
+  const [currentUserName, setCurrentUserName] = useState<string | null>(null);
 
-  const handleOpenDashboard = async (e: React.MouseEvent<HTMLAnchorElement>) => {
-    e.preventDefault();
+  useEffect(() => {
+    let ignore = false;
+
+    getEnvironmentName()
+      .then(name => {
+        if (!ignore) setEnvironmentName(name);
+      })
+      .catch(() => {
+        environmentNameLoaded = true;
+        environmentNameCache = null;
+        if (!ignore) setEnvironmentName(null);
+      });
+
+    resolveCurrentSystemUser()
+      .then(user => {
+        if (!ignore) setCurrentUserName(user.displayName);
+      })
+      .catch(() => {
+        if (!ignore) setCurrentUserName(null);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  const handleOpenDashboard = async () => {
     let dashboardUrl = DASHBOARD_URL_FALLBACK;
     try {
       dashboardUrl = await getPowerBiDashboardUrl();
@@ -234,93 +199,94 @@ function SideNav({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
     window.open(dashboardUrl, '_blank', 'noopener,noreferrer');
   };
 
-  return (
-    <aside className={`side-nav${collapsed ? ' collapsed' : ''}`}>
-      <button className="side-nav-toggle" type="button" onClick={onToggle} aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}>
-        <Menu size={24} />
-      </button>
-
-      <nav className="side-nav-links" aria-label="Primary">
-        <a
-          className="side-nav-link"
-          href="#"
-          onClick={handleOpenDashboard}
-          title="Open Power BI Dashboard"
-        >
-          <LayoutDashboard size={22} />
-          {!collapsed && <span>Dashboard</span>}
-        </a>
-
-        <NavLink
-          to="/dashboard-home"
-          className={({ isActive }) => `side-nav-link${isActive ? ' active' : ''}`}
-          onClick={e => { if (navGuard.intercept('/dashboard-home')) e.preventDefault(); }}
-        >
-          <Home size={22} />
-          {!collapsed && <span>Enrolments</span>}
-        </NavLink>
-
-        {SUPERVISOR_APPROVAL_ROLES.includes(activeRole) && (
-          <NavLink
-            to="/supervisor-approval"
-            className={({ isActive }) => `side-nav-link${isActive ? ' active' : ''}`}
-            onClick={e => {
-              if (navGuard.intercept('/supervisor-approval')) {
-                e.preventDefault();
-                return;
-              }
-              clearSaCache();
-            }}
-          >
-            <ClipboardCheck size={22} />
-            {!collapsed && <span>Supervisor Approval</span>}
-          </NavLink>
-        )}
-      </nav>
-
-      <a
-          className="side-nav-link side-nav-link--new-tab"
-          href="#"
-          onClick={e => { e.preventDefault(); void openInNewTab(window.location.hash); }}
-          title="Open in new tab"
-        >
-          <ExternalLink size={22} />
-          {!collapsed && <span>Open in new tab</span>}
-        </a>
-
-      <RoleSwitcher collapsed={collapsed} />
-    </aside>
+  const navConfig = createSideNavConfig(
+    [
+      createLinkNavItem({
+        key: 'dashboard',
+        label: 'Dashboard',
+        icon: <LayoutDashboard size={22} />,
+        href: '#',
+        title: 'Open Power BI Dashboard',
+        onClick: e => {
+          e.preventDefault();
+          void handleOpenDashboard();
+        },
+      }),
+      createRouteNavItem({
+        key: 'enrolments',
+        label: 'Enrolments',
+        icon: <Home size={22} />,
+        to: '/dashboard-home',
+        onClick: e => {
+          if (navGuard.intercept('/dashboard-home')) e.preventDefault();
+        },
+      }),
+      createRouteNavItem({
+        key: 'supervisor-approval',
+        label: 'Supervisor Approval',
+        icon: <ClipboardCheck size={22} />,
+        to: '/supervisor-approval',
+        hidden: !SUPERVISOR_APPROVAL_ROLES.includes(activeRole),
+        onClick: e => {
+          if (navGuard.intercept('/supervisor-approval')) {
+            e.preventDefault();
+            return;
+          }
+          clearSaCache();
+        },
+      }),
+    ],
+    [
+      createLinkNavItem({
+        key: 'open-new-tab',
+        label: 'Open in new tab',
+        icon: <ExternalLink size={22} />,
+        href: '#',
+        title: 'Open in new tab',
+        className: 'side-nav-link--new-tab',
+        onClick: e => {
+          e.preventDefault();
+          void openInNewTab(window.location.hash);
+        },
+      }),
+    ],
   );
-}
 
-function AppShell() {
-  const [navCollapsed, setNavCollapsed] = useState(false);
-  const [showAppSwitcher, setShowAppSwitcher] = useState(false);
+  const bannerTone = environmentName ? getEnvironmentKey(environmentName) : 'default';
+  const bannerTitle = environmentName ? getBannerTitle(environmentName) : 'ENROLMENT';
 
   return (
-    <div className="app-frame">
-      <EnvironmentBanner onOpenSwitcher={() => setShowAppSwitcher(true)} />
-      <div className="app-shell">
-        <SideNav collapsed={navCollapsed} onToggle={() => setNavCollapsed(prev => !prev)} />
-        <main className="app-shell-content">
-          <Routes>
-            <Route path="/" element={<Navigate to="/dashboard-home" replace />} />
-            <Route path="/dashboard-home" element={<DashboardHomePage />} />
-            <Route path="/enrolment/:enrolmentId" element={<EnrolmentDetailsPage />} />
-            <Route path="/enrolment/:source/:enrolmentId" element={<EnrolmentDetailsPage />} />
-            <Route path="/supervisor-approval" element={<ProtectedRoute allowedRoles={SUPERVISOR_APPROVAL_ROLES}><SupervisorApprovalPage /></ProtectedRoute>} />
-            <Route path="/deadline-reminders" element={<DeadlineReminderPage />} />
-            <Route path="/calculation/:enrolmentId" element={<ProtectedRoute allowedRoles={CALCULATION_ROLES}><EnrolmentCalculationPage /></ProtectedRoute>} />
-            <Route path="/calculation/:source/:enrolmentId" element={<ProtectedRoute allowedRoles={CALCULATION_ROLES}><EnrolmentCalculationPage /></ProtectedRoute>} />
-            <Route path="/calculation" element={<Navigate to="/dashboard-home" replace />} />
-            <Route path="/history/:historyId" element={<EnrolmentHistoryPage />} />
-            <Route path="/history/:enrolmentId/:historyId" element={<EnrolmentHistoryPage />} />
-            <Route path="*" element={<Navigate to="/dashboard-home" replace />} />
-          </Routes>
-        </main>
-      </div>
+    <>
+      <AppLayout
+        title={bannerTitle}
+        environmentName={environmentName}
+        userName={currentUserName}
+        bannerTone={bannerTone}
+        navCollapsed={navCollapsed}
+        onToggleNav={() => setNavCollapsed(prev => !prev)}
+        navItems={navConfig.primaryItems}
+        navSecondaryItems={navConfig.secondaryItems}
+        navFooter={<RoleSwitcher collapsed={navCollapsed} />}
+        onOpenAppSwitcher={() => setShowAppSwitcher(true)}
+        bannerBrand={<EnrolmentLogoMark />}
+      >
+        <Routes>
+          <Route path="/" element={<Navigate to="/dashboard-home" replace />} />
+          <Route path="/dashboard-home" element={<DashboardHomePage />} />
+          <Route path="/enrolment/:enrolmentId" element={<EnrolmentDetailsPage />} />
+          <Route path="/enrolment/:source/:enrolmentId" element={<EnrolmentDetailsPage />} />
+          <Route path="/supervisor-approval" element={<ProtectedRoute allowedRoles={SUPERVISOR_APPROVAL_ROLES}><SupervisorApprovalPage /></ProtectedRoute>} />
+          <Route path="/deadline-reminders" element={<DeadlineReminderPage />} />
+          <Route path="/calculation/:enrolmentId" element={<ProtectedRoute allowedRoles={CALCULATION_ROLES}><EnrolmentCalculationPage /></ProtectedRoute>} />
+          <Route path="/calculation/:source/:enrolmentId" element={<ProtectedRoute allowedRoles={CALCULATION_ROLES}><EnrolmentCalculationPage /></ProtectedRoute>} />
+          <Route path="/calculation" element={<Navigate to="/dashboard-home" replace />} />
+          <Route path="/history/:historyId" element={<EnrolmentHistoryPage />} />
+          <Route path="/history/:enrolmentId/:historyId" element={<EnrolmentHistoryPage />} />
+          <Route path="*" element={<Navigate to="/dashboard-home" replace />} />
+        </Routes>
+      </AppLayout>
       {showAppSwitcher && <AppSwitcher onClose={() => setShowAppSwitcher(false)} />}
-    </div>
+    </>
   );
 }
 
