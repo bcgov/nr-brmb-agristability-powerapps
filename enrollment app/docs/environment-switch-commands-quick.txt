@@ -11,6 +11,10 @@ powershell -ExecutionPolicy Bypass -File .\scripts\post-deploy-powerapps.ps1 -St
 
 Fast (skip build): add -SkipBuild
 
-If PAC auth is wrong tenant:
+If auth is wrong tenant:
 pac org select --environment https://aff-brmb-crm-dev.crm3.dynamics.com/
 pac org select --environment https://aff-brmb-crm-test.crm3.dynamics.com/
+
+Useful checks:
+pa auth status
+pa app list

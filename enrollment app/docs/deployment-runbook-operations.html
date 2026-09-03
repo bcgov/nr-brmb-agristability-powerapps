@@ -221,7 +221,7 @@
       </div>
       <div class="card">
         <h3>3) Push</h3>
-        <p><span class="step">Action:</span> Script runs <code>npx power-apps push</code>.</p>
+        <p><span class="step">Action:</span> Script runs <code>pa app push</code>.</p>
         <p><span class="pill ok">Success</span> Push exits with code 0 and app is reachable.</p>
       </div>
       <div class="card">
@@ -271,7 +271,7 @@
       <li>Repo checked out locally with dependencies installed.</li>
       <li>Access to target connector <code>connectionId</code> values.</li>
       <li>Permission to add/rebind Power Apps data sources.</li>
-      <li>New/updated flows must be in a solution and discoverable via <code>npx power-apps list-flows</code> in the target stage.</li>
+      <li>New/updated flows must be in a solution and discoverable via <code>pa app list-flows</code> in the target stage.</li>
     </ul>
 
     <h2>Command Pack (Copy/Paste)</h2>
@@ -354,12 +354,12 @@
 
     <h2>What the Post-Deploy Script Does</h2>
     <ol>
-      <li><code>pac code init -n &lt;appName&gt; -env &lt;environmentId&gt;</code></li>
-      <li>For each data source in stage config: <code>pac code add-data-source -a &lt;apiId&gt; -c &lt;connectionId&gt;</code></li>
+      <li><code>pa app init --display-name &lt;appName&gt; --environment-id &lt;environmentId&gt;</code></li>
+      <li>For each data source in stage config: <code>pa app add data-source --connector &lt;apiId&gt; --connection-id &lt;connectionId&gt;</code></li>
       <li>Injects Dataverse table mappings from <code>dataverseTableMappings</code> into <code>power.config.json</code></li>
-      <li>Resolves flow IDs in the stage with <code>npx power-apps list-flows --json</code> and binds them with <code>npx power-apps add-flow -f &lt;workflowId&gt;</code></li>
+      <li>Resolves flow IDs in the stage with <code>pa app list-flows --json</code> and binds them with <code>pa app add flow --flow-id &lt;workflowId&gt;</code></li>
       <li><code>npm.cmd run build</code> (unless <code>-SkipBuild</code>)</li>
-      <li><code>npx.cmd power-apps push</code></li>
+      <li><code>pa app push</code></li>
     </ol>
 
     <h2>Validation Checklist (Go/No-Go)</h2>
@@ -380,13 +380,13 @@
 
     <h3>PAC cannot find the target environment by GUID</h3>
     <p>Usually wrong tenant/account is active in PAC. Re-auth and select by URL:</p>
-    <pre>pac auth list
-  pac auth create --deviceCode
+    <pre>pa auth status
+  pa auth login
   pac org select --environment https://aff-brmb-crm-test.crm3.dynamics.com/</pre>
 
     <h3>Flow still skipped by script</h3>
     <p>The flow is not yet discoverable as a solution cloud flow invokable from Power Apps in that stage. Verify with:</p>
-    <pre>npx power-apps list-flows --search "&lt;flow name&gt;" --json --no-color</pre>
+    <pre>pa app list-flows --search "&lt;flow name&gt;"</pre>
 
     <h3>Deep links fail after successful push</h3>
     <p>Verify active core config has valid <code>vsi_coreenvironmentid</code> and <code>vsi_tenantid</code>.</p>

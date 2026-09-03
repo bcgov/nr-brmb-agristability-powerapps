@@ -60,6 +60,69 @@ function Invoke-CapturedCommand {
   return $output
 }
 
+$script:UsePaCli = $null
+
+function Test-UsePaCli {
+  if ($null -eq $script:UsePaCli) {
+    $script:UsePaCli = $null -ne (Get-Command 'pa' -ErrorAction SilentlyContinue)
+  }
+
+  return [bool]$script:UsePaCli
+}
+
+function Invoke-CheckedPowerAppsAppCommand {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string[]]$AppArguments,
+
+    [Parameter(Mandatory = $true)]
+    [string[]]$LegacyArguments,
+
+    [Parameter(Mandatory = $true)]
+    [string]$Description
+  )
+
+  if (Test-UsePaCli) {
+    Invoke-CheckedCommand -FilePath 'pa' -Arguments @('app') + $AppArguments -Description $Description
+    return
+  }
+
+  Invoke-CheckedCommand -FilePath 'npx.cmd' -Arguments $LegacyArguments -Description "$Description (legacy CLI)"
+}
+
+function Invoke-CapturedPowerAppsAppCommand {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string[]]$AppArguments,
+
+    [Parameter(Mandatory = $true)]
+    [string[]]$LegacyArguments,
+
+    [Parameter(Mandatory = $true)]
+    [string]$Description,
+
+    [Parameter(Mandatory = $false)]
+    [switch]$FallbackToLegacyOnError
+  )
+
+  if (Test-UsePaCli) {
+    try {
+      return Invoke-CapturedCommand -FilePath 'pa' -Arguments @('app') + $AppArguments -Description $Description
+    }
+    catch {
+      if (-not $FallbackToLegacyOnError) {
+        throw
+      }
+
+      Write-Host "  Primary CLI invocation failed; retrying with legacy CLI wrapper." -ForegroundColor Yellow
+      Write-Host "           $([string]$_.Exception.Message)" -ForegroundColor DarkGray
+      return Invoke-CapturedCommand -FilePath 'npx.cmd' -Arguments $LegacyArguments -Description "$Description (legacy CLI)"
+    }
+  }
+
+  return Invoke-CapturedCommand -FilePath 'npx.cmd' -Arguments $LegacyArguments -Description "$Description (legacy CLI)"
+}
+
 function Get-RequiredProperty {
   param(
     [Parameter(Mandatory = $true)]
@@ -129,7 +192,11 @@ function Get-ReminderTemplateGuidMap {
   }
 
   try {
-    $listOutput = Invoke-CapturedCommand -FilePath 'npx.cmd' -Arguments @('power-apps', 'list-environment-variables', '--json', '--no-color', '--non-interactive') -Description 'List environment variables for reminder templates'
+    $listOutput = Invoke-CapturedPowerAppsAppCommand `
+      -AppArguments @('list-environment-variables', '--json') `
+      -LegacyArguments @('power-apps', 'list-environment-variables', '--json', '--no-color', '--non-interactive') `
+      -Description 'List environment variables for reminder templates' `
+      -FallbackToLegacyOnError
     if ($listOutput -is [System.Array]) {
       $raw = [string]::Join("`n", @($listOutput | ForEach-Object { [string]$_ }))
     }
@@ -491,7 +558,7 @@ if ($Stage -eq 'prod' -and $SkipBuild.IsPresent) {
 if ($PreserveSchemas) {
   Write-Host "  Mode: Update existing environment (preserving local schemas)" -ForegroundColor Yellow
 } else {
-  Write-Host "  Mode: Initialize new environment (full setup with pac code init)" -ForegroundColor Yellow
+  Write-Host "  Mode: Initialize new environment (full setup with Power Apps CLI init)" -ForegroundColor Yellow
 }
 
 if ($PreserveSchemas) {
@@ -507,11 +574,14 @@ Invoke-CheckedCommand -FilePath 'pac' -Arguments @('org', 'select', '--environme
 
 if (-not $PreserveSchemas) {
   if (Test-Path -LiteralPath $powerConfigPath) {
-    Write-Host "Existing power.config.json detected. Removing it before pac code init..." -ForegroundColor Yellow
+    Write-Host "Existing power.config.json detected. Removing it before app init..." -ForegroundColor Yellow
     Remove-Item -LiteralPath $powerConfigPath -Force
   }
 
-  Invoke-CheckedCommand -FilePath 'pac' -Arguments @('code', 'init', '-n', $appName, '-env', $environmentId) -Description 'Initialize app for target environment'
+  Invoke-CheckedPowerAppsAppCommand `
+    -AppArguments @('--display-name', $appName, '--environment-id', $environmentId) `
+    -LegacyArguments @('power-apps', 'init', '-n', $appName, '-env', $environmentId) `
+    -Description 'Initialize app for target environment'
   
   if ($null -ne $targetAppId) {
     if (Test-Path -LiteralPath $powerConfigPath) {
@@ -647,20 +717,24 @@ foreach ($dataSource in $target.dataSources) {
     }
   }
 
-  $args = @('code', 'add-data-source', '-a', $apiId)
+  $appArgs = @('add', 'data-source', '--connector', $apiId)
+  $legacyArgs = @('power-apps', 'add-data-source', '-a', $apiId)
   if (-not [string]::IsNullOrWhiteSpace($connectionId)) {
-    $args += @('-c', $connectionId)
+    $appArgs += @('--connection-id', $connectionId)
+    $legacyArgs += @('-c', $connectionId)
   }
 
   if ((Test-HasProperty -Object $dataSource -PropertyName 'table') -and -not [string]::IsNullOrWhiteSpace([string]$dataSource.table)) {
-    $args += @('-t', [string]$dataSource.table)
+    $appArgs += @('--table', [string]$dataSource.table)
+    $legacyArgs += @('-t', [string]$dataSource.table)
   }
 
   if ((Test-HasProperty -Object $dataSource -PropertyName 'dataset') -and -not [string]::IsNullOrWhiteSpace([string]$dataSource.dataset)) {
-    $args += @('-d', [string]$dataSource.dataset)
+    $appArgs += @('--dataset', [string]$dataSource.dataset)
+    $legacyArgs += @('-d', [string]$dataSource.dataset)
   }
 
-  Invoke-CheckedCommand -FilePath 'pac' -Arguments $args -Description "Add data source '$apiId'"
+  Invoke-CheckedPowerAppsAppCommand -AppArguments $appArgs -LegacyArguments $legacyArgs -Description "Add data source '$apiId'"
 }
 
 # Patch dataSourcesInfo files to restore sharing APIs wiped by pac regeneration
@@ -785,35 +859,19 @@ if (Test-Path -LiteralPath $powerConfigPath) {
 
 # Add flow connection references using the current environment's workflow IDs.
 if ($null -ne $config.flowReferences -and $config.flowReferences.Count -gt 0) {
-  $flowListTempPath = [System.IO.Path]::GetTempFileName()
-  try {
-    Write-Host "`n==> List invokable flows in current environment" -ForegroundColor Cyan
-    Write-Host "    npx.cmd power-apps list-flows --json --no-color" -ForegroundColor DarkGray
-    $previousErrorActionPreference = $ErrorActionPreference
-    try {
-      # npm can emit harmless warnings on stderr; do not let those abort the deploy before exit code handling.
-      $ErrorActionPreference = 'Continue'
-      & 'npx.cmd' @('power-apps', 'list-flows', '--json', '--no-color') *> $flowListTempPath
-      $flowListExitCode = $LASTEXITCODE
-    }
-    finally {
-      $ErrorActionPreference = $previousErrorActionPreference
-    }
-
-    if ($flowListExitCode -ne 0) {
-      throw "Command failed with exit code ${flowListExitCode}: npx.cmd power-apps list-flows --json --no-color"
-    }
-
-    $flowListText = Get-Content -LiteralPath $flowListTempPath -Raw
-    # Strip ANSI/VT escape sequences emitted by the spinner (ESC[?25l, ESC[2K, ESC[1G, etc.)
-    # so that IndexOf('[') finds the JSON array bracket and not an ANSI CSI bracket.
-    $flowListText = $flowListText -replace '\x1b\[[0-9;?]*[a-zA-Z]', ''
+  $flowListOutput = Invoke-CapturedPowerAppsAppCommand `
+    -AppArguments @('list-flows', '--json') `
+    -LegacyArguments @('power-apps', 'list-flows', '--json', '--no-color') `
+    -Description 'List invokable flows in current environment' `
+    -FallbackToLegacyOnError
+  if ($flowListOutput -is [System.Array]) {
+    $flowListText = [string]::Join("`n", @($flowListOutput | ForEach-Object { [string]$_ }))
   }
-  finally {
-    if (Test-Path -LiteralPath $flowListTempPath) {
-      Remove-Item -LiteralPath $flowListTempPath -Force
-    }
+  else {
+    $flowListText = [string]$flowListOutput
   }
+  # Strip ANSI/VT escape sequences emitted by CLI spinners so JSON extraction remains stable.
+  $flowListText = $flowListText -replace '\x1b\[[0-9;?]*[a-zA-Z]', ''
 
   $jsonStart = $flowListText.IndexOf('[')
   $jsonEnd = $flowListText.LastIndexOf(']')
@@ -844,7 +902,10 @@ if ($null -ne $config.flowReferences -and $config.flowReferences.Count -gt 0) {
       throw "Required flow '$workflowDisplayName' is not active in the '$Stage' environment (statecode: $($flow.statecode)). Deployment stopped before push."
     }
 
-    $addFlowOutput = Invoke-CapturedCommand -FilePath 'npx.cmd' -Arguments @('power-apps', 'add-flow', '-f', [string]$flow.workflowId) -Description "Add flow '$workflowDisplayName'"
+    $addFlowOutput = Invoke-CapturedPowerAppsAppCommand `
+      -AppArguments @('add', 'flow', '--flow-id', [string]$flow.workflowId) `
+      -LegacyArguments @('power-apps', 'add-flow', '-f', [string]$flow.workflowId) `
+      -Description "Add flow '$workflowDisplayName'"
     $addFlowText = ($addFlowOutput | Out-String)
     if ($addFlowText -match 'Failed to add flow' -or $addFlowText -match 'Unable to retrieve connection') {
       throw "add-flow reported a failure for '$workflowDisplayName'. Ensure all dependent connections (e.g. SharePoint, Word Online) are added as data sources before running this script.`n$addFlowText"
@@ -919,7 +980,10 @@ if (-not $SkipBuild.IsPresent) {
   Invoke-CheckedCommand -FilePath 'npm.cmd' -Arguments @('run', 'build') -Description 'Build app'
 }
 
-Invoke-CheckedCommand -FilePath 'npx.cmd' -Arguments @('power-apps', 'push') -Description 'Push app with Power Apps CLI wrapper'
+Invoke-CheckedPowerAppsAppCommand `
+  -AppArguments @('push') `
+  -LegacyArguments @('power-apps', 'push') `
+  -Description 'Push app with Power Apps CLI'
 
 Write-Host "`nPost-deploy setup completed successfully for '$Stage'." -ForegroundColor Green
 

@@ -90,23 +90,23 @@
     <ol>
       <li>Open PowerShell in <code>c:\agristability\nr-brmb-agristability-powerapps\enrollment app</code>.</li>
       <li>Build the app.</li>
-      <li>Push with <code>npx power-apps push</code>.</li>
+      <li>Push with <code>pa app push</code>.</li>
     </ol>
     <pre>npm run build
-npx power-apps push</pre>
+  pa app push</pre>
 
     <h2>TEST Migration + Publish</h2>
     <ol>
       <li>Retarget project to TEST environment.</li>
       <li>Re-add required data sources if needed.</li>
       <li>Build the app.</li>
-      <li>Push with <code>npx power-apps push</code>.</li>
+      <li>Push with <code>pa app push</code>.</li>
     </ol>
-    <pre>pac code init -n "enrollment app" -env "YOUR-TEST-ENV-ID"
-pac code add-data-source -a "shared_office365users" -c "YOUR-CONNECTION-ID"
-pac code add-data-source -a "shared_sql" -c "YOUR-CONNECTION-ID" -t "[dbo].[MobileDeviceInventory]" -d "SERVER,DATABASE"
+    <pre>pa app init --display-name "enrollment app" --environment-id "YOUR-TEST-ENV-ID"
+  pa app add data-source --connector "shared_office365users" --connection-id "YOUR-CONNECTION-ID"
+  pa app add data-source --connector "shared_sql" --connection-id "YOUR-CONNECTION-ID" --table "[dbo].[MobileDeviceInventory]" --dataset "SERVER,DATABASE"
 npm run build
-npx power-apps push</pre>
+  pa app push</pre>
 
     <h2>Post-Push Validation</h2>
     <ol>
@@ -117,7 +117,7 @@ npx power-apps push</pre>
     </ol>
 
     <div class="note">
-      This checklist intentionally uses <code>npx power-apps push</code> (not <code>pac code push</code>).
+      This checklist intentionally uses <code>pa app push</code>.
     </div>
   </div>
 </body>
