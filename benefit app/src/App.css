@@ -1,0 +1,459 @@
+:root {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: #1f2937;
+  background: #eef2f7;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  margin: 0;
+  min-width: 100%;
+  min-height: 100%;
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: #eef2f7;
+}
+
+button,
+select,
+input {
+  font: inherit;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app-frame {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #eef2f7;
+}
+
+.environment-banner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 48px;
+  padding: 0.25rem 4.75rem 0.25rem 1rem;
+  background: #416257;
+  color: rgb(255, 255, 255);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+  font-family: "Segoe UI", "Segoe UI Web (West European)", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", sans-serif;
+}
+
+.environment-banner[data-environment='dev'],
+.environment-banner[data-environment='default'] {
+  background: #416257;
+}
+
+.environment-banner[data-environment='test'] {
+  background: #7b2c33;
+}
+
+.environment-banner[data-environment='prod'] {
+  background: #465a72;
+}
+
+.environment-banner-trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  color: #ffffff;
+  transition: background 0.15s ease;
+  min-height: 40px;
+}
+
+.environment-banner-trigger:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.environment-banner-name {
+  font-size: 1em;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0;
+  color: rgb(255, 255, 255);
+  text-transform: uppercase;
+}
+
+.environment-banner-logo,
+.benefit-brand-mark {
+  width: 52px;
+  height: 34px;
+  flex: 0 0 auto;
+  color: rgb(255, 255, 255);
+  display: block;
+}
+
+.environment-banner[data-environment='dev'] .benefit-brand-mark,
+.environment-banner[data-environment='default'] .benefit-brand-mark {
+  color: #416257;
+}
+
+.environment-banner[data-environment='test'] .benefit-brand-mark {
+  color: #7b2c33;
+}
+
+.environment-banner[data-environment='prod'] .benefit-brand-mark {
+  color: #465a72;
+}
+
+.environment-banner-user {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(248, 251, 250, 0.85);
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #f8fbfa;
+  font-size: 0.9rem;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.app-switcher-backdrop {
+  position: fixed;
+  top: 48px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 900;
+  display: flex;
+  align-items: flex-start;
+  justify-content: stretch;
+}
+
+.app-switcher-panel {
+  background: #f3f4f5;
+  width: 100%;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 1.5rem 2rem 2.5rem;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
+  box-sizing: border-box;
+  animation: app-switcher-slide-down 0.15s ease;
+}
+
+@keyframes app-switcher-slide-down {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.app-switcher-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.app-switcher-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin: 0;
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.app-switcher-close {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #4b5563;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.3rem;
+  border-radius: 4px;
+  line-height: 1;
+}
+
+.app-switcher-close:hover {
+  background: #e0e2e6;
+}
+
+.app-switcher-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.app-card-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.app-card {
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  width: 210px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.app-card:hover:not(.app-card--current) {
+  border-color: #0078d4;
+  box-shadow: 0 2px 8px rgba(0, 120, 212, 0.18);
+}
+
+.app-card--current {
+  border-color: #0078d4;
+  cursor: default;
+}
+
+.app-card-icon-area {
+  background: #1a3557;
+  height: 110px;
+  flex: 0 0 110px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+}
+
+.app-card-icon-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 110px;
+  height: 52px;
+  font-size: 3.3rem;
+  font-weight: 700;
+  letter-spacing: -0.12em;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.9);
+  text-transform: uppercase;
+  transform: translateY(2px);
+}
+
+.app-card-icon-img {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+}
+
+.app-card-body {
+  padding: 0.65rem 0.75rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.app-card-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1a1a2e;
+  line-height: 1.35;
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.app-card-badge {
+  display: inline-block;
+  align-self: flex-start;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 2px 6px;
+  border-radius: 2px;
+  text-transform: uppercase;
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.app-card-badge--model {
+  background: #1a3557;
+  color: #ffffff;
+}
+
+.app-card-badge--canvas {
+  background: #5c2d91;
+  color: #ffffff;
+}
+
+.app-card-badge--code {
+  background: #416257;
+  color: #ffffff;
+}
+
+.app-card-badge--model {
+  background: #1a3557;
+  color: #ffffff;
+}
+
+.app-card-badge--external {
+  background: #374151;
+  color: #ffffff;
+}
+
+.environment-banner-user {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  line-height: 1;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.app-shell {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.side-nav {
+  width: 250px;
+  border-right: 1px solid #d7dbe1;
+  background: #f1f2f4;
+  transition: width 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.side-nav.collapsed {
+  width: 84px;
+}
+
+.side-nav-toggle {
+  height: 64px;
+  border: 0;
+  border-bottom: 1px solid #d7dbe1;
+  background: transparent;
+  color: #4b5563;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.side-nav-toggle:hover {
+  background: #e8eaee;
+}
+
+.side-nav-links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.5rem 0.4rem;
+}
+
+.side-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-height: 52px;
+  padding: 0.55rem 0.75rem;
+  border-radius: 6px;
+  color: #2f343c;
+  text-decoration: none;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.side-nav-link span {
+  font-size: 0.88rem;
+  line-height: 1.25;
+}
+
+.side-nav-link:hover {
+  background: #e8eaee;
+}
+
+.side-nav-link.active {
+  background: #dde8f8;
+  color: #1d4f91;
+}
+
+.side-nav-link--new-tab {
+  margin-top: auto;
+}
+
+.app-shell-content {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  display: flex;
+  flex-direction: column;
+  padding: 0 0.65rem;
+  box-sizing: border-box;
+}
+
+.page-panel {
+  max-width: 960px;
+  margin: 1rem auto;
+  padding: 1rem 1.25rem;
+  background: #fff;
+  border: 1px solid #e4e8ed;
+  border-radius: 8px;
+}
+
+.page-panel h1 {
+  margin: 0 0 0.6rem;
+  font-size: 1.25rem;
+  color: #1f2937;
+}
+
+.page-panel p {
+  margin: 0;
+  color: #4b5563;
+}
+
+@media (max-width: 768px) {
+  .app-shell {
+    flex-direction: column;
+  }
+
+  .side-nav {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid #dfe7f1;
+  }
+
+  .app-shell-content {
+    padding: 1rem;
+  }
+}
