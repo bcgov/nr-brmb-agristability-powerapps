@@ -31,7 +31,17 @@
                                                                                                  "entitySetName":  "vsi_armsconfigurations",
                                                                                                  "logicalName":  "vsi_armsconfiguration",
                                                                                                  "isHidden":  false
-                                                                                             }
+                                                                                             },
+                                                                       "environment_39a902ba":  {
+                                                                                                    "entitySetName":  "Environment",
+                                                                                                    "logicalName":  "environment_39a902ba",
+                                                                                                    "isHidden":  false
+                                                                                                },
+                                                                       "users":  {
+                                                                                     "entitySetName":  "systemusers",
+                                                                                     "logicalName":  "systemuser",
+                                                                                     "isHidden":  false
+                                                                                 }
                                                                    },
                                                    "environmentVariableName":  "",
                                                    "state":  "Configured",

@@ -6,4 +6,5 @@ export const DEPLOY_ENV = {
   tenantId: '6fdb5200-3d0d-4a8a-b036-d3685e359adc',
   modelApps: [{"key":"core-crm","displayName":"CORE DEV","appModuleId":"88c024d9-9fd5-ec11-a7b5-002248ada475"},{"key":"finance","displayName":"FINANCE DEV","appModuleId":"f09f4af5-f56c-ed11-81ac-0022483cb0d4"}],
   canvasAppIds: {"change-management":"2a047e32-cfaa-40bd-a6f2-73ccd5cf8d06"},
+  codeAppIds: {"enrollment-app":"f19458f1-ddb2-438a-9089-82ba678268a1"},
 } as const;
