@@ -86,12 +86,18 @@ function resolveCanvasUrl(key: string): string | null {
   return `https://apps.powerapps.com/play/e/${DEPLOY_ENV.environmentId}/a/${appId}?tenantId=${DEPLOY_ENV.tenantId}&hidenavbar=true`;
 }
 
+function resolveCodeAppUrl(key: string): string | null {
+  const ids = (DEPLOY_ENV as { codeAppIds?: Record<string, string> }).codeAppIds ?? {};
+  const appId = ids[key];
+  if (!appId || appId.startsWith('replace-with-')) return null;
+  return `https://apps.powerapps.com/play/e/${DEPLOY_ENV.environmentId}/a/${appId}?tenantId=${DEPLOY_ENV.tenantId}&hidenavbar=true`;
+}
+
 function buildInitialTiles(currentUrl: string): AppTile[] {
   return [
     { key: 'core-crm',          iconKey: 'core-crm',          label: DEPLOY_ENV.modelApps.find(a => a.key === 'core-crm')?.displayName ?? 'Core',    type: 'model',    url: null },
     { key: 'finance',           iconKey: 'finance',           label: DEPLOY_ENV.modelApps.find(a => a.key === 'finance')?.displayName ?? 'Finance', type: 'model',    url: null },
-    // Enrolment App tile URL intentionally left blank until the app is published.
-    { key: 'enrollment-app',    iconKey: 'enrollment-app',    label: 'Enrolment App',       type: 'code',     url: null },
+    { key: 'enrollment-app',    iconKey: 'enrollment-app',    label: 'Enrolment App',       type: 'code',     url: resolveCodeAppUrl('enrollment-app') },
     { key: 'benefit-app',       iconKey: 'benefit-app',       label: 'Benefit App',         type: 'code',     isCurrent: true, url: currentUrl },
     { key: 'change-management', iconKey: 'change-management', label: 'Change Management',   type: 'canvas',   url: resolveCanvasUrl('change-management') },
     { key: 'farms',             iconKey: 'farms',             label: 'FARMS',               type: 'external', url: null },

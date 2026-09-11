@@ -2,6 +2,35 @@
   "appName": "Benefit App",
   "tenantId": "6fdb5200-3d0d-4a8a-b036-d3685e359adc",
   "dataverseReferenceId": "38746486-341a-48c9-8607-93e344e2bad0",
+  "canvasAppNames": {
+    "change-management": "Change Management"
+  },
+  "codeAppNames": {
+    "enrollment-app": "Enrollment App"
+  },
+  "requiredDataSources": [
+    {
+      "logicalName": "vsi_armsconfiguration",
+      "entitySetName": "vsi_armsconfigurations",
+      "alias": "coreconfiguration",
+      "purpose": "ARMS core configuration table (env-specific settings).",
+      "addCommand": "pa app add data-source --connector dataverse --table vsi_armsconfiguration"
+    },
+    {
+      "logicalName": "systemuser",
+      "entitySetName": "systemusers",
+      "alias": "users",
+      "purpose": "Current user lookup (banner badge via useCurrentUser hook).",
+      "addCommand": "pa app add data-source --connector dataverse --table systemuser"
+    }
+  ],
+  "requiredDataverseApis": [
+    {
+      "name": "WhoAmI",
+      "purpose": "Resolves current user id for the banner badge (paired with systemuser lookup).",
+      "addCommand": "pa app add data-source --connector dataverse --dataverse-api WhoAmI"
+    }
+  ],
   "environments": {
     "dev": {
       "appId": "replace-with-dev-app-id",
@@ -14,6 +43,9 @@
       ],
       "canvasAppIds": {
         "change-management": "2a047e32-cfaa-40bd-a6f2-73ccd5cf8d06"
+      },
+      "codeAppIds": {
+        "enrollment-app": "f19458f1-ddb2-438a-9089-82ba678268a1"
       }
     },
     "test": {
@@ -27,6 +59,9 @@
       ],
       "canvasAppIds": {
         "change-management": "3e53534f-a2cc-4a6e-a314-fb77cd6bf8c4"
+      },
+      "codeAppIds": {
+        "enrollment-app": "1ff7ab6b-a1a7-46bd-9bfc-a60cf25d9391"
       }
     },
     "prod": {
@@ -40,6 +75,9 @@
       ],
       "canvasAppIds": {
         "change-management": "replace-with-prod-canvas-app-id"
+      },
+      "codeAppIds": {
+        "enrollment-app": "replace-with-prod-enrollment-app-id"
       }
     }
   }

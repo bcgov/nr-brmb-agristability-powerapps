@@ -5,11 +5,36 @@
  */
 
 export const dataSourcesInfo = {
+  "systemusers": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "systemuserid",
+    "dataSourceType": "Dataverse",
+    "apis": {}
+  },
   "vsi_armsconfigurations": {
     "tableId": "",
     "version": "",
     "primaryKey": "vsi_armsconfigurationid",
     "dataSourceType": "Dataverse",
     "apis": {}
+  },
+  "whoami": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "",
+    "dataSourceType": "Dataverse",
+    "apis": {
+      "WhoAmI": {
+        "path": "/api/data/v9.2/WhoAmI",
+        "method": "GET",
+        "parameters": [],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          }
+        }
+      }
+    }
   }
 };

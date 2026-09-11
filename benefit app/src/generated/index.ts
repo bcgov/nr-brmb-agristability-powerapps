@@ -5,7 +5,11 @@
 
 // Models
 export * as CommonModels from './models/CommonModels';
+export * as SystemusersModel from './models/SystemusersModel';
 export * as Vsi_armsconfigurationsModel from './models/Vsi_armsconfigurationsModel';
+export * as WhoAmIModel from './models/WhoAmIModel';
 
 // Services
+export * from './services/SystemusersService';
 export * from './services/Vsi_armsconfigurationsService';
+export * from './services/WhoAmIService';

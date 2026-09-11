@@ -6,6 +6,7 @@ import { AppLayout } from '../components/shell/AppLayout';
 import { createRouteNavItem, createSideNavConfig } from '../components/shell/navConfig';
 import { DEPLOY_ENV } from '../constants/deployEnvConfig';
 import { AppSwitcher } from './AppSwitcher';
+import { useCurrentUser } from './useCurrentUser';
 
 function BenefitLogoMark() {
   return (
@@ -81,85 +82,10 @@ function getBannerTitle(value: string | null | undefined): string {
   return `BENEFIT APP ${label}`;
 }
 
-function normalizeUserDisplayName(rawName: string): string {
-  const trimmed = rawName.trim();
-  if (!trimmed) return '';
-
-  const withoutDomain = trimmed.includes('@') ? trimmed.split('@')[0] : trimmed;
-  const normalized = withoutDomain
-    .replace(/[_.-]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  return normalized || trimmed;
-}
-
-function resolveCurrentUserName(): string | null {
-  const candidates = [window, window.parent, window.top];
-
-  for (const candidate of candidates) {
-    try {
-      const settings = (candidate as unknown as {
-        Xrm?: {
-          Utility?: {
-            getGlobalContext?: () => {
-              userSettings?: {
-                userName?: string;
-                userPrincipalName?: string;
-                fullName?: string;
-              };
-            };
-          };
-        };
-      })?.Xrm?.Utility?.getGlobalContext?.()?.userSettings;
-
-      const rawName = settings?.fullName ?? settings?.userName ?? settings?.userPrincipalName;
-      if (typeof rawName === 'string') {
-        const normalized = normalizeUserDisplayName(rawName);
-        if (normalized) return normalized;
-      }
-    } catch {
-      // Ignore cross-origin probe failures and keep checking the next possible context.
-    }
-  }
-
-  const storageSources = [window.sessionStorage, window.localStorage];
-  for (const storage of storageSources) {
-    try {
-      if (!storage) continue;
-
-      for (let index = 0; index < storage.length; index += 1) {
-        const key = storage.key(index) ?? '';
-        const value = storage.getItem(key) ?? '';
-        if (!value) continue;
-
-        const matches = [
-          /"fullName"\s*:\s*"([^"]+)"/i,
-          /"userName"\s*:\s*"([^"]+)"/i,
-          /"preferred_username"\s*:\s*"([^"]+)"/i,
-          /"upn"\s*:\s*"([^"]+)"/i,
-        ];
-
-        for (const pattern of matches) {
-          const match = value.match(pattern);
-          if (match?.[1]) {
-            const normalized = normalizeUserDisplayName(match[1]);
-            if (normalized) return normalized;
-          }
-        }
-      }
-    } catch {
-      // Ignore storage access issues and continue.
-    }
-  }
-
-  return null;
-}
-
 export function BenefitApp() {
   const [navCollapsed, setNavCollapsed] = useState(false);
   const [showAppSwitcher, setShowAppSwitcher] = useState(false);
-  const [userName] = useState<string | null>(() => resolveCurrentUserName());
+  const { name: userName } = useCurrentUser();
 
   const environmentName = DEPLOY_ENV.stage.toUpperCase();
 
