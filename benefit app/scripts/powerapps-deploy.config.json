@@ -1,0 +1,46 @@
+{
+  "appName": "Benefit App",
+  "tenantId": "6fdb5200-3d0d-4a8a-b036-d3685e359adc",
+  "dataverseReferenceId": "38746486-341a-48c9-8607-93e344e2bad0",
+  "environments": {
+    "dev": {
+      "appId": "replace-with-dev-app-id",
+      "environmentId": "dcd88fe8-d919-ee82-8313-8376a1e413f4",
+      "dataverseInstanceUrl": "https://aff-brmb-crm-dev.crm3.dynamics.com/",
+      "dataverseConnectionId": "b05319f6f3244385ac9d9959391a2970",
+      "modelApps": [
+        { "key": "core-crm", "displayName": "CORE DEV",    "appModuleId": "88c024d9-9fd5-ec11-a7b5-002248ada475" },
+        { "key": "finance",  "displayName": "FINANCE DEV", "appModuleId": "f09f4af5-f56c-ed11-81ac-0022483cb0d4" }
+      ],
+      "canvasAppIds": {
+        "change-management": "2a047e32-cfaa-40bd-a6f2-73ccd5cf8d06"
+      }
+    },
+    "test": {
+      "appId": "replace-with-test-app-id",
+      "environmentId": "e0901c96-7fca-e8e1-914d-da7a82a7ecf6",
+      "dataverseInstanceUrl": "https://aff-brmb-crm-test.crm3.dynamics.com/",
+      "dataverseConnectionId": "ff699992001647a89917e4ec3fd164a4",
+      "modelApps": [
+        { "key": "core-crm", "displayName": "CORE TEST",    "appModuleId": "89aa057f-ec44-ee11-be6f-002248d5428c" },
+        { "key": "finance",  "displayName": "FINANCE TEST", "appModuleId": "cc41e698-8f6f-ee11-8179-002248d5428c" }
+      ],
+      "canvasAppIds": {
+        "change-management": "3e53534f-a2cc-4a6e-a314-fb77cd6bf8c4"
+      }
+    },
+    "prod": {
+      "appId": "replace-with-prod-app-id",
+      "environmentId": "replace-with-prod-environment-id",
+      "dataverseInstanceUrl": "replace-with-prod-dataverse-instance-url",
+      "dataverseConnectionId": "replace-with-prod-dataverse-connection-id",
+      "modelApps": [
+        { "key": "core-crm", "displayName": "CORE",    "appModuleId": "replace-with-prod-core-crm-app-id" },
+        { "key": "finance",  "displayName": "FINANCE", "appModuleId": "replace-with-prod-finance-app-id" }
+      ],
+      "canvasAppIds": {
+        "change-management": "replace-with-prod-canvas-app-id"
+      }
+    }
+  }
+}

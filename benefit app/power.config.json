@@ -1,0 +1,43 @@
+{
+    "version":  "1.0",
+    "appId":  null,
+    "appDisplayName":  "Benefit App",
+    "region":  "prod",
+    "appType":  "CodeApp",
+    "environmentId":  "dcd88fe8-d919-ee82-8313-8376a1e413f4",
+    "description":  " ",
+    "buildPath":  "./dist",
+    "buildEntryPoint":  "index.html",
+    "localAppUrl":  "http://localhost:3000",
+    "logoPath":  "Default",
+    "connectionReferences":  {
+                                 "38746486-341a-48c9-8607-93e344e2bad0":  {
+                                                                              "id":  "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                                                              "displayName":  "Microsoft Dataverse",
+                                                                              "dataSources":  [
+                                                                                                  "commondataserviceforapps"
+                                                                                              ],
+                                                                              "authenticationType":  "ServicePrincipalOauth",
+                                                                              "sharedConnectionId":  "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps/connections/b05319f6f3244385ac9d9959391a2970",
+                                                                              "dataSets":  {
+
+                                                                                           }
+                                                                          }
+                             },
+    "databaseReferences":  {
+                               "default.cds":  {
+                                                   "dataSources":  {
+                                                                       "coreconfiguration":  {
+                                                                                                 "entitySetName":  "vsi_armsconfigurations",
+                                                                                                 "logicalName":  "vsi_armsconfiguration",
+                                                                                                 "isHidden":  false
+                                                                                             }
+                                                                   },
+                                                   "environmentVariableName":  "",
+                                                   "state":  "Configured",
+                                                   "instanceUrl":  "https://aff-brmb-crm-dev.crm3.dynamics.com/",
+                                                   "webApiVersion":  "v9.0",
+                                                   "version":  "v9.0"
+                                               }
+                           }
+}
