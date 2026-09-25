@@ -552,6 +552,18 @@ button:focus-visible {
   color: #92400e;
 }
 
+.calc-fortyfiveday-pausecomment {
+  margin-top: 0.2rem;
+  font-size: 0.7rem;
+  font-style: italic;
+  font-weight: 400;
+  color: #6b4b00;
+  max-width: 22rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .calc-benefit-table tbody th {
   width: 5.2rem;
 }

@@ -25,6 +25,9 @@ pac org select --environment https://aff-brmb-crm-dev.crm3.dynamics.com/
 TEST org select:
 pac org select --environment https://aff-brmb-crm-test.crm3.dynamics.com/
 
+Note:
+On some PAC versions, pac org select can crash after printing "Connected to..." with a non-recoverable error. If that happens, run pac org list and confirm the expected environment is marked active (*), then continue.
+
 Useful checks:
 pa auth status
 pa app list

@@ -4,6 +4,7 @@ import sharepointIconUrl from '/icons/sharepoint.svg?url';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ApprovalErrorModal } from '../components/ApprovalErrorModal';
 import { Send45DayLetterModal } from '../components/Send45DayLetterModal';
+import { Pause45DayCounterModal } from '../components/Pause45DayCounterModal';
 import { ConfirmActionModal } from '../components/ConfirmActionModal';
 import { ReferToSupervisorModal } from '../components/ReferToSupervisorModal';
 import { Toast, nextToastId, type ToastMessage } from '../components/Toast';
@@ -690,6 +691,7 @@ export function EnrolmentCalculationPage() {
   const [farmsWorkflowCalculationLoading, setFarmsWorkflowCalculationLoading] = useState(false);
   const [farmsWorkflowCalculationError, setFarmsWorkflowCalculationError] = useState<string | null>(null);
   const [show45DayModal, setShow45DayModal] = useState(false);
+  const [show45DayPauseModal, setShow45DayPauseModal] = useState(false);
   const [letterSentMessage, setLetterSentMessage] = useState<string | null>(null);
   const [counterActionLoading, setCounterActionLoading] = useState(false);
   const [counterActionError, setCounterActionError] = useState<string | null>(null);
@@ -1188,7 +1190,7 @@ export function EnrolmentCalculationPage() {
     await openPartnerEnrolment(row, 'calculation');
   };
 
-  const handle45DayPause = async () => {
+  const handle45DayPause = async (comment: string) => {
     if (!record || !resolvedEnrolmentId) return;
     setCounterActionLoading(true);
     setCounterActionError(null);
@@ -1197,11 +1199,13 @@ export function EnrolmentCalculationPage() {
       const patch: Partial<Vsi_participantprogramyears> = {
         vsi_fortyfivedaycounterpaused: true,
         vsi_fortyfivedaypausedate: today,
+        vsi_fortyfivedayletterpausecomment: comment,
       };
       const result = await Vsi_participantprogramyearsService.update(resolvedEnrolmentId, patch);
       if (!result.success) throw new Error(result.error?.message ?? 'Failed to pause counter.');
       setRecord(prev => prev ? { ...prev, ...patch } : prev);
       patchEnrolmentCache([{ id: resolvedEnrolmentId, fields: patch }]);
+      setShow45DayPauseModal(false);
     } catch (err) {
       setCounterActionError(err instanceof Error ? err.message : 'Failed to pause counter.');
     } finally {
@@ -1482,6 +1486,11 @@ export function EnrolmentCalculationPage() {
                   {paused
                     ? <span className="fortyfiveday-badge fortyfiveday-badge-paused">⏸ Paused{pauseDate ? ` since ${new Date(pauseDate).toLocaleDateString()}` : ''}</span>
                     : <span className="fortyfiveday-badge fortyfiveday-badge-running">▶ Running</span>}
+                  {paused && record.vsi_fortyfivedayletterpausecomment && (
+                    <div className="calc-fortyfiveday-pausecomment" title={record.vsi_fortyfivedayletterpausecomment}>
+                      {record.vsi_fortyfivedayletterpausecomment}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1499,7 +1508,10 @@ export function EnrolmentCalculationPage() {
                 <button
                   className="calc-outline-btn"
                   type="button"
-                  onClick={() => void handle45DayPause()}
+                  onClick={() => {
+                    setCounterActionError(null);
+                    setShow45DayPauseModal(true);
+                  }}
                   disabled={counterActionLoading}
                 >
                   {counterActionLoading ? 'Pausing...' : 'Pause Counter'}
@@ -1792,6 +1804,19 @@ export function EnrolmentCalculationPage() {
           onClose={() => setShow45DayModal(false)}
           onSuccess={() => {
             setLetterSentMessage('45-day letter sent successfully.');
+          }}
+        />
+      )}
+      {show45DayPauseModal && (
+        <Pause45DayCounterModal
+          enrolmentName={record?.vsi_name ?? ''}
+          loading={counterActionLoading}
+          error={counterActionError}
+          onConfirm={comment => void handle45DayPause(comment)}
+          onCancel={() => {
+            if (counterActionLoading) return;
+            setCounterActionError(null);
+            setShow45DayPauseModal(false);
           }}
         />
       )}

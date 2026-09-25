@@ -209,16 +209,16 @@ export interface SearchOutput {
   // List of rows
   value?: {
    // Search score of row
-   _search_score?: number;
+   "@search.score"?: number;
    // Search highlights of row
-   _search_highlights?: {
+   "@search.highlights"?: {
    };
    // Table that contains the row
-   _search_entityname?: string;
+   "@search.entityname"?: string;
    // Objectid of row
-   _search_objectid?: string;
+   "@search.objectid"?: string;
    // Objecttypecode of row
-   _search_objecttypecode?: number;
+   "@search.objecttypecode"?: number;
  }[];
   // Total count of results (-1 if returntotalrecordcount is set to false)
   totalrecordcount?: number;

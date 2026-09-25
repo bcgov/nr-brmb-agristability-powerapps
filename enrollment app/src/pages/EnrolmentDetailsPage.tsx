@@ -1747,6 +1747,12 @@ export function EnrolmentDetailsPage() {
                           {paused
                             ? <span className="fortyfiveday-badge fortyfiveday-badge-paused">⏸ Paused{pauseDate ? ` since ${new Date(pauseDate).toLocaleDateString()}` : ''}</span>
                             : <span className="fortyfiveday-badge fortyfiveday-badge-running">▶ Running</span>}
+                          {paused && (() => {
+                            const comment = (record as unknown as Record<string, unknown>)['vsi_fortyfivedayletterpausecomment'] as string | undefined;
+                            return comment ? (
+                              <div className="calc-fortyfiveday-pausecomment" title={comment}>{comment}</div>
+                            ) : null;
+                          })()}
                         </div>
                       </div>
                     </div>
