@@ -60,14 +60,40 @@ function Invoke-CapturedCommand {
   return $output
 }
 
-$script:UsePaCli = $null
-
-function Test-UsePaCli {
-  if ($null -eq $script:UsePaCli) {
-    $script:UsePaCli = $null -ne (Get-Command 'pa' -ErrorAction SilentlyContinue)
+function Assert-PaCliReady {
+  $hasPaCommand = $null -ne (Get-Command 'pa' -ErrorAction SilentlyContinue)
+  if ($hasPaCommand) {
+    return
   }
 
-  return [bool]$script:UsePaCli
+  throw @"
+The deployment script now requires the modern Power Apps CLI only.
+Install it and ensure `pa` is on PATH, then rerun deployment.
+"@
+}
+
+function Resolve-PaAppArguments {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string[]]$AppArguments
+  )
+
+  # Some pa app subcommands (for example add data-source and push) do not
+  # accept --environment-id. Environment targeting is provided by
+  # PA_CLI_ENVIRONMENT_ID, which is set per stage by this script.
+  $hasNonInteractive = $false
+  foreach ($arg in $AppArguments) {
+    if ($arg -eq '--non-interactive') {
+      $hasNonInteractive = $true
+      break
+    }
+  }
+
+  if (-not $hasNonInteractive) {
+    return $AppArguments + @('--non-interactive')
+  }
+
+  return $AppArguments
 }
 
 function Invoke-CheckedPowerAppsAppCommand {
@@ -82,12 +108,9 @@ function Invoke-CheckedPowerAppsAppCommand {
     [string]$Description
   )
 
-  if (Test-UsePaCli) {
-    Invoke-CheckedCommand -FilePath 'pa' -Arguments @('app') + $AppArguments -Description $Description
-    return
-  }
-
-  Invoke-CheckedCommand -FilePath 'npx.cmd' -Arguments $LegacyArguments -Description "$Description (legacy CLI)"
+  Assert-PaCliReady
+  $resolvedArguments = Resolve-PaAppArguments -AppArguments $AppArguments
+  Invoke-CheckedCommand -FilePath 'pa' -Arguments (@('app') + $resolvedArguments) -Description $Description
 }
 
 function Invoke-CapturedPowerAppsAppCommand {
@@ -105,22 +128,137 @@ function Invoke-CapturedPowerAppsAppCommand {
     [switch]$FallbackToLegacyOnError
   )
 
-  if (Test-UsePaCli) {
+  Assert-PaCliReady
+  $resolvedArguments = Resolve-PaAppArguments -AppArguments $AppArguments
+  return Invoke-CapturedCommand -FilePath 'pa' -Arguments (@('app') + $resolvedArguments) -Description $Description
+}
+
+function Invoke-AppInitSafe {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$AppName,
+
+    [Parameter(Mandatory = $true)]
+    [string]$EnvironmentId,
+
+    [Parameter(Mandatory = $true)]
+    [string]$PowerConfigPath
+  )
+
+  Assert-PaCliReady
+  $usePa = $true
+  $filePath = 'pa'
+  $arguments = @('app', 'init', '--display-name', $AppName, '--environment-id', $EnvironmentId)
+  $description = 'Initialize app for target environment'
+
+  Write-Host "`n==> $description" -ForegroundColor Cyan
+  Write-Host "    $filePath $($arguments -join ' ')" -ForegroundColor DarkGray
+
+  $previousErrorActionPreference = $ErrorActionPreference
+  try {
+    $ErrorActionPreference = 'Continue'
+    $output = & $filePath @arguments 2>&1
+    $exitCode = $LASTEXITCODE
+  }
+  finally {
+    $ErrorActionPreference = $previousErrorActionPreference
+  }
+
+  if ($output) {
+    $output | ForEach-Object { Write-Host $_ }
+  }
+
+  if ($exitCode -eq 0) {
+    return
+  }
+
+  $outputText = if ($output -is [System.Array]) {
+    [string]::Join("`n", @($output | ForEach-Object { [string]$_ }))
+  }
+  else {
+    [string]$output
+  }
+
+  $initArtifactExists = Test-Path -LiteralPath $PowerConfigPath
+  if ($initArtifactExists) {
     try {
-      return Invoke-CapturedCommand -FilePath 'pa' -Arguments @('app') + $AppArguments -Description $Description
+      $cfg = Get-Content -LiteralPath $PowerConfigPath -Raw | ConvertFrom-Json
+      $envFromConfig = [string]$cfg.environmentId
+      if ([string]::IsNullOrWhiteSpace($envFromConfig)) {
+        $initArtifactExists = $false
+      }
     }
     catch {
-      if (-not $FallbackToLegacyOnError) {
-        throw
-      }
-
-      Write-Host "  Primary CLI invocation failed; retrying with legacy CLI wrapper." -ForegroundColor Yellow
-      Write-Host "           $([string]$_.Exception.Message)" -ForegroundColor DarkGray
-      return Invoke-CapturedCommand -FilePath 'npx.cmd' -Arguments $LegacyArguments -Description "$Description (legacy CLI)"
+      $initArtifactExists = $false
     }
   }
 
-  return Invoke-CapturedCommand -FilePath 'npx.cmd' -Arguments $LegacyArguments -Description "$Description (legacy CLI)"
+  $looksLikeKnownNodeCrash = $outputText -match 'Assertion failed:.*UV_HANDLE_CLOSING' -or $outputText -match 'Exception Type:\s*System\.InvalidOperationException'
+  $showsInitSuccess = $outputText -match 'Created power\.config\.json'
+
+  if (-not $usePa -and $initArtifactExists -and $showsInitSuccess -and $looksLikeKnownNodeCrash) {
+    Write-Host "  Warning: legacy init reported a known post-success process crash, but power.config.json was created. Continuing." -ForegroundColor Yellow
+    return
+  }
+
+  throw "Command failed with exit code ${exitCode}: $filePath $($arguments -join ' ')"
+}
+
+function Invoke-PacOrgSelectSafe {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$EnvironmentId
+  )
+
+  Write-Host "`n==> Select target environment in PAC auth context" -ForegroundColor Cyan
+  Write-Host "    pac org select --environment $EnvironmentId" -ForegroundColor DarkGray
+
+  $previousErrorActionPreference = $ErrorActionPreference
+  try {
+    $ErrorActionPreference = 'Continue'
+    $output = & 'pac' @('org', 'select', '--environment', $EnvironmentId) 2>&1
+    $exitCode = $LASTEXITCODE
+  }
+  finally {
+    $ErrorActionPreference = $previousErrorActionPreference
+  }
+
+  $text = if ($output -is [System.Array]) {
+    [string]::Join("`n", @($output | ForEach-Object { [string]$_ }))
+  }
+  else {
+    [string]$output
+  }
+
+  $isKnownPacCrashAfterConnect = ($text -match 'Connected to\.\.\.') -and (
+    ($text -match 'non-recoverable error') -or
+    ($text -match 'Exception Type:\s*System\.InvalidOperationException')
+  )
+
+  if ($isKnownPacCrashAfterConnect) {
+    Write-Host "  Warning: pac org select reported a known PAC internal error after successful connection. Continuing with current context." -ForegroundColor Yellow
+    return
+  }
+
+  if ($output) {
+    $output | ForEach-Object { Write-Host $_ }
+  }
+
+  if ($exitCode -eq 0) {
+    return
+  }
+
+  throw "Command failed with exit code ${exitCode}: pac org select --environment $EnvironmentId"
+}
+
+function Set-PaEnvironmentContext {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$EnvironmentId
+  )
+
+  $env:PA_CLI_ENVIRONMENT_ID = $EnvironmentId
+  Write-Host "  Set PA_CLI_ENVIRONMENT_ID=$EnvironmentId for pa app commands." -ForegroundColor DarkGray
 }
 
 function Get-RequiredProperty {
@@ -529,6 +667,8 @@ if ($null -eq $target) {
 $environmentId = Get-RequiredProperty -Object $target -Name 'environmentId'
 Assert-NotPlaceholder -Value $environmentId -Name "$Stage.environmentId"
 
+Set-PaEnvironmentContext -EnvironmentId $environmentId
+
 $dataverseInstanceUrl = $null
 if (Test-HasProperty -Object $target -PropertyName 'dataverseInstanceUrl') {
   $dataverseInstanceUrl = [string]$target.dataverseInstanceUrl
@@ -570,7 +710,7 @@ if ($PreserveSchemas) {
   }
 }
 
-Invoke-CheckedCommand -FilePath 'pac' -Arguments @('org', 'select', '--environment', $environmentId) -Description 'Select target environment in PAC auth context'
+Write-Host "Skipping pac org select; using PA_CLI_ENVIRONMENT_ID for pa app command targeting." -ForegroundColor DarkGray
 
 if (-not $PreserveSchemas) {
   if (Test-Path -LiteralPath $powerConfigPath) {
@@ -578,10 +718,7 @@ if (-not $PreserveSchemas) {
     Remove-Item -LiteralPath $powerConfigPath -Force
   }
 
-  Invoke-CheckedPowerAppsAppCommand `
-    -AppArguments @('--display-name', $appName, '--environment-id', $environmentId) `
-    -LegacyArguments @('power-apps', 'init', '-n', $appName, '-env', $environmentId) `
-    -Description 'Initialize app for target environment'
+  Invoke-AppInitSafe -AppName $appName -EnvironmentId $environmentId -PowerConfigPath $powerConfigPath
   
   if ($null -ne $targetAppId) {
     if (Test-Path -LiteralPath $powerConfigPath) {
@@ -717,21 +854,39 @@ foreach ($dataSource in $target.dataSources) {
     }
   }
 
+  # connectionRef is optional; when supplied we prefer it over connectionId.
+  $connectionRef = $null
+  if ((Test-HasProperty -Object $dataSource -PropertyName 'connectionRef') -and -not [string]::IsNullOrWhiteSpace([string]$dataSource.connectionRef)) {
+    $connectionRef = [string]$dataSource.connectionRef
+    if ($connectionRef -match '^replace-with-') {
+      if ($PreserveSchemas) {
+        Write-Host "Skipping data source '$apiId' because connectionRef is still a placeholder in preserve mode." -ForegroundColor Yellow
+        continue
+      }
+
+      Assert-NotPlaceholder -Value $connectionRef -Name "$Stage.$apiId.connectionRef"
+    }
+  }
+
   $appArgs = @('add', 'data-source', '--connector', $apiId)
-  $legacyArgs = @('power-apps', 'add-data-source', '-a', $apiId)
-  if (-not [string]::IsNullOrWhiteSpace($connectionId)) {
+  $legacyArgs = @('power-apps', 'add-data-source', '--non-interactive', '--api-id', $apiId)
+  if (-not [string]::IsNullOrWhiteSpace($connectionRef)) {
+    $appArgs += @('--connection-ref', $connectionRef)
+    $legacyArgs += @('--connection-id', $connectionRef)
+  }
+  elseif (-not [string]::IsNullOrWhiteSpace($connectionId)) {
     $appArgs += @('--connection-id', $connectionId)
-    $legacyArgs += @('-c', $connectionId)
+    $legacyArgs += @('--connection-id', $connectionId)
   }
 
   if ((Test-HasProperty -Object $dataSource -PropertyName 'table') -and -not [string]::IsNullOrWhiteSpace([string]$dataSource.table)) {
     $appArgs += @('--table', [string]$dataSource.table)
-    $legacyArgs += @('-t', [string]$dataSource.table)
+    $legacyArgs += @('--resource-name', [string]$dataSource.table)
   }
 
   if ((Test-HasProperty -Object $dataSource -PropertyName 'dataset') -and -not [string]::IsNullOrWhiteSpace([string]$dataSource.dataset)) {
     $appArgs += @('--dataset', [string]$dataSource.dataset)
-    $legacyArgs += @('-d', [string]$dataSource.dataset)
+    $legacyArgs += @('--dataset', [string]$dataSource.dataset)
   }
 
   Invoke-CheckedPowerAppsAppCommand -AppArguments $appArgs -LegacyArguments $legacyArgs -Description "Add data source '$apiId'"
@@ -861,7 +1016,7 @@ if (Test-Path -LiteralPath $powerConfigPath) {
 if ($null -ne $config.flowReferences -and $config.flowReferences.Count -gt 0) {
   $flowListOutput = Invoke-CapturedPowerAppsAppCommand `
     -AppArguments @('list-flows', '--json') `
-    -LegacyArguments @('power-apps', 'list-flows', '--json', '--no-color') `
+    -LegacyArguments @('power-apps', 'list-flows', '--non-interactive', '--json', '--no-color') `
     -Description 'List invokable flows in current environment' `
     -FallbackToLegacyOnError
   if ($flowListOutput -is [System.Array]) {
@@ -904,11 +1059,11 @@ if ($null -ne $config.flowReferences -and $config.flowReferences.Count -gt 0) {
 
     $addFlowOutput = Invoke-CapturedPowerAppsAppCommand `
       -AppArguments @('add', 'flow', '--flow-id', [string]$flow.workflowId) `
-      -LegacyArguments @('power-apps', 'add-flow', '-f', [string]$flow.workflowId) `
+      -LegacyArguments @('power-apps', 'add-flow', '--non-interactive', '--flow-id', [string]$flow.workflowId) `
       -Description "Add flow '$workflowDisplayName'"
     $addFlowText = ($addFlowOutput | Out-String)
     if ($addFlowText -match 'Failed to add flow' -or $addFlowText -match 'Unable to retrieve connection') {
-      throw "add-flow reported a failure for '$workflowDisplayName'. Ensure all dependent connections (e.g. SharePoint, Word Online) are added as data sources before running this script.`n$addFlowText"
+      throw "add flow reported a failure for '$workflowDisplayName'. Ensure all dependent connections (e.g. SharePoint, Word Online) are added as data sources before running this script.`n$addFlowText"
     }
   }
 
@@ -972,7 +1127,7 @@ if ($null -ne $config.flowReferences -and $config.flowReferences.Count -gt 0) {
 }
 
 if (-not $SkipBuild.IsPresent) {
-  # Re-patch here in case add-flow or any earlier step wiped the schemas
+  # Re-patch here in case add flow or any earlier step wiped the schemas
   Write-Host "`n==> Re-patch userqueries sharing APIs (pre-build safety check)" -ForegroundColor Cyan
   Patch-UserqueriesSharingApis -FilePath (Join-Path $dataSourcesInfoDir 'dataSourcesInfo.ts')
   Patch-UserqueriesSharingApis -FilePath (Join-Path $dataSourcesInfoDir 'dataSourcesInfo.js')
@@ -982,7 +1137,7 @@ if (-not $SkipBuild.IsPresent) {
 
 Invoke-CheckedPowerAppsAppCommand `
   -AppArguments @('push') `
-  -LegacyArguments @('power-apps', 'push') `
+  -LegacyArguments @('power-apps', 'push', '--non-interactive') `
   -Description 'Push app with Power Apps CLI'
 
 Write-Host "`nPost-deploy setup completed successfully for '$Stage'." -ForegroundColor Green

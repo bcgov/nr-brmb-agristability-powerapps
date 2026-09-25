@@ -15,6 +15,8 @@ If auth is wrong tenant:
 pac org select --environment https://aff-brmb-crm-dev.crm3.dynamics.com/
 pac org select --environment https://aff-brmb-crm-test.crm3.dynamics.com/
 
+Note: if pac org select crashes after showing "Connected to...", run pac org list and verify the target environment is active, then continue.
+
 Useful checks:
 pa auth status
 pa app list

@@ -111,6 +111,7 @@ export interface Vsi_participantprogramyearsBase {
   vsi_finaldeadlineremindersent?: boolean;
   vsi_firstmonthlateinformationfee?: number;
   vsi_fortyfivedaycounterpaused?: boolean;
+  vsi_fortyfivedayletterpausecomment?: string;
   vsi_fortyfivedaylettersent?: string;
   vsi_fortyfivedayletterstartdate?: string;
   vsi_fortyfivedaypausedate?: string;
