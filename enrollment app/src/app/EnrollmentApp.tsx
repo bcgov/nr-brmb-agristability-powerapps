@@ -3,15 +3,12 @@ import { useEffect, useState } from 'react';
 import { AppSwitcher } from '../components/AppSwitcher';
 import { AppLayout } from '../components/shell/AppLayout';
 import { useRole } from '../context/RoleContext';
-import { normalizeInitialDeepLink } from '../utils/deepLinks';
 import { resolveCurrentSystemUser } from '../utils/currentUser';
 import { EnrolmentLogoMark } from './brand';
 import { DASHBOARD_URL_FALLBACK, getBannerTitle, getEnvironmentKey, getEnvironmentName, getPowerBiDashboardUrl } from './environment';
 import { buildEnrollmentNavConfig } from './navigation';
 import { RoleSwitcher } from './RoleSwitcher';
 import { EnrollmentRoutes } from './routes';
-
-normalizeInitialDeepLink();
 
 export function EnrollmentApp() {
   const { activeRole } = useRole();

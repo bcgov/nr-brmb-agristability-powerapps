@@ -4,7 +4,7 @@
   "type": "Microsoft.PowerApps/apis",
   "properties": {
     "displayName": "Microsoft Dataverse",
-    "iconUri": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1827/1.0.1827.4939/commondataserviceforapps/icon.png",
+    "iconUri": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1831/1.0.1831.5064/commondataserviceforapps/icon.png",
     "iconBrandColor": "",
     "apiEnvironment": "Shared",
     "isCustomApi": false,
@@ -4505,6 +4505,8 @@
             }
           }
         },
+        "/{connectionId}/api/iq/v1.0/semanticmodel": {},
+        "/{connectionId}/api/iq/v1.0.0/semanticmodel": {},
         "/{connectionId}/api/data/v9.2/callbackregistrations": {
           "post": {
             "tags": [
@@ -6052,6 +6054,155 @@
             }
           }
         },
+        "IqSemanticModelListResponse": {
+          "description": "The semantic models available in the selected Dataverse environment.",
+          "type": "object",
+          "properties": {
+            "data": {
+              "x-ms-summary": "Semantic models",
+              "description": "A list of semantic models available in the environment.",
+              "type": "array",
+              "x-nullable": true,
+              "items": {
+                "$ref": "#/definitions/IqSemanticModel"
+              }
+            }
+          }
+        },
+        "IqSemanticModel": {
+          "description": "Information about a Microsoft Dataverse semantic model.",
+          "type": "object",
+          "properties": {
+            "id": {
+              "x-ms-summary": "Semantic model ID",
+              "description": "The ID of the semantic model.",
+              "type": "string",
+              "x-nullable": true
+            },
+            "uniqueName": {
+              "x-ms-summary": "Unique name",
+              "description": "The unique name assigned to the semantic model.",
+              "type": "string",
+              "x-nullable": true
+            },
+            "source": {
+              "x-ms-summary": "Source",
+              "description": "The application or service that created the semantic model.",
+              "type": "string",
+              "x-nullable": true
+            },
+            "description": {
+              "x-ms-summary": "Description",
+              "description": "The description of the semantic model.",
+              "type": "string",
+              "x-nullable": true
+            },
+            "owner": {
+              "x-ms-summary": "Owner",
+              "description": "The name of the user or team that owns the semantic model.",
+              "type": "string",
+              "x-nullable": true
+            },
+            "tables": {
+              "x-ms-summary": "Tables",
+              "description": "The logical names of the Dataverse tables included in the semantic model.",
+              "type": "array",
+              "x-nullable": true,
+              "items": {
+                "type": "string"
+              }
+            },
+            "createdBy": {
+              "x-ms-summary": "Created by",
+              "description": "The name of the user who created the semantic model.",
+              "type": "string",
+              "x-nullable": true
+            },
+            "modifiedOn": {
+              "x-ms-summary": "Modified on",
+              "description": "The date and time when the semantic model was last modified.",
+              "type": "string",
+              "format": "date-time",
+              "x-nullable": true
+            },
+            "createdOn": {
+              "x-ms-summary": "Created on",
+              "description": "The date and time when the semantic model was created.",
+              "type": "string",
+              "format": "date-time",
+              "x-nullable": true
+            },
+            "ownerId": {
+              "x-ms-summary": "Owner ID",
+              "description": "The ID of the user or team that owns the semantic model.",
+              "type": "string",
+              "x-nullable": true
+            },
+            "m365AppModuleId": {
+              "x-ms-summary": "Primary Microsoft 365 app module ID",
+              "description": "The ID of the app module associated with an ALM-compliant primary semantic model. This value is backed by the DVTableSearch-to-AppModule lookup relationship.",
+              "type": "string",
+              "x-nullable": true
+            },
+            "m365AppModuleIdSecondary": {
+              "x-ms-summary": "Secondary Microsoft 365 app module ID",
+              "description": "The app module ID associated with a secondary semantic model. This value is stored as a GUID and does not create an ALM-managed relationship to the app module.",
+              "type": "string",
+              "x-nullable": true
+            },
+            "appModulePrimaryName": {
+              "x-ms-summary": "Primary app module name",
+              "description": "The display name of the app module referenced by m365AppModuleId.",
+              "type": "string",
+              "x-nullable": true
+            },
+            "appModulePrimaryUniqueName": {
+              "x-ms-summary": "Primary app module unique name",
+              "description": "The logical name of the app module referenced by m365AppModuleId.",
+              "type": "string",
+              "x-nullable": true
+            },
+            "appModuleSecondaryName": {
+              "x-ms-summary": "Secondary app module name",
+              "description": "The display name of the app module whose ID is stored in m365AppModuleIdSecondary.",
+              "type": "string",
+              "x-nullable": true
+            },
+            "appModuleSecondaryUniqueName": {
+              "x-ms-summary": "Secondary app module unique name",
+              "description": "The logical name of the app module whose ID is stored in m365AppModuleIdSecondary.",
+              "type": "string",
+              "x-nullable": true
+            },
+            "bots": {
+              "x-ms-summary": "Agents",
+              "description": "Information about the agents associated with the semantic model. Returned when Include agent information is set to botinfo.",
+              "type": "array",
+              "x-nullable": true,
+              "items": {
+                "$ref": "#/definitions/IqSemanticModelBotInfo"
+              }
+            }
+          }
+        },
+        "IqSemanticModelBotInfo": {
+          "description": "Information about an agent associated with a semantic model.",
+          "type": "object",
+          "properties": {
+            "botComponentName": {
+              "x-ms-summary": "Agent component name",
+              "description": "The internal name of the agent component.",
+              "type": "string",
+              "x-nullable": true
+            },
+            "agentName": {
+              "x-ms-summary": "Agent name",
+              "description": "The name of the agent.",
+              "type": "string",
+              "x-nullable": true
+            }
+          }
+        },
         "WhenAnActionIsPerformedSubscriptionRequest": {
           "description": "The callback registration table for when an action is performed trigger.",
           "required": [
@@ -6296,14 +6447,14 @@
       "brandColor": "",
       "useNewApimVersion": "true",
       "version": {
-        "previous": "releases/v1.0.1825\\1.0.1825.4855",
-        "current": "releases/v1.0.1827\\1.0.1827.4939"
+        "previous": "releases/v1.0.1827\\1.0.1827.4939",
+        "current": "releases/v1.0.1831\\1.0.1831.5064"
       },
       "OperationIcons": {
-        "mcp_ContactCenterMCPServer": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1827/1.0.1827.4939/commondataserviceforapps/icon_mcp_ContactCenterMCPServer.png",
-        "mcp_ERPMCPServer": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1827/1.0.1827.4939/commondataserviceforapps/icon_mcp_ERPMCPServer.png",
-        "mcp_SalesMCPServer": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1827/1.0.1827.4939/commondataserviceforapps/icon_mcp_SalesMCPServer.png",
-        "mcp_ServiceMCPServer": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1827/1.0.1827.4939/commondataserviceforapps/icon_mcp_ServiceMCPServer.png"
+        "mcp_ContactCenterMCPServer": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1831/1.0.1831.5064/commondataserviceforapps/icon_mcp_ContactCenterMCPServer.png",
+        "mcp_ERPMCPServer": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1831/1.0.1831.5064/commondataserviceforapps/icon_mcp_ERPMCPServer.png",
+        "mcp_SalesMCPServer": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1831/1.0.1831.5064/commondataserviceforapps/icon_mcp_SalesMCPServer.png",
+        "mcp_ServiceMCPServer": "https://static.powerapps.com/resource/ppcr/releases/v1.0.1831/1.0.1831.5064/commondataserviceforapps/icon_mcp_ServiceMCPServer.png"
       }
     },
     "capabilities": [
@@ -6313,7 +6464,7 @@
     "interfaces": {},
     "description": "Provides access to Microsoft Dataverse actions and triggers for Power Platform environments.",
     "createdTime": "2019-03-15T22:52:03.5485869Z",
-    "changedTime": "2026-09-10T20:01:26.0658171Z",
+    "changedTime": "2026-09-28T16:42:46.4485242Z",
     "releaseTag": "Production",
     "tier": "Premium",
     "publisher": "Microsoft",
