@@ -1,4 +1,5 @@
 import powerConfig from '../../power.config.json';
+import { getContext } from '@microsoft/power-apps/app';
 import { Vsi_armsconfigurationsService } from '../generated/services/Vsi_armsconfigurationsService';
 
 const PENDING_ROUTE_KEY = 'pendingDeepLinkRoute';
@@ -19,6 +20,7 @@ const ID_PARAM_NAMES = [
   'vsi_participantprogramyearid',
   'recordId',
   'guid',
+  'id',
 ];
 
 function decodeValue(value: string): string {
@@ -139,7 +141,7 @@ function routeFromExplicitIdParams(params: URLSearchParams): string | null {
     return id ? `/calculation/${getRouteSource(params)}/${id}` : null;
   }
 
-  const enrolmentId = params.get('enrolmentId') ?? params.get('enrollmentId') ?? params.get('participantProgramYearId');
+  const enrolmentId = params.get('enrolmentId') ?? params.get('enrollmentId') ?? params.get('participantProgramYearId') ?? params.get('id');
   if (enrolmentId) {
     const id = normalizeEnrolmentId(enrolmentId);
     return id ? `/enrolment/${getRouteSource(params)}/${id}` : null;
@@ -152,7 +154,6 @@ export function normalizeInitialDeepLink(): void {
   if (typeof window === 'undefined') return;
 
   const url = new URL(window.location.href);
-  if (url.hash.startsWith('#/')) return;
 
   // Check for a pending deep-link written by another tab via openInNewTab().
   // The route is stored in localStorage so it works across both local dev and production.
@@ -168,6 +169,27 @@ export function normalizeInitialDeepLink(): void {
     }
   } catch { /* localStorage unavailable */ }
 
+  const currentHashRoute = url.hash.startsWith('#/')
+    ? url.hash.slice(2).split(/[?#]/, 1)[0].replace(/\/+$/, '')
+    : undefined;
+  const isDefaultDashboardHash = currentHashRoute === undefined
+    || currentHashRoute === ''
+    || currentHashRoute === 'dashboard-home';
+
+  const queryRoute =
+    routeFromRouteParam(url.searchParams)
+    ?? routeFromPageParams(url.searchParams)
+    ?? routeFromExplicitIdParams(url.searchParams);
+
+  if (queryRoute && isDefaultDashboardHash) {
+    window.history.replaceState(null, '', `${url.pathname}${url.search}#${queryRoute}`);
+    return;
+  }
+
+  if (currentHashRoute !== undefined) {
+    return;
+  }
+
   const hashParams = new URLSearchParams(url.hash.replace(/^#/, ''));
   const pathSegments = url.pathname.split('/').map(segment => decodeValue(segment).toLowerCase()).filter(Boolean);
 
@@ -180,7 +202,34 @@ export function normalizeInitialDeepLink(): void {
     ?? routeFromExplicitIdParams(hashParams)
     ?? routeFromSegments(pathSegments);
 
-  if (!route) return;
+  void getContext()
+    .then(context => {
+      const queryParams = context.app.queryParams ?? {};
+      const launchParams = new URLSearchParams();
+      for (const [name, value] of Object.entries(queryParams)) {
+        if (typeof value === 'string') launchParams.set(name, value);
+      }
+
+      const launchRoute =
+        routeFromRouteParam(launchParams)
+        ?? routeFromPageParams(launchParams)
+        ?? routeFromExplicitIdParams(launchParams);
+      const activeHashRoute = window.location.hash.startsWith('#/')
+        ? window.location.hash.slice(2).split(/[?#]/, 1)[0].replace(/\/+$/, '')
+        : undefined;
+      const canApplyLaunchRoute = activeHashRoute === undefined
+        || activeHashRoute === ''
+        || activeHashRoute === 'dashboard-home';
+
+      if (launchRoute && canApplyLaunchRoute) {
+        window.location.hash = launchRoute;
+      }
+    })
+    .catch(() => {});
+
+  if (!route) {
+    return;
+  }
 
   window.history.replaceState(null, '', `${url.pathname}${url.search}#${route}`);
 }

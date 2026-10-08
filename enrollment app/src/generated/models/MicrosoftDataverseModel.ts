@@ -227,6 +227,55 @@ export interface SearchOutput {
   };
 }
 
+export interface IqSemanticModelListResponse {
+  // A list of semantic models available in the environment.
+  data?: IqSemanticModel[];
+}
+
+export interface IqSemanticModel {
+  // The ID of the semantic model.
+  id?: string;
+  // The unique name assigned to the semantic model.
+  uniqueName?: string;
+  // The application or service that created the semantic model.
+  source?: string;
+  // The description of the semantic model.
+  description?: string;
+  // The name of the user or team that owns the semantic model.
+  owner?: string;
+  // The logical names of the Dataverse tables included in the semantic model.
+  tables?: string[];
+  // The name of the user who created the semantic model.
+  createdBy?: string;
+  // The date and time when the semantic model was last modified.
+  modifiedOn?: string;
+  // The date and time when the semantic model was created.
+  createdOn?: string;
+  // The ID of the user or team that owns the semantic model.
+  ownerId?: string;
+  // The ID of the app module associated with an ALM-compliant primary semantic model. This value is backed by the DVTableSearch-to-AppModule lookup relationship.
+  m365AppModuleId?: string;
+  // The app module ID associated with a secondary semantic model. This value is stored as a GUID and does not create an ALM-managed relationship to the app module.
+  m365AppModuleIdSecondary?: string;
+  // The display name of the app module referenced by m365AppModuleId.
+  appModulePrimaryName?: string;
+  // The logical name of the app module referenced by m365AppModuleId.
+  appModulePrimaryUniqueName?: string;
+  // The display name of the app module whose ID is stored in m365AppModuleIdSecondary.
+  appModuleSecondaryName?: string;
+  // The logical name of the app module whose ID is stored in m365AppModuleIdSecondary.
+  appModuleSecondaryUniqueName?: string;
+  // Information about the agents associated with the semantic model. Returned when Include agent information is set to botinfo.
+  bots?: IqSemanticModelBotInfo[];
+}
+
+export interface IqSemanticModelBotInfo {
+  // The internal name of the agent component.
+  botComponentName?: string;
+  // The name of the agent.
+  agentName?: string;
+}
+
 export interface WhenAnActionIsPerformedSubscriptionRequest {
   // The callback registration table version.
   version: number;
